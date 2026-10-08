@@ -53,7 +53,7 @@ public class AmuletProjectile : MonoBehaviour
         float finalDamage = owner != null ? owner.RollDamage(damage, out isCritical) : damage;
 
         Debug.Log($"부적 {(isCritical ? "치명타" : "적중")}! {other.name}에게 {finalDamage}의 데미지");
-        enemy.TakeDamage(finalDamage, isCritical);
+        enemy.TakeDamage(finalDamage, isCritical, transform.position);
 
         Destroy(gameObject);
     }

@@ -84,7 +84,7 @@ public class AoESkill : MonoBehaviour
             // 적마다 치명타를 따로 판정
             bool isCritical = false;
             float finalDamage = owner != null ? owner.RollDamage(damage, out isCritical) : damage;
-            enemy.TakeDamage(finalDamage, isCritical);
+            enemy.TakeDamage(finalDamage, isCritical, transform.position); // 폭발 중심에서 바깥쪽으로 밀려남
         }
 
         Debug.Log($"부적 폭발! 적 {damagedEnemies.Count}명에게 기본 {damage}의 데미지");

@@ -150,22 +150,6 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &7617924889689426087
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8614667841246218426}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: edae64eaf150a8e41bc9f0b79060fefb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EnemyHealthBar
-  fillImage: {fileID: 3742038670459378227}
-  enemy: {fileID: 0}
-  hideWhenFull: 1
-  smoothSpeed: 10
 --- !u!1 &8190579268854747374
 GameObject:
   m_ObjectHideFlags: 0
@@ -303,6 +287,12 @@ MonoBehaviour:
   attackDamage: 50
   attackCooldown: 1.5
   rotationSpeed: 10
+  flashColor: {r: 1, g: 1, b: 1, a: 1}
+  flashIntensity: 1.5
+  flashDuration: 0.12
+  knockbackDistance: 0.4
+  knockbackDuration: 0.1
+  criticalKnockbackMultiplier: 2
 --- !u!114 &6933227885698364685
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -316,10 +306,62 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LootDropper
   itemPrefab: {fileID: 7284257490835777839, guid: 8b8a91037c3edbe479a34674d688cab7, type: 3}
-  upwardForce: 5
+  dropTable:
+  - item:
+      itemName: "\uB0A1\uC740 \uB2E8\uAC80"
+      itemType: 0
+      rarity: 0
+      statValue: 5
+    weight: 30
+  - item:
+      itemName: "\uBCF5\uC22D\uC544\uB098\uBB34 \uAC80"
+      itemType: 0
+      rarity: 0
+      statValue: 8
+    weight: 20
+  - item:
+      itemName: "\uB3C4\uC0AC\uC758 \uC9C0\uD321\uC774"
+      itemType: 0
+      rarity: 0
+      statValue: 11
+    weight: 10
+  - item:
+      itemName: "\uBCBC\uB77D \uB9DE\uC740 \uB300\uCD94\uB098\uBB34 \uAC80"
+      itemType: 0
+      rarity: 0
+      statValue: 15
+    weight: 5
+  - item:
+      itemName: "\uBB34\uBA85 \uB3C4\uD3EC"
+      itemType: 1
+      rarity: 0
+      statValue: 15
+    weight: 30
+  - item:
+      itemName: "\uAC00\uC8FD \uAC11\uC637"
+      itemType: 1
+      rarity: 0
+      statValue: 20
+    weight: 20
+  - item:
+      itemName: "\uBE44\uB2E8 \uB3C4\uD3EC"
+      itemType: 1
+      rarity: 0
+      statValue: 30
+    weight: 10
+  - item:
+      itemName: "\uC0AC\uC2AC \uAC11\uC637"
+      itemType: 1
+      rarity: 0
+      statValue: 40
+    weight: 5
+  upwardForce: 0
   sideForce: 2
   spinForce: 3
   spawnHeightOffset: 0.5
+  labelFont: {fileID: 11400000, guid: 20b2501f3882aa348a32afafa525a93f, type: 2}
+  labelFontSize: 3
+  labelHeight: 0.5
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   magicColor: {r: 0, g: 0, b: 1, a: 1}
   rareColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
@@ -435,3 +477,19 @@ MonoBehaviour:
   m_DefaultSpriteDPI: 96
   m_DynamicPixelsPerUnit: 1
   m_PresetInfoIsWorld: 1
+--- !u!114 &7617924889689426087
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8614667841246218426}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: edae64eaf150a8e41bc9f0b79060fefb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyHealthBar
+  fillImage: {fileID: 3742038670459378227}
+  enemy: {fileID: 0}
+  hideWhenFull: 1
+  smoothSpeed: 10

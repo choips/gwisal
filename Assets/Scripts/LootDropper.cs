@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TMPro;                     // TMP_FontAsset 사용 (바닥 이름표 글꼴)
 using UnityEngine;
 
 // 드랍 테이블의 한 줄: 어떤 아이템이 얼마나 자주 떨어지는지
@@ -59,6 +60,16 @@ public class LootDropper : MonoBehaviour
     [Tooltip("바닥에 파묻혀 생성되지 않도록 dropPosition보다 위로 띄울 높이")]
     [SerializeField] private float spawnHeightOffset = 0.5f;
 
+    [Header("바닥 이름표")]
+    [Tooltip("아이템 위에 띄울 이름표의 글꼴 (한글이 보이도록 NotoSansKR-Regular SDF 지정, 비워 두면 이름표 없음)")]
+    [SerializeField] private TMP_FontAsset labelFont;
+
+    [Tooltip("이름표 글자 크기 (3이면 글자 높이 약 0.3m)")]
+    [SerializeField] private float labelFontSize = 3f;
+
+    [Tooltip("아이템 중심에서 이름표까지의 높이(m)")]
+    [SerializeField] private float labelHeight = 0.5f;
+
     [Header("등급별 색상")]
     [SerializeField] private Color normalColor = Color.white;
     [SerializeField] private Color magicColor = Color.blue;
@@ -101,6 +112,13 @@ public class LootDropper : MonoBehaviour
             itemComponent.data.statValue = Mathf.Round(itemComponent.data.statValue * GetStatMultiplier(rarity));
             item.name = $"{itemComponent.data.itemName} ({rarity})";
             Debug.Log($"아이템 드랍! {itemComponent.data.DisplayName} ({itemComponent.data.StatDescription})");
+
+            // 아이템 위에 이름을 등급 색으로 표시 (글꼴이 없으면 한글이 □로 깨지므로 생략)
+            if (labelFont != null)
+            {
+                item.AddComponent<ItemNameLabel>().Setup(
+                    itemComponent.data.itemName, itemComponent.data.RarityColor, labelFont, labelFontSize, labelHeight);
+            }
         }
 
         // 프리팹에 DroppedItem이 없어도 착지 후 고정되도록 자동으로 붙여 줌

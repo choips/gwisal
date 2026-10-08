@@ -59,7 +59,11 @@ public class InventoryManager : MonoBehaviour
     [Tooltip("칸 배경 색")]
     [SerializeField] private Color slotColor = new Color(0.12f, 0.12f, 0.15f, 0.95f);
 
-    [Header("아이템 아이콘 (비워 두면 검/갑/약 글자로 표시)")]
+    [Header("아이템 아이콘")]
+    [Tooltip("아이템 전용 아이콘을 찾을 Resources 안 폴더. 아이템 이름과 같은 이름의 그림을 넣으면 됩니다 (예: Resources/ItemIcons/낡은 단검.png)")]
+    [SerializeField] private string itemIconFolder = "ItemIcons";
+
+    [Tooltip("전용 아이콘이 없을 때 쓰는 종류별 공용 아이콘 (이것도 비워 두면 검/갑/약 글자로 표시)")]
     [SerializeField] private Sprite weaponIcon;
     [SerializeField] private Sprite armorIcon;
     [SerializeField] private Sprite potionIcon;
@@ -79,6 +83,7 @@ public class InventoryManager : MonoBehaviour
     private PlayerStats playerStats; // 장착 시 능력치를 바꿀 플레이어
 
     private readonly List<ItemSlotUI> bagSlots = new List<ItemSlotUI>(); // 코드로 만든 가방 칸들
+    private readonly Dictionary<string, Sprite> itemIconCache = new Dictionary<string, Sprite>(); // 아이템 이름 → 전용 아이콘 (없으면 null)
 
     private const string SlotIconName = "EquipIcon"; // 장비 칸 버튼에 코드로 붙이는 아이콘 오브젝트 이름
     private static readonly Color EmptySlotBorderColor = new Color(0.3f, 0.3f, 0.35f); // 빈 장비 칸 테두리 색
@@ -484,9 +489,12 @@ public class InventoryManager : MonoBehaviour
         }
     }
 
-    // 아이템 종류에 맞는 아이콘 그림
+    // 아이템 아이콘: 이름과 같은 전용 아이콘이 있으면 그것, 없으면 종류별 공용 아이콘
     private Sprite GetIcon(ItemData item)
     {
+        Sprite itemIcon = GetItemIcon(item.itemName);
+        if (itemIcon != null) return itemIcon;
+
         switch (item.itemType)
         {
             case ItemType.Weapon: return weaponIcon;
@@ -494,6 +502,19 @@ public class InventoryManager : MonoBehaviour
             case ItemType.ManaPotion: return potionIcon;
             default: return null;
         }
+    }
+
+    // Resources/ItemIcons 폴더에서 아이템 이름과 같은 그림을 찾음 (찾은 결과는 기억해 두고 재사용)
+    private Sprite GetItemIcon(string itemName)
+    {
+        if (string.IsNullOrEmpty(itemName)) return null;
+
+        if (!itemIconCache.TryGetValue(itemName, out Sprite sprite))
+        {
+            sprite = Resources.Load<Sprite>($"{itemIconFolder}/{itemName}");
+            itemIconCache[itemName] = sprite;
+        }
+        return sprite;
     }
 
     // 장비 칸 버튼에 장착 중인 장비를 표시 (비어 있으면 회색 "없음", 클릭 불가)

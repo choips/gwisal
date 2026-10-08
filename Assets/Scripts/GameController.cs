@@ -53,7 +53,7 @@ public class GameController : MonoBehaviour
 
         if (SaveManager.Instance.SaveGame(data))
         {
-            Debug.Log("게임 저장 완료!");
+            NotificationUI.Show("게임 저장 완료!", NotificationUI.NoticeType.Success);
         }
     }
 
@@ -65,7 +65,7 @@ public class GameController : MonoBehaviour
         SaveData data = SaveManager.Instance.LoadGame();
         if (data == null)
         {
-            Debug.LogWarning("불러올 세이브 파일이 없습니다. 먼저 S 키로 저장해 주세요.");
+            NotificationUI.Show("불러올 세이브 파일이 없습니다. 먼저 S 키로 저장해 주세요.", NotificationUI.NoticeType.Warning);
             return;
         }
 
@@ -77,7 +77,7 @@ public class GameController : MonoBehaviour
             InventoryManager.Instance.SetEquipment(data.equippedWeapon, data.equippedArmor);
         }
 
-        Debug.Log("게임 불러오기 완료!");
+        NotificationUI.Show("게임 불러오기 완료!", NotificationUI.NoticeType.Success);
     }
 
     // 저장/불러오기에 필요한 SaveManager와 PlayerStats가 준비되어 있는지 확인

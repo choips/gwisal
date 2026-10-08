@@ -17,6 +17,13 @@ public class AmuletProjectile : MonoBehaviour
     [Tooltip("생성 후 이 시간(초)이 지나면 자동 파괴")]
     [SerializeField] private float lifeTime = 3f;
 
+    [Header("적중 이펙트")]
+    [Tooltip("적에게 맞았을 때 맞은 자리에 생성할 이펙트 프리팹 (파티클 시스템, 비워두면 생략)")]
+    [SerializeField] private GameObject hitEffectPrefab;
+
+    [Tooltip("이펙트를 확실히 지우기 위한 최대 유지 시간(초)")]
+    [SerializeField] private float hitEffectMaxLifetime = 2f;
+
     private bool hasHit; // 이미 적을 맞혔는지 여부 (한 프레임에 여러 적과 겹쳐도 한 번만 처리)
     private PlayerStats owner; // 부적을 던진 플레이어 (치명타 판정용, 없으면 치명타 없음)
 
@@ -55,6 +62,20 @@ public class AmuletProjectile : MonoBehaviour
         Debug.Log($"부적 {(isCritical ? "치명타" : "적중")}! {other.name}에게 {finalDamage}의 데미지");
         enemy.TakeDamage(finalDamage, isCritical, transform.position);
 
+        SpawnHitEffect(other);
+
         Destroy(gameObject);
+    }
+
+    // 적의 표면 중 부적과 가장 가까운 지점에 이펙트 생성 (날아온 쪽을 향하도록 회전)
+    private void SpawnHitEffect(Collider hitCollider)
+    {
+        if (hitEffectPrefab == null) return;
+
+        Vector3 hitPoint = hitCollider.ClosestPoint(transform.position);
+        GameObject effect = Instantiate(hitEffectPrefab, hitPoint, Quaternion.LookRotation(-transform.forward));
+
+        // 파티클의 Stop Action 설정을 빠뜨려도 이펙트가 쌓이지 않도록 일정 시간 뒤 제거
+        Destroy(effect, hitEffectMaxLifetime);
     }
 }

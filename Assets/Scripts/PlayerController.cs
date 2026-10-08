@@ -182,18 +182,19 @@ public class PlayerController : MonoBehaviour
         if (mouse.leftButton.wasPressedThisFrame)
         {
             // 새로 클릭한 순간: 적/아이템/바닥 중 무엇인지 판단해서 처리
-            HandleClick(mousePosition);
+            HandleClick(mousePosition, true);
         }
         else if (moveWhileHolding && mouse.leftButton.isPressed && target == null)
         {
             // 누르고 있는 중: 적이나 아이템을 타겟팅하고 있지 않을 때만 마우스를 따라 이동
             // (대상을 클릭한 채 버튼을 계속 누르고 있어도 타겟이 풀리지 않도록 하기 위함)
-            HandleClick(mousePosition);
+            HandleClick(mousePosition, false);
         }
     }
 
     // 화면상의 마우스 좌표로 Ray를 쏴서 맞은 대상에 따라 타겟팅 또는 이동
-    private void HandleClick(Vector2 screenPosition)
+    // isNewClick: 이번 프레임에 새로 누른 클릭인지 (누르고 있는 중이면 false → 바닥 표시를 만들지 않음)
+    private void HandleClick(Vector2 screenPosition, bool isNewClick)
     {
         if (mainCamera == null) return;
 
@@ -222,7 +223,27 @@ public class PlayerController : MonoBehaviour
             // 바닥을 클릭함 → 타겟을 해제하고 그 위치로 이동
             ClearTarget();
             MoveTo(hit.point);
+
+            if (isNewClick)
+            {
+                SpawnClickMarker(hit.point);
+            }
         }
+    }
+
+    // 클릭한 바닥 위치에 표시 이펙트 생성 (이전 표시는 바로 지워서 하나만 보이게 함)
+    private void SpawnClickMarker(Vector3 position)
+    {
+        if (clickMarkerPrefab == null) return;
+
+        if (currentClickMarker != null)
+        {
+            Destroy(currentClickMarker);
+        }
+
+        // 바닥과 겹쳐 깜빡이지 않도록 아주 살짝 띄움
+        currentClickMarker = Instantiate(clickMarkerPrefab, position + Vector3.up * 0.02f, Quaternion.identity);
+        Destroy(currentClickMarker, clickMarkerMaxLifetime);
     }
 
     // 마우스가 가리키는 바닥 방향으로 몸을 돌리고 부적을 발사

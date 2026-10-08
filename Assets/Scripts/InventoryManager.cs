@@ -80,6 +80,9 @@ public class InventoryManager : MonoBehaviour
 
     private readonly List<ItemSlotUI> bagSlots = new List<ItemSlotUI>(); // 코드로 만든 가방 칸들
 
+    private const string SlotIconName = "EquipIcon"; // 장비 칸 버튼에 코드로 붙이는 아이콘 오브젝트 이름
+    private static readonly Color EmptySlotBorderColor = new Color(0.3f, 0.3f, 0.35f); // 빈 장비 칸 테두리 색
+
     public ItemData EquippedWeapon => equippedWeapon;
     public ItemData EquippedArmor => equippedArmor;
 
@@ -509,6 +512,20 @@ public class InventoryManager : MonoBehaviour
             label.color = equipped != null ? equipped.NameColor : emptySlotColor;
         }
 
+        // 왼쪽 아이콘 (그림이 연결되지 않았거나 비어 있으면 숨김)
+        Image slotIcon = GetOrCreateSlotIcon(slotButton, label);
+        Sprite sprite = equipped != null ? GetIcon(equipped) : null;
+        slotIcon.sprite = sprite;
+        slotIcon.enabled = sprite != null;
+
+        // 가방 칸처럼 등급 색 테두리
+        if (!slotButton.TryGetComponent(out Outline border))
+        {
+            border = slotButton.gameObject.AddComponent<Outline>();
+            border.effectDistance = new Vector2(2f, -2f);
+        }
+        border.effectColor = equipped != null ? equipped.NameColor : EmptySlotBorderColor;
+
         if (itemTooltip != null)
         {
             if (!slotButton.TryGetComponent(out ItemTooltipTrigger trigger))
@@ -517,6 +534,42 @@ public class InventoryManager : MonoBehaviour
             }
             trigger.Setup(equipped, itemTooltip, true);
         }
+    }
+
+    // 장비 칸 버튼 왼쪽의 아이콘 이미지 (처음 한 번만 코드로 만들고, 이후에는 찾아서 재사용)
+    private Image GetOrCreateSlotIcon(Button slotButton, TMP_Text label)
+    {
+        Transform existing = slotButton.transform.Find(SlotIconName);
+        if (existing != null) return existing.GetComponent<Image>();
+
+        // 버튼 높이에 맞춘 정사각형 (위아래 3픽셀씩 여백)
+        float iconSize = ((RectTransform)slotButton.transform).rect.height - 6f;
+        if (iconSize <= 0f) iconSize = 30f;
+
+        GameObject iconObject = new GameObject(SlotIconName, typeof(RectTransform));
+        iconObject.transform.SetParent(slotButton.transform, false);
+
+        // 버튼 왼쪽 가운데에 붙임
+        RectTransform rect = (RectTransform)iconObject.transform;
+        rect.anchorMin = new Vector2(0f, 0.5f);
+        rect.anchorMax = new Vector2(0f, 0.5f);
+        rect.pivot = new Vector2(0f, 0.5f);
+        rect.anchoredPosition = new Vector2(4f, 0f);
+        rect.sizeDelta = new Vector2(iconSize, iconSize);
+
+        Image image = iconObject.AddComponent<Image>();
+        image.preserveAspect = true;  // 그림 비율 유지
+        image.raycastTarget = false;  // 클릭은 버튼이 받도록
+
+        // 글자가 아이콘과 겹치지 않도록 글자 왼쪽 여백을 아이콘 너비만큼 늘림
+        if (label != null)
+        {
+            Vector4 margin = label.margin; // x = 왼쪽 여백
+            margin.x += iconSize + 6f;
+            label.margin = margin;
+        }
+
+        return image;
     }
 
     // 장착 중인 장비와 보유 개수 표시

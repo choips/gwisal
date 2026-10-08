@@ -1,10 +1,12 @@
 using UnityEngine;
 
 // 아이템 종류
+// 세이브 파일에는 순서 번호(0, 1, 2…)로 저장되므로, 새 종류는 반드시 맨 뒤에 추가해야 합니다.
 public enum ItemType
 {
-    Weapon, // 무기: 공격력 증가
-    Armor   // 방어구: 최대 체력 증가
+    Weapon,     // 무기: 공격력 증가
+    Armor,      // 방어구: 최대 체력 증가
+    ManaPotion  // 기력 물약: 사용하면 기력(MP) 회복 (한 번 쓰면 사라짐)
 }
 
 // 아이템 등급
@@ -26,7 +28,7 @@ public class ItemData
     public ItemType itemType = ItemType.Weapon;
     public ItemRarity rarity = ItemRarity.Normal;
 
-    [Tooltip("무기: 공격력 증가량 / 방어구: 최대 체력 증가량")]
+    [Tooltip("무기: 공격력 증가량 / 방어구: 최대 체력 증가량 / 기력 물약: 기력 회복량")]
     public float statValue = 5f;
 
     public ItemData() { }
@@ -43,14 +45,39 @@ public class ItemData
     // JSON에서 불러온 빈 칸(이름 없음)인지 확인
     public bool IsEmpty => string.IsNullOrEmpty(itemName);
 
-    // 화면 표시용 이름 (예: "[Rare] 낡은 단검")
-    public string DisplayName => $"[{rarity}] {itemName}";
+    // 장착하는 대신 사용하면 사라지는 소모품인지 (물약 등)
+    public bool IsConsumable => itemType == ItemType.ManaPotion;
+
+    // 화면 표시용 이름 (예: "[Rare] 낡은 단검", 등급이 없는 소모품은 "기력 물약")
+    public string DisplayName => IsConsumable ? itemName : $"[{rarity}] {itemName}";
 
     // 종류 이름 (예: "무기")
-    public string TypeName => itemType == ItemType.Weapon ? "무기" : "방어구";
+    public string TypeName
+    {
+        get
+        {
+            switch (itemType)
+            {
+                case ItemType.Armor:      return "방어구";
+                case ItemType.ManaPotion: return "물약";
+                default:                  return "무기";
+            }
+        }
+    }
 
     // 이 아이템이 올려 주는 능력치 이름 (예: "공격력")
-    public string StatName => itemType == ItemType.Weapon ? "공격력" : "최대 체력";
+    public string StatName
+    {
+        get
+        {
+            switch (itemType)
+            {
+                case ItemType.Armor:      return "최대 체력";
+                case ItemType.ManaPotion: return "기력 회복";
+                default:                  return "공격력";
+            }
+        }
+    }
 
     // 등급 한글 이름 (예: "레어")
     public string RarityName
@@ -84,4 +111,7 @@ public class ItemData
             }
         }
     }
+
+    // 이름을 표시할 때 쓰는 색 (장비는 등급 색, 기력 물약은 하늘색)
+    public Color NameColor => IsConsumable ? new Color(0.35f, 0.85f, 1f) : RarityColor;
 }

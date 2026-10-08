@@ -47,6 +47,22 @@ public class LootDropper : MonoBehaviour
         new LootEntry("사슬 갑옷", ItemType.Armor, 40f, 5f),
     };
 
+    [Header("기력 물약(Mana Potion)")]
+    [Tooltip("장비와 별도로 기력 물약이 하나 더 떨어질 확률 (0.3 = 30%)")]
+    [Range(0f, 1f)] [SerializeField] private float potionDropChance = 0.3f;
+
+    [Tooltip("물약 이름")]
+    [SerializeField] private string potionName = "기력 물약";
+
+    [Tooltip("물약 한 개로 회복하는 기력")]
+    [SerializeField] private float potionRestoreAmount = 50f;
+
+    [Tooltip("바닥에 떨어진 물약 구슬의 색")]
+    [SerializeField] private Color potionColor = new Color(0.2f, 0.45f, 1f); // 파랑
+
+    [Tooltip("장비 구슬 대비 물약 구슬 크기 (0.7 = 70%, 장비와 구별하기 쉽게)")]
+    [SerializeField] private float potionScale = 0.7f;
+
     [Header("튀어 오르는 힘")]
     [Tooltip("위쪽으로 가하는 힘")]
     [SerializeField] private float upwardForce = 5f;
@@ -82,7 +98,7 @@ public class LootDropper : MonoBehaviour
     [SerializeField] private float rareStatMultiplier = 2f;
     [SerializeField] private float uniqueStatMultiplier = 3f;
 
-    // dropPosition 위치에 아이템을 생성하고 튀어 오르게 함
+    // dropPosition 위치에 장비 하나를 떨어뜨리고, 확률에 따라 기력 물약도 하나 더 떨어뜨림
     public void DropItem(Vector3 dropPosition)
     {
         if (itemPrefab == null)
@@ -91,33 +107,74 @@ public class LootDropper : MonoBehaviour
             return;
         }
 
-        Vector3 spawnPosition = dropPosition + Vector3.up * spawnHeightOffset;
-        GameObject item = Instantiate(itemPrefab, spawnPosition, Random.rotation);
+        DropEquipment(dropPosition);
+
+        if (Random.value < potionDropChance)
+        {
+            DropPotion(dropPosition);
+        }
+    }
+
+    // 드랍 테이블에서 고른 장비를 무작위 등급으로 떨어뜨림 (등급에 따라 능력치 강화)
+    private void DropEquipment(Vector3 dropPosition)
+    {
+        ItemData data;
+        LootEntry entry = PickEntry();
+        if (entry != null)
+        {
+            // 드랍 테이블 원본이 바뀌지 않도록 복사본을 사용
+            data = new ItemData(entry.item);
+        }
+        else if (itemPrefab.TryGetComponent(out Item prefabItem))
+        {
+            // 드랍 테이블이 비어 있으면 프리팹에 설정된 아이템을 그대로 사용
+            data = new ItemData(prefabItem.data);
+        }
+        else
+        {
+            data = new ItemData();
+        }
 
         ItemRarity rarity = RollRarity();
-        ApplyRarityColor(item, rarity);
-        item.name = $"{itemPrefab.name} ({rarity})";
+        data.rarity = rarity;
+        data.statValue = Mathf.Round(data.statValue * GetStatMultiplier(rarity));
 
-        // 드랍 테이블에서 고른 아이템으로 내용을 바꾸고, 등급을 기록한 뒤 등급에 따라 능력치를 강화
+        SpawnItem(dropPosition, data, GetRarityColor(rarity));
+    }
+
+    // 기력 물약을 떨어뜨림 (물약은 등급이 없음)
+    private void DropPotion(Vector3 dropPosition)
+    {
+        ItemData data = new ItemData
+        {
+            itemName = potionName,
+            itemType = ItemType.ManaPotion,
+            rarity = ItemRarity.Normal,
+            statValue = potionRestoreAmount
+        };
+
+        GameObject potion = SpawnItem(dropPosition, data, potionColor);
+        potion.transform.localScale *= potionScale;
+    }
+
+    // 아이템 모양 프리팹을 만들어 내용·색·이름표를 정하고 튀어 오르게 함
+    private GameObject SpawnItem(Vector3 dropPosition, ItemData data, Color objectColor)
+    {
+        Vector3 spawnPosition = dropPosition + Vector3.up * spawnHeightOffset;
+        GameObject item = Instantiate(itemPrefab, spawnPosition, Random.rotation);
+        item.name = data.IsConsumable ? data.itemName : $"{data.itemName} ({data.rarity})";
+        ApplyColor(item, objectColor);
+
         if (item.TryGetComponent(out Item itemComponent))
         {
-            LootEntry entry = PickEntry();
-            if (entry != null)
-            {
-                // 프리팹 원본이나 드랍 테이블이 바뀌지 않도록 복사본을 넣음
-                itemComponent.data = new ItemData(entry.item);
-            }
-
-            itemComponent.data.rarity = rarity;
-            itemComponent.data.statValue = Mathf.Round(itemComponent.data.statValue * GetStatMultiplier(rarity));
-            item.name = $"{itemComponent.data.itemName} ({rarity})";
-            Debug.Log($"아이템 드랍! {itemComponent.data.DisplayName} ({itemComponent.data.StatDescription})");
+            itemComponent.data = data;
+            Debug.Log($"아이템 드랍! {data.DisplayName} ({data.StatDescription})");
 
             // 아이템 위에 이름을 등급 색으로 표시 (글꼴이 없으면 한글이 □로 깨지므로 생략)
             if (labelFont != null)
             {
                 item.AddComponent<ItemNameLabel>().Setup(
-                    itemComponent.data.itemName, itemComponent.data.RarityColor, labelFont, labelFontSize, labelHeight);
+                    data.itemName, data.NameColor, labelFont, labelFontSize, labelHeight);
             }
         }
 
@@ -128,6 +185,7 @@ public class LootDropper : MonoBehaviour
         }
 
         Launch(item);
+        return item;
     }
 
     // Rigidbody에 힘을 가해 아이템을 위로 통 튀어 오르게 함
@@ -192,14 +250,14 @@ public class LootDropper : MonoBehaviour
         return ItemRarity.Normal;                   // 0.30 ~ 1.00 : 70%
     }
 
-    // 등급에 맞는 색상을 아이템의 재질(Material)에 적용
-    private void ApplyRarityColor(GameObject item, ItemRarity rarity)
+    // 아이템의 재질(Material)에 색 적용 (장비: 등급 색, 물약: 물약 색)
+    private void ApplyColor(GameObject item, Color color)
     {
         Renderer itemRenderer = item.GetComponentInChildren<Renderer>();
         if (itemRenderer == null) return;
 
         // .material은 이 아이템 전용 재질 복사본을 만들므로 다른 아이템 색에 영향을 주지 않음
-        itemRenderer.material.color = GetRarityColor(rarity);
+        itemRenderer.material.color = color;
     }
 
     private float GetStatMultiplier(ItemRarity rarity)

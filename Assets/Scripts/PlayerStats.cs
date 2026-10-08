@@ -157,6 +157,21 @@ public class PlayerStats : MonoBehaviour
         return true;
     }
 
+    // 기력 회복 (기력 물약 등): 회복했으면 true, 이미 가득 찼거나 사망 중이면 false (물약을 아끼기 위함)
+    public bool RestoreMP(float amount)
+    {
+        if (IsDead || amount <= 0f) return false;
+
+        if (currentMP >= maxMP)
+        {
+            Debug.Log("기력이 이미 가득 차 있습니다.");
+            return false;
+        }
+
+        currentMP = Mathf.Min(currentMP + amount, maxMP);
+        return true;
+    }
+
     // 경험치를 얻고, 필요 경험치를 넘으면 레벨업
     public void AddExperience(float amount)
     {

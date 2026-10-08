@@ -140,17 +140,46 @@ public class ItemTooltip : MonoBehaviour
     // 툴팁에 들어갈 글 만들기 (TextMeshPro 서식 태그 사용)
     private string BuildContent(ItemData item, bool isEquipped)
     {
-        string rarityHex = ColorUtility.ToHtmlStringRGB(item.RarityColor);
+        string nameHex = ColorUtility.ToHtmlStringRGB(item.NameColor);
         string hintHex = ColorUtility.ToHtmlStringRGB(hintColor);
 
-        string body = isEquipped ? BuildUnequipPreview(item) : BuildComparison(item);
-        string hint = isEquipped ? "클릭하여 해제" : "클릭하여 장착";
+        string body;
+        string hint;
+        string typeLine;
+        if (item.IsConsumable)
+        {
+            body = BuildPotionPreview(item);
+            hint = "클릭 또는 1 키로 사용";
+            typeLine = item.TypeName; // 물약은 등급이 없음
+        }
+        else
+        {
+            body = isEquipped ? BuildUnequipPreview(item) : BuildComparison(item);
+            hint = isEquipped ? "클릭하여 해제" : "클릭하여 장착";
+            typeLine = $"<color=#{nameHex}>{item.RarityName}</color> {item.TypeName}";
+        }
 
-        return $"<size=125%><color=#{rarityHex}>{item.itemName}</color></size>\n"
-             + $"<color=#{rarityHex}>{item.RarityName}</color> {item.TypeName}\n"
+        return $"<size=125%><color=#{nameHex}>{item.itemName}</color></size>\n"
+             + $"{typeLine}\n"
              + $"\n{item.StatDescription}\n"
              + $"\n{body}\n"
              + $"\n<color=#{hintHex}>{hint}</color>";
+    }
+
+    // 물약: 마시면 바뀌는 기력 (예: "기력 30 → 80", 가득 차 있으면 사용할 수 없다고 안내)
+    private string BuildPotionPreview(ItemData item)
+    {
+        PlayerStats stats = GetPlayerStats();
+        if (stats == null) return "";
+
+        if (stats.currentMP >= stats.maxMP)
+        {
+            return $"<color=#{ColorUtility.ToHtmlStringRGB(sameColor)}>기력이 가득 차 있어 마실 필요가 없습니다</color>";
+        }
+
+        float after = Mathf.Min(stats.currentMP + item.statValue, stats.maxMP);
+        return $"<color=#{ColorUtility.ToHtmlStringRGB(betterColor)}>▲ 기력 +{FormatNumber(after - stats.currentMP)}</color>\n"
+             + $"기력 {FormatNumber(stats.currentMP)} → {FormatNumber(after)}";
     }
 
     // 가방 아이템: 같은 종류의 장착 중인 장비와 비교한 결과
@@ -162,7 +191,7 @@ public class ItemTooltip : MonoBehaviour
 
         string hintHex = ColorUtility.ToHtmlStringRGB(hintColor);
         string equippedLine = equipped != null
-            ? $"<color=#{hintHex}>장착 중:</color> <color=#{ColorUtility.ToHtmlStringRGB(equipped.RarityColor)}>{equipped.itemName}</color> ({equipped.StatDescription})"
+            ? $"<color=#{hintHex}>장착 중:</color> <color=#{ColorUtility.ToHtmlStringRGB(equipped.NameColor)}>{equipped.itemName}</color> ({equipped.StatDescription})"
             : $"<color=#{hintHex}>장착 중인 {item.TypeName} 없음</color>";
 
         return $"{equippedLine}\n{BuildDifference(item, difference)}";

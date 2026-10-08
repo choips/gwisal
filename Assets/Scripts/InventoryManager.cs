@@ -9,6 +9,7 @@ using UnityEngine.UI;            // Button 사용
 // - 'I' 키로 인벤토리 UI 패널을 열고 닫습니다.
 // - 아이템마다 버튼을 만들어 목록에 나열하고, 버튼을 클릭하면 그 아이템을 장착합니다.
 // - 무기·방어구 장비 칸 버튼을 클릭하면 장착 중인 장비를 해제해 가방으로 돌려보냅니다.
+// - 기력 물약은 같은 것끼리 한 칸으로 묶어 보여 주고, 클릭하거나 단축키(1)를 누르면 마십니다.
 public class InventoryManager : MonoBehaviour
 {
     // 씬에 하나만 존재하는 인벤토리 관리자에 접근하기 위한 전역 참조
@@ -47,6 +48,9 @@ public class InventoryManager : MonoBehaviour
     [Header("설정")]
     [Tooltip("게임 시작 시 인벤토리를 열어 둘지 여부")]
     [SerializeField] private bool openOnStart = false;
+
+    [Tooltip("기력 물약(Mana Potion)을 마시는 단축키 (인벤토리를 닫아 두어도 사용 가능)")]
+    [SerializeField] private Key potionKey = Key.Digit1;
 
     // 장착 중인 장비 (없으면 null)
     // Inspector에 노출하면 Unity가 빈 객체를 자동으로 채워 null 검사가 어려워지므로 직렬화하지 않음
@@ -103,6 +107,11 @@ public class InventoryManager : MonoBehaviour
         {
             ToggleInventory();
         }
+
+        if (keyboard[potionKey].wasPressedThisFrame)
+        {
+            DrinkFirstPotion();
+        }
     }
 
     // 인벤토리 패널 열기/닫기 전환 (닫기 버튼의 OnClick에도 연결 가능)
@@ -152,10 +161,53 @@ public class InventoryManager : MonoBehaviour
         RefreshUI();
     }
 
-    // 가방에 있는 아이템을 장착 (아이템 버튼을 클릭하면 호출됨)
+    // 가방의 아이템 버튼을 클릭했을 때: 소모품이면 사용, 장비면 장착
+    public void UseItem(ItemData item)
+    {
+        if (item == null) return;
+
+        if (item.IsConsumable)
+        {
+            DrinkPotion(item);
+        }
+        else
+        {
+            EquipItem(item);
+        }
+    }
+
+    // 단축키: 가방에서 처음 찾은 기력 물약을 마심
+    public void DrinkFirstPotion()
+    {
+        ItemData potion = inventory.Find(item => item.itemType == ItemType.ManaPotion);
+        if (potion == null)
+        {
+            Debug.Log("기력 물약이 없습니다.");
+            return;
+        }
+
+        DrinkPotion(potion);
+    }
+
+    // 기력 물약을 마셔 기력 회복 (기력이 가득 차 있으면 물약을 쓰지 않음)
+    private void DrinkPotion(ItemData potion)
+    {
+        if (!inventory.Contains(potion)) return;
+
+        PlayerStats stats = GetUsablePlayerStats();
+        if (stats == null) return;
+
+        if (!stats.RestoreMP(potion.statValue)) return;
+
+        inventory.Remove(potion);
+        Debug.Log($"{potion.itemName} 사용! 기력 +{potion.statValue} (현재 {stats.currentMP:0} / {stats.maxMP:0})");
+        RefreshUI();
+    }
+
+    // 가방에 있는 장비를 장착
     public void EquipItem(ItemData item)
     {
-        if (item == null || !inventory.Contains(item)) return;
+        if (item == null || item.IsConsumable || !inventory.Contains(item)) return;
 
         PlayerStats stats = GetUsablePlayerStats();
         if (stats == null) return;
@@ -249,19 +301,19 @@ public class InventoryManager : MonoBehaviour
         equippedArmor = null;
     }
 
-    // 장비를 바꿀 수 있는 상태의 플레이어 능력치 (찾지 못했거나 사망 중이면 null)
+    // 장비를 바꾸거나 물약을 쓸 수 있는 상태의 플레이어 능력치 (찾지 못했거나 사망 중이면 null)
     private PlayerStats GetUsablePlayerStats()
     {
         PlayerStats stats = GetPlayerStats();
         if (stats == null)
         {
-            Debug.LogWarning("씬에서 PlayerStats를 찾지 못해 장비를 바꿀 수 없습니다.");
+            Debug.LogWarning("씬에서 PlayerStats를 찾지 못해 아이템을 쓸 수 없습니다.");
             return null;
         }
 
         if (stats.IsDead)
         {
-            Debug.Log("사망한 상태에서는 장비를 바꿀 수 없습니다.");
+            Debug.Log("사망한 상태에서는 아이템을 쓸 수 없습니다.");
             return null;
         }
 
@@ -294,20 +346,33 @@ public class InventoryManager : MonoBehaviour
             Destroy(oldButton);
         }
 
-        // 아이템마다 버튼을 새로 생성
+        // 소모품(물약)은 같은 이름끼리 한 칸으로 묶기 위해 개수를 먼저 셈
+        Dictionary<string, int> consumableCounts = new Dictionary<string, int>();
         foreach (ItemData item in inventory)
         {
+            if (!item.IsConsumable) continue;
+            consumableCounts.TryGetValue(item.itemName, out int count);
+            consumableCounts[item.itemName] = count + 1;
+        }
+        HashSet<string> shownConsumables = new HashSet<string>(); // 이미 버튼을 만든 소모품 이름
+
+        // 아이템마다 버튼을 새로 생성 (묶인 소모품은 첫 번째 것만)
+        foreach (ItemData item in inventory)
+        {
+            if (item.IsConsumable && !shownConsumables.Add(item.itemName)) continue;
+
             Button button = Instantiate(itemButtonPrefab, itemListParent);
 
             TMP_Text label = button.GetComponentInChildren<TMP_Text>();
             if (label != null)
             {
-                label.text = $"{item.DisplayName}  ({item.StatDescription})";
-                label.color = item.RarityColor;
+                string countText = item.IsConsumable ? $" ×{consumableCounts[item.itemName]}" : "";
+                label.text = $"{item.DisplayName}{countText}  ({item.StatDescription})";
+                label.color = item.NameColor;
             }
 
-            // 이 버튼을 누르면 "이 버튼의 아이템"을 장착하도록 클릭 이벤트 연결
-            button.onClick.AddListener(() => EquipItem(item));
+            // 이 버튼을 누르면 "이 버튼의 아이템"을 장착(장비) 또는 사용(물약)하도록 클릭 이벤트 연결
+            button.onClick.AddListener(() => UseItem(item));
 
             // 마우스를 올리면 이 아이템의 툴팁이 뜨도록 연결
             if (itemTooltip != null)
@@ -330,7 +395,7 @@ public class InventoryManager : MonoBehaviour
             label.text = equipped != null
                 ? $"{slotName}: {equipped.DisplayName} ({equipped.StatDescription})"
                 : $"{slotName}: 없음";
-            label.color = equipped != null ? equipped.RarityColor : emptySlotColor;
+            label.color = equipped != null ? equipped.NameColor : emptySlotColor;
         }
 
         if (itemTooltip != null)
@@ -368,7 +433,7 @@ public class InventoryManager : MonoBehaviour
         }
 
         text += inventory.Count > 0
-            ? $"보유 아이템: {inventory.Count}개 (클릭하여 장착)"
+            ? $"보유 아이템: {inventory.Count}개 (클릭: 장착/사용)"
             : "(가방이 비어 있음)";
 
         equipmentText.text = text;

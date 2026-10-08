@@ -30,6 +30,9 @@ public class InventoryManager : MonoBehaviour
     [Tooltip("(선택) 장착 중인 장비와 보유 개수를 표시할 텍스트")]
     [SerializeField] private TextMeshProUGUI equipmentText;
 
+    [Tooltip("(선택) 아이템 버튼에 마우스를 올리면 띄울 툴팁 창")]
+    [SerializeField] private ItemTooltip itemTooltip;
+
     [Header("설정")]
     [Tooltip("게임 시작 시 인벤토리를 열어 둘지 여부")]
     [SerializeField] private bool openOnStart = false;
@@ -232,6 +235,12 @@ public class InventoryManager : MonoBehaviour
 
             // 이 버튼을 누르면 "이 버튼의 아이템"을 장착하도록 클릭 이벤트 연결
             button.onClick.AddListener(() => EquipItem(item));
+
+            // 마우스를 올리면 이 아이템의 툴팁이 뜨도록 연결
+            if (itemTooltip != null)
+            {
+                button.gameObject.AddComponent<ItemTooltipTrigger>().Setup(item, itemTooltip);
+            }
         }
     }
 

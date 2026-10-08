@@ -46,15 +46,29 @@ public class ItemData
     // 화면 표시용 이름 (예: "[Rare] 낡은 단검")
     public string DisplayName => $"[{rarity}] {itemName}";
 
-    // 능력치 설명 (예: "공격력 +10")
-    public string StatDescription
+    // 종류 이름 (예: "무기")
+    public string TypeName => itemType == ItemType.Weapon ? "무기" : "방어구";
+
+    // 이 아이템이 올려 주는 능력치 이름 (예: "공격력")
+    public string StatName => itemType == ItemType.Weapon ? "공격력" : "최대 체력";
+
+    // 등급 한글 이름 (예: "레어")
+    public string RarityName
     {
         get
         {
-            string statName = itemType == ItemType.Weapon ? "공격력" : "최대 체력";
-            return $"{statName} +{statValue}";
+            switch (rarity)
+            {
+                case ItemRarity.Magic:  return "매직";
+                case ItemRarity.Rare:   return "레어";
+                case ItemRarity.Unique: return "유니크";
+                default:                return "노멀";
+            }
         }
     }
+
+    // 능력치 설명 (예: "공격력 +10")
+    public string StatDescription => $"{StatName} +{statValue}";
 
     // 어두운 UI 배경에서 잘 보이는 등급별 글자 색
     public Color RarityColor

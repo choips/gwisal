@@ -9,7 +9,8 @@ using UnityEngine.InputSystem;   // 새 Input System (Mouse.current) 사용
 //  - 적(Enemy 태그)을 클릭하면 타겟으로 지정해 다가간 뒤 사거리 안에서 공격하고
 //  - 아이템(Item 태그)을 클릭하면 다가가서 줍습니다.
 // 마우스 우클릭 시 커서 방향으로 부적(투사체)을 발사합니다.
-// Q 키를 누르면 기력(MP)을 소모해 커서 위치에 광역 폭발을 일으킵니다.
+// Q 키를 누르고 있으면 커서 위치에 폭발 범위(조준 원)가 보이고,
+// Q 키를 떼면 기력(MP)을 소모해 그 위치에 광역 폭발을 일으킵니다. (조준 중 ESC: 취소)
 [RequireComponent(typeof(NavMeshAgent))]
 [RequireComponent(typeof(PlayerStats))]
 public class PlayerController : MonoBehaviour
@@ -75,6 +76,9 @@ public class PlayerController : MonoBehaviour
     [Tooltip("광역 스킬을 다시 쓸 수 있을 때까지의 대기 시간(초, 0이면 쿨타임 없음)")]
     public float aoeCooldown = 1f; // 광역 스킬 쿨타임
 
+    [Tooltip("Q 키를 누르고 있는 동안 폭발 범위를 바닥에 보여 줄 조준 원 (비워두면 조준 원 없이 Q를 뗄 때 바로 폭발)")]
+    [SerializeField] private AoEIndicator aoeIndicator; // 조준 원
+
     private NavMeshAgent agent;   // 캐릭터 길찾기 이동 컴포넌트
     private PlayerStats stats;    // 플레이어 능력치 (공격력 등)
     private Transform target;     // 현재 타겟팅 중인 대상 (적 또는 아이템, 없으면 null)
@@ -84,6 +88,8 @@ public class PlayerController : MonoBehaviour
     private float nextAttackTime = 0f; // 다음 공격이 가능한 시각 (게임 시작 후 경과 초)
     private float nextSkillTime = 0f;  // 다음 부적 스킬 사용이 가능한 시각
     private float nextAoeTime = 0f;    // 다음 광역 스킬 사용이 가능한 시각
+    private bool isAimingAoE;          // Q 키를 누르고 폭발 위치를 조준하는 중인지 여부
+    private AoESkill aoeTemplate;      // 폭발 프리팹의 AoESkill (조준 원 크기를 실제 폭발 반경과 맞추기 위해 읽음)
     private GameObject currentClickMarker; // 지금 바닥에 떠 있는 클릭 표시
 
     // 스킬바 UI가 읽어가는 남은 쿨타임(초, 0이면 사용 가능)
@@ -104,15 +110,21 @@ public class PlayerController : MonoBehaviour
         {
             mainCamera = Camera.main;
         }
+
+        if (aoePrefab != null)
+        {
+            aoeTemplate = aoePrefab.GetComponent<AoESkill>();
+        }
     }
 
-    // 사망 등으로 조작이 꺼질 때 타겟을 잊어서, 부활 후 이전 행동을 이어가지 않도록 함
+    // 사망 등으로 조작이 꺼질 때 타겟과 조준을 잊어서, 부활 후 이전 행동을 이어가지 않도록 함
     private void OnDisable()
     {
         target = null;
         targetEnemy = null;
         targetItem = null;
         isAttacking = false;
+        StopAimingAoE();
     }
 
     private void Update()
@@ -122,24 +134,85 @@ public class PlayerController : MonoBehaviour
         UpdateTargeting();
     }
 
-    // 키보드 입력 처리 (Q: 광역 스킬, 쿨타임이 지났을 때만)
+    // 키보드 입력 처리 (Q 누름: 조준 시작 → Q 뗌: 폭발, 조준 중 ESC: 취소)
     private void HandleKeyboardInput()
     {
         Keyboard keyboard = Keyboard.current;
         Mouse mouse = Mouse.current;
         if (keyboard == null || mouse == null) return;
 
-        if (keyboard.qKey.wasPressedThisFrame && Time.time >= nextAoeTime)
+        if (keyboard.qKey.wasPressedThisFrame)
         {
-            CastAoE(mouse.position.ReadValue());
+            isAimingAoE = true;
         }
+
+        if (!isAimingAoE) return;
+
+        if (keyboard.escapeKey.wasPressedThisFrame)
+        {
+            StopAimingAoE();
+            return;
+        }
+
+        Vector2 mousePosition = mouse.position.ReadValue();
+
+        // Q를 짧게 톡 치면 누름과 뗌이 거의 동시에 일어나 바로 폭발함 (예전 조작과 같은 느낌)
+        if (keyboard.qKey.wasReleasedThisFrame)
+        {
+            StopAimingAoE();
+            if (Time.time >= nextAoeTime)
+            {
+                CastAoE(mousePosition);
+            }
+            return;
+        }
+
+        UpdateAoEIndicator(mousePosition);
+    }
+
+    // 조준 중: 마우스가 가리키는 바닥에 폭발 범위 원을 표시 (바닥 밖을 가리키면 숨김)
+    private void UpdateAoEIndicator(Vector2 screenPosition)
+    {
+        if (aoeIndicator == null || aoeTemplate == null) return;
+
+        if (!TryGetGroundPoint(screenPosition, out Vector3 groundPoint))
+        {
+            aoeIndicator.Hide();
+            return;
+        }
+
+        // 쿨타임이 끝났고 기력도 충분해야 "사용 가능"(금색), 아니면 빨간색
+        bool isReady = Time.time >= nextAoeTime && stats != null && stats.currentMP >= aoeCost;
+        aoeIndicator.Show(groundPoint, aoeTemplate.explosionRadius, isReady);
+    }
+
+    // 조준 끝내기 (조준 원 숨김)
+    private void StopAimingAoE()
+    {
+        isAimingAoE = false;
+        if (aoeIndicator != null) aoeIndicator.Hide();
+    }
+
+    // 화면상의 마우스 좌표가 가리키는 바닥(Ground 레이어) 좌표 구하기 (바닥이 아니면 false)
+    // 적이 커서 아래에 있어도 Ground 레이어만 검사하므로 광선이 적을 통과해 바닥에 맞음
+    private bool TryGetGroundPoint(Vector2 screenPosition, out Vector3 groundPoint)
+    {
+        groundPoint = Vector3.zero;
+        if (mainCamera == null) return false;
+
+        Ray ray = mainCamera.ScreenPointToRay(screenPosition);
+        if (!Physics.Raycast(ray, out RaycastHit hit, maxRayDistance, groundLayer, QueryTriggerInteraction.Ignore))
+        {
+            return false;
+        }
+
+        groundPoint = hit.point;
+        return true;
     }
 
     // 기력을 소모해 마우스가 가리키는 바닥 위치에 광역 폭발 생성
     private void CastAoE(Vector2 screenPosition)
     {
-        if (mainCamera == null) return;
-
         if (aoePrefab == null)
         {
             Debug.LogWarning("PlayerController에 Aoe Prefab이 연결되지 않아 광역 스킬을 쓸 수 없습니다.");
@@ -147,17 +220,13 @@ public class PlayerController : MonoBehaviour
         }
 
         // a. 마우스가 가리키는 바닥 위치 찾기 (바닥이 아닌 곳이면 기력을 쓰지 않고 취소)
-        Ray ray = mainCamera.ScreenPointToRay(screenPosition);
-        if (!Physics.Raycast(ray, out RaycastHit hit, maxRayDistance, groundLayer, QueryTriggerInteraction.Ignore))
-        {
-            return;
-        }
+        if (!TryGetGroundPoint(screenPosition, out Vector3 groundPoint)) return;
 
         // b. 기력이 충분한지 확인하고 소모
         if (stats == null || !stats.UseMP(aoeCost)) return;
 
         // c. 바닥 위치에 광역 폭발 생성
-        GameObject explosion = Instantiate(aoePrefab, hit.point, Quaternion.identity);
+        GameObject explosion = Instantiate(aoePrefab, groundPoint, Quaternion.identity);
 
         // 폭발의 Start(데미지 처리)보다 먼저 실행되므로 치명타 판정에 시전자 정보를 쓸 수 있음
         if (explosion.TryGetComponent(out AoESkill aoe))
@@ -256,32 +325,26 @@ public class PlayerController : MonoBehaviour
     // 마우스가 가리키는 바닥 방향으로 몸을 돌리고 부적을 발사
     private void CastAmulet(Vector2 screenPosition)
     {
-        if (mainCamera == null) return;
-
         if (amuletPrefab == null)
         {
             Debug.LogWarning("PlayerController에 Amulet Prefab이 연결되지 않아 부적을 발사할 수 없습니다.");
             return;
         }
 
-        // a. 마우스가 가리키는 바닥 좌표 구하기 (적이 커서 아래에 있어도 광선이 통과해 바닥에 맞음)
-        Ray ray = mainCamera.ScreenPointToRay(screenPosition);
-        if (!Physics.Raycast(ray, out RaycastHit hit, maxRayDistance, groundLayer, QueryTriggerInteraction.Ignore))
-        {
-            return;
-        }
+        // a. 마우스가 가리키는 바닥 좌표 구하기
+        if (!TryGetGroundPoint(screenPosition, out Vector3 groundPoint)) return;
 
         // 스킬을 쓰는 동안에는 이동/공격을 멈춤 (이동 중이면 NavMeshAgent가 몸을 다시 진행 방향으로 돌려 버림)
         ClearTarget();
         agent.ResetPath();
 
         // b. 마우스 좌표를 바라보도록 회전 (높이를 플레이어와 같게 맞춰 Y축 회전만 적용)
-        Vector3 lookPoint = new Vector3(hit.point.x, transform.position.y, hit.point.z);
+        Vector3 lookPoint = new Vector3(groundPoint.x, transform.position.y, groundPoint.z);
         transform.LookAt(lookPoint);
 
         // c. 발사 위치에 부적 생성 (발사 위치에서 마우스 지점을 향하도록 수평 방향으로 회전)
         Vector3 spawnPosition = firePoint != null ? firePoint.position : transform.position;
-        Vector3 direction = hit.point - spawnPosition;
+        Vector3 direction = groundPoint - spawnPosition;
         direction.y = 0f;
         if (direction.sqrMagnitude < 0.0001f) direction = transform.forward;
 

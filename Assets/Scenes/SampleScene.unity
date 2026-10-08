@@ -3532,6 +3532,8 @@ MonoBehaviour:
   maxHP: 100
   currentHP: 0
   attackPower: 10
+  critChance: 0.1
+  critMultiplier: 2
   maxMP: 100
   currentMP: 0
   mpRegenPerSecond: 5
@@ -3543,6 +3545,9 @@ MonoBehaviour:
   xpBarFill: {fileID: 2089331449}
   levelText: {fileID: 1323904379}
   barSmoothSpeed: 10
+  damageTextPrefab: {fileID: 3157025288564402360, guid: da3cf388195c4b748b2f4899062edbfb, type: 3}
+  damageTextHeight: 1.5
+  damageTextColor: {r: 0.75, g: 0.35, b: 1, a: 1}
   respawnInvincibleTime: 2
   blinkInterval: 0.1
 --- !u!1 &1494356108

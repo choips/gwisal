@@ -58,6 +58,16 @@ public class PlayerStats : MonoBehaviour
     [Tooltip("바가 목표 길이로 부드럽게 따라가는 속도 (0이면 즉시 변경)")]
     [SerializeField] private float barSmoothSpeed = 10f;
 
+    [Header("피격 데미지 숫자")]
+    [Tooltip("맞았을 때 머리 위에 띄울 데미지 숫자 프리팹 (적과 같은 DamageText 프리팹)")]
+    [SerializeField] private GameObject damageTextPrefab;
+
+    [Tooltip("플레이어 중심에서 숫자가 나타날 높이")]
+    [SerializeField] private float damageTextHeight = 1.5f;
+
+    [Tooltip("플레이어가 받은 데미지 숫자의 색 (치명타 빨강과 구분)")]
+    [SerializeField] private Color damageTextColor = new Color(0.75f, 0.35f, 1f); // 보라색
+
     [Header("부활")]
     [Tooltip("부활 직후 피해를 받지 않는 시간(초)")]
     [SerializeField] private float respawnInvincibleTime = 2f; // 부활 후 무적 시간
@@ -256,9 +266,27 @@ public class PlayerStats : MonoBehaviour
         currentHP = Mathf.Max(currentHP - damage, 0f);
         Debug.Log($"플레이어 피격! 남은 체력: {currentHP} / {maxHP}");
 
+        // 마지막 일격에도 숫자가 보이도록 사망 처리보다 먼저 생성
+        ShowDamageText(damage);
+
         if (currentHP <= 0f)
         {
             Die();
+        }
+    }
+
+    // 머리 위에 받은 데미지 숫자 띄우기
+    private void ShowDamageText(float damage)
+    {
+        if (damageTextPrefab == null) return;
+
+        Vector3 spawnPosition = transform.position + Vector3.up * damageTextHeight;
+        GameObject textObject = Instantiate(damageTextPrefab, spawnPosition, Quaternion.identity);
+
+        if (textObject.TryGetComponent(out DamageText damageText))
+        {
+            damageText.Setup(damage);
+            damageText.SetColor(damageTextColor);
         }
     }
 

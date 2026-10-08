@@ -71,6 +71,15 @@ public class DamageText : MonoBehaviour
         transform.position += new Vector3(Random.Range(-randomOffsetX, randomOffsetX), 0f, 0f);
     }
 
+    // 숫자 색을 바꿈 (플레이어 피격처럼 적 피격과 구분할 때 Setup 뒤에 호출)
+    public void SetColor(Color color)
+    {
+        if (text != null)
+        {
+            text.color = color;
+        }
+    }
+
     private void Update()
     {
         elapsed += Time.deltaTime;

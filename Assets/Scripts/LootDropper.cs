@@ -1,12 +1,50 @@
+using System.Collections.Generic;
 using UnityEngine;
 
+// 드랍 테이블의 한 줄: 어떤 아이템이 얼마나 자주 떨어지는지
+[System.Serializable]
+public class LootEntry
+{
+    [Tooltip("떨어질 아이템 정보 (등급은 드랍할 때 랜덤으로 정해지므로 여기 등급은 무시됨)")]
+    public ItemData item = new ItemData();
+
+    [Tooltip("나올 확률 가중치 (클수록 자주 나옴, 0이면 안 나옴)")]
+    public float weight = 10f; // 가중치
+
+    public LootEntry() { }
+
+    public LootEntry(string itemName, ItemType itemType, float statValue, float weight)
+    {
+        item = new ItemData { itemName = itemName, itemType = itemType, statValue = statValue };
+        this.weight = weight;
+    }
+}
+
 // 디아블로 스타일 아이템 드랍 스크립트
-// 지정한 위치에 아이템을 생성하고, 위로 튀어 오르게 한 뒤 등급에 따라 색을 바꿉니다.
+// 드랍 테이블에서 아이템 종류를 무작위로 고르고(가중치 확률), 등급도 무작위로 정한 뒤
+// 지정한 위치에 생성해서 위로 튀어 오르게 하고 등급에 따라 색을 바꿉니다.
 public class LootDropper : MonoBehaviour
 {
     [Header("드랍 아이템")]
-    [Tooltip("드랍할 아이템 프리팹 (Rigidbody와 Collider가 붙어 있어야 합니다)")]
+    [Tooltip("바닥에 떨어질 아이템 모양 프리팹 (Item 스크립트, Rigidbody, Collider가 붙어 있어야 합니다)")]
     public GameObject itemPrefab;
+
+    [Tooltip("떨어질 수 있는 아이템 목록 (비워 두면 Item Prefab에 설정된 아이템이 그대로 떨어짐)\n"
+           + "가중치 예: 30 / 20 / 10이면 각각 50% / 33% / 17% 확률")]
+    [SerializeField] private List<LootEntry> dropTable = new List<LootEntry>
+    {
+        // 무기 (공격력)
+        new LootEntry("낡은 단검", ItemType.Weapon, 5f, 30f),
+        new LootEntry("복숭아나무 검", ItemType.Weapon, 8f, 20f),
+        new LootEntry("도사의 지팡이", ItemType.Weapon, 11f, 10f),
+        new LootEntry("벼락 맞은 대추나무 검", ItemType.Weapon, 15f, 5f),
+
+        // 방어구 (최대 체력)
+        new LootEntry("무명 도포", ItemType.Armor, 15f, 30f),
+        new LootEntry("가죽 갑옷", ItemType.Armor, 20f, 20f),
+        new LootEntry("비단 도포", ItemType.Armor, 30f, 10f),
+        new LootEntry("사슬 갑옷", ItemType.Armor, 40f, 5f),
+    };
 
     [Header("튀어 오르는 힘")]
     [Tooltip("위쪽으로 가하는 힘")]
@@ -48,13 +86,21 @@ public class LootDropper : MonoBehaviour
         ItemRarity rarity = RollRarity();
         ApplyRarityColor(item, rarity);
         item.name = $"{itemPrefab.name} ({rarity})";
-        Debug.Log($"아이템 드랍! 등급: {rarity}");
 
-        // 아이템 데이터에 등급을 기록하고, 등급에 따라 능력치를 강화
+        // 드랍 테이블에서 고른 아이템으로 내용을 바꾸고, 등급을 기록한 뒤 등급에 따라 능력치를 강화
         if (item.TryGetComponent(out Item itemComponent))
         {
+            LootEntry entry = PickEntry();
+            if (entry != null)
+            {
+                // 프리팹 원본이나 드랍 테이블이 바뀌지 않도록 복사본을 넣음
+                itemComponent.data = new ItemData(entry.item);
+            }
+
             itemComponent.data.rarity = rarity;
             itemComponent.data.statValue = Mathf.Round(itemComponent.data.statValue * GetStatMultiplier(rarity));
+            item.name = $"{itemComponent.data.itemName} ({rarity})";
+            Debug.Log($"아이템 드랍! {itemComponent.data.DisplayName} ({itemComponent.data.StatDescription})");
         }
 
         // 프리팹에 DroppedItem이 없어도 착지 후 고정되도록 자동으로 붙여 줌
@@ -84,6 +130,36 @@ public class LootDropper : MonoBehaviour
 
         // 공중에서 회전하며 떨어지도록 랜덤 회전력 추가
         rb.AddTorque(Random.insideUnitSphere * spinForce, ForceMode.Impulse);
+    }
+
+    // 드랍 테이블에서 가중치 확률로 아이템 하나 고르기 (고를 수 있는 것이 없으면 null)
+    // 예: 가중치 30, 20, 10 → 0~60 사이 숫자를 뽑아 0~30이면 첫째, 30~50이면 둘째, 50~60이면 셋째
+    private LootEntry PickEntry()
+    {
+        float totalWeight = 0f;
+        foreach (LootEntry entry in dropTable)
+        {
+            if (IsValidEntry(entry)) totalWeight += entry.weight;
+        }
+        if (totalWeight <= 0f) return null;
+
+        float roll = Random.value * totalWeight;
+        LootEntry lastValid = null; // 계산 오차로 끝까지 못 고른 경우를 대비한 마지막 후보
+        foreach (LootEntry entry in dropTable)
+        {
+            if (!IsValidEntry(entry)) continue;
+
+            lastValid = entry;
+            roll -= entry.weight;
+            if (roll < 0f) return entry;
+        }
+        return lastValid;
+    }
+
+    // 이름이 있고 가중치가 0보다 큰 줄만 드랍 후보로 인정
+    private static bool IsValidEntry(LootEntry entry)
+    {
+        return entry != null && entry.item != null && !entry.item.IsEmpty && entry.weight > 0f;
     }
 
     // 확률에 따라 아이템 등급 결정

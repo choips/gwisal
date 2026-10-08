@@ -24,6 +24,13 @@ public class DamageText : MonoBehaviour
     [Tooltip("원래 크기로 돌아오는 데 걸리는 시간(초)")]
     [SerializeField] private float popDuration = 0.15f;
 
+    [Header("치명타(Critical) 표시")]
+    [Tooltip("치명타 숫자의 색")]
+    [SerializeField] private Color criticalColor = new Color(1f, 0.15f, 0.1f);
+
+    [Tooltip("치명타 숫자의 크기 배율 (1.6 = 1.6배)")]
+    [SerializeField] private float criticalScale = 1.6f;
+
     private TMP_Text text;          // 숫자를 표시할 텍스트 컴포넌트
     private Camera mainCamera;      // 텍스트가 항상 바라볼 카메라
     private Vector3 originalScale;  // 프리팹에 설정된 원래 크기
@@ -39,13 +46,26 @@ public class DamageText : MonoBehaviour
         Destroy(gameObject, lifeTime);
     }
 
-    // 전달받은 데미지를 텍스트로 표시
-    public void Setup(float damageAmount)
+    // 전달받은 데미지를 텍스트로 표시 (치명타면 크고 빨갛게, 뒤에 느낌표)
+    public void Setup(float damageAmount, bool isCritical = false)
     {
         if (text != null)
         {
             // 소수점 없이 정수로 표시
-            text.text = Mathf.RoundToInt(damageAmount).ToString();
+            string number = Mathf.RoundToInt(damageAmount).ToString();
+            text.text = isCritical ? number + "!" : number;
+
+            if (isCritical)
+            {
+                text.color = criticalColor;
+            }
+        }
+
+        if (isCritical)
+        {
+            // Update의 팝 효과가 originalScale 기준이므로, 기준 크기 자체를 키움
+            originalScale *= criticalScale;
+            transform.localScale = originalScale * popScale;
         }
 
         transform.position += new Vector3(Random.Range(-randomOffsetX, randomOffsetX), 0f, 0f);

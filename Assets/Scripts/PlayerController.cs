@@ -150,7 +150,13 @@ public class PlayerController : MonoBehaviour
         if (stats == null || !stats.UseMP(aoeCost)) return;
 
         // c. 바닥 위치에 광역 폭발 생성
-        Instantiate(aoePrefab, hit.point, Quaternion.identity);
+        GameObject explosion = Instantiate(aoePrefab, hit.point, Quaternion.identity);
+
+        // 폭발의 Start(데미지 처리)보다 먼저 실행되므로 치명타 판정에 시전자 정보를 쓸 수 있음
+        if (explosion.TryGetComponent(out AoESkill aoe))
+        {
+            aoe.SetOwner(stats);
+        }
 
         nextAoeTime = Time.time + aoeCooldown;
     }
@@ -251,7 +257,13 @@ public class PlayerController : MonoBehaviour
         direction.y = 0f;
         if (direction.sqrMagnitude < 0.0001f) direction = transform.forward;
 
-        Instantiate(amuletPrefab, spawnPosition, Quaternion.LookRotation(direction));
+        GameObject amulet = Instantiate(amuletPrefab, spawnPosition, Quaternion.LookRotation(direction));
+
+        // 치명타 판정을 할 수 있도록 시전자(플레이어)를 알려 줌
+        if (amulet.TryGetComponent(out AmuletProjectile projectile))
+        {
+            projectile.SetOwner(stats);
+        }
 
         nextSkillTime = Time.time + skillCooldown;
     }
@@ -393,9 +405,9 @@ public class PlayerController : MonoBehaviour
     {
         if (targetEnemy == null || stats == null) return;
 
-        float damage = stats.attackPower;
-        Debug.Log($"적중! {damage}의 데미지");
-        targetEnemy.TakeDamage(damage);
+        float damage = stats.RollDamage(stats.attackPower, out bool isCritical);
+        Debug.Log(isCritical ? $"치명타! {damage}의 데미지" : $"적중! {damage}의 데미지");
+        targetEnemy.TakeDamage(damage, isCritical);
 
         // attackRate가 0 이하이면 0으로 나누게 되므로 최소값을 보장
         nextAttackTime = Time.time + (1f / Mathf.Max(attackRate, 0.01f));

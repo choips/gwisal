@@ -146,7 +146,8 @@ public class Enemy : MonoBehaviour
     }
 
     // 데미지를 받아 체력을 깎고, 0 이하가 되면 사망 처리
-    public void TakeDamage(float damage)
+    // isCritical: 치명타면 데미지 숫자를 크고 빨갛게 표시
+    public void TakeDamage(float damage, bool isCritical = false)
     {
         if (isDead) return;
 
@@ -154,7 +155,7 @@ public class Enemy : MonoBehaviour
         Debug.Log($"{gameObject.name} 남은 체력: {Mathf.Max(currentHealth, 0f)} / {maxHealth}");
 
         // 마지막 일격에도 숫자가 보이도록 사망 처리보다 먼저 생성
-        ShowDamageText(damage);
+        ShowDamageText(damage, isCritical);
 
         if (currentHealth <= 0f)
         {
@@ -163,7 +164,7 @@ public class Enemy : MonoBehaviour
     }
 
     // 머리 위에 데미지 숫자 띄우기
-    private void ShowDamageText(float damage)
+    private void ShowDamageText(float damage, bool isCritical)
     {
         if (damageTextPrefab == null) return;
 
@@ -172,7 +173,7 @@ public class Enemy : MonoBehaviour
 
         if (textObject.TryGetComponent(out DamageText damageText))
         {
-            damageText.Setup(damage);
+            damageText.Setup(damage, isCritical);
         }
         else
         {

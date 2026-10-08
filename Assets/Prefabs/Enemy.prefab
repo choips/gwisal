@@ -86,8 +86,6 @@ GameObject:
   - component: {fileID: 7425955303465733258}
   - component: {fileID: 6807328944231900639}
   - component: {fileID: 3742038670459378227}
-  - component: {fileID: 7089703306964794702}
-  - component: {fileID: 7617924889689426087}
   m_Layer: 0
   m_Name: Fill
   m_TagString: Untagged
@@ -152,36 +150,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!223 &7089703306964794702
-Canvas:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5004285517615601205}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_RenderMode: 2
-  m_Camera: {fileID: 0}
-  m_PlaneDistance: 100
-  m_PixelPerfect: 0
-  m_ReceivesEvents: 1
-  m_OverrideSorting: 0
-  m_OverridePixelPerfect: 0
-  m_SortingBucketNormalizedSize: 0
-  m_VertexColorAlwaysGammaSpace: 0
-  m_AdditionalShaderChannelsFlag: 0
-  m_UpdateRectTransformForStandalone: 0
-  m_SortingLayerID: 0
-  m_SortingOrder: 0
-  m_TargetDisplay: 0
 --- !u!114 &7617924889689426087
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5004285517615601205}
+  m_GameObject: {fileID: 8614667841246218426}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: edae64eaf150a8e41bc9f0b79060fefb, type: 3}
@@ -385,6 +360,7 @@ GameObject:
   - component: {fileID: 7803477195297430867}
   - component: {fileID: 186872042358918225}
   - component: {fileID: 6310641794156827362}
+  - component: {fileID: 7617924889689426087}
   m_Layer: 0
   m_Name: HealthBarCanvas
   m_TagString: Untagged

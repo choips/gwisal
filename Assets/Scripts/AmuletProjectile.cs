@@ -18,6 +18,13 @@ public class AmuletProjectile : MonoBehaviour
     [SerializeField] private float lifeTime = 3f;
 
     private bool hasHit; // 이미 적을 맞혔는지 여부 (한 프레임에 여러 적과 겹쳐도 한 번만 처리)
+    private PlayerStats owner; // 부적을 던진 플레이어 (치명타 판정용, 없으면 치명타 없음)
+
+    // 발사한 플레이어를 기억 (PlayerController가 생성 직후 호출)
+    public void SetOwner(PlayerStats stats)
+    {
+        owner = stats;
+    }
 
     private void Start()
     {
@@ -41,8 +48,12 @@ public class AmuletProjectile : MonoBehaviour
         if (enemy == null) return;
 
         hasHit = true;
-        Debug.Log($"부적 적중! {other.name}에게 {damage}의 데미지");
-        enemy.TakeDamage(damage);
+
+        bool isCritical = false;
+        float finalDamage = owner != null ? owner.RollDamage(damage, out isCritical) : damage;
+
+        Debug.Log($"부적 {(isCritical ? "치명타" : "적중")}! {other.name}에게 {finalDamage}의 데미지");
+        enemy.TakeDamage(finalDamage, isCritical);
 
         Destroy(gameObject);
     }

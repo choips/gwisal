@@ -18,6 +18,13 @@ public class PlayerStats : MonoBehaviour
     public float currentHP;             // 현재 체력
     public float attackPower = 10f;     // 공격력 (한 번 공격 시 주는 데미지)
 
+    [Header("치명타(Critical)")]
+    [Tooltip("치명타가 터질 확률 (0.1 = 10%)")]
+    [Range(0f, 1f)] public float critChance = 0.1f;   // 치명타 확률
+
+    [Tooltip("치명타일 때 데미지에 곱해지는 배율 (2 = 2배)")]
+    public float critMultiplier = 2f;                 // 치명타 배율
+
     [Header("기력(MP)")]
     public float maxMP = 100f;          // 최대 기력
     public float currentMP;             // 현재 기력
@@ -116,6 +123,15 @@ public class PlayerStats : MonoBehaviour
         if (IsDead || currentMP >= maxMP) return;
 
         currentMP = Mathf.Min(currentMP + mpRegenPerSecond * Time.deltaTime, maxMP);
+    }
+
+    // 치명타 판정: 확률에 당첨되면 배율만큼 커진 데미지를 돌려주고 isCritical = true
+    // (근접 공격, 부적, 폭발 모두 이 함수로 최종 데미지를 정함)
+    public float RollDamage(float baseDamage, out bool isCritical)
+    {
+        // System.Random과 이름이 겹치므로 UnityEngine.Random을 명시
+        isCritical = UnityEngine.Random.value < critChance;
+        return isCritical ? baseDamage * critMultiplier : baseDamage;
     }
 
     // 기력 소모: 충분하면 소모하고 true, 부족하면 false

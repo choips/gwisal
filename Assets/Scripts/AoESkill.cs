@@ -32,6 +32,13 @@ public class AoESkill : MonoBehaviour
     private Color startEmission;     // 처음 발광 색상
     private Vector3 targetScale;     // 최종 크기
     private float elapsed;           // 생성 후 지난 시간
+    private PlayerStats owner;       // 폭발을 일으킨 플레이어 (치명타 판정용, 없으면 치명타 없음)
+
+    // 시전한 플레이어를 기억 (PlayerController가 생성 직후, Start보다 먼저 호출)
+    public void SetOwner(PlayerStats stats)
+    {
+        owner = stats;
+    }
 
     private void Start()
     {
@@ -74,10 +81,13 @@ public class AoESkill : MonoBehaviour
             Enemy enemy = hit.GetComponentInParent<Enemy>();
             if (enemy == null || !damagedEnemies.Add(enemy)) continue;
 
-            enemy.TakeDamage(damage);
+            // 적마다 치명타를 따로 판정
+            bool isCritical = false;
+            float finalDamage = owner != null ? owner.RollDamage(damage, out isCritical) : damage;
+            enemy.TakeDamage(finalDamage, isCritical);
         }
 
-        Debug.Log($"부적 폭발! 적 {damagedEnemies.Count}명에게 {damage}의 데미지");
+        Debug.Log($"부적 폭발! 적 {damagedEnemies.Count}명에게 기본 {damage}의 데미지");
     }
 
     private void Update()

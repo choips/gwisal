@@ -176,6 +176,17 @@ public class InventoryManager : MonoBehaviour
         }
     }
 
+    // 가방에 든 특정 종류 아이템의 개수 (물약 칸 UI가 남은 물약 수를 표시할 때 사용)
+    public int CountItems(ItemType type)
+    {
+        int count = 0;
+        foreach (ItemData item in inventory)
+        {
+            if (item.itemType == type) count++;
+        }
+        return count;
+    }
+
     // 단축키: 가방에서 처음 찾은 기력 물약을 마심
     public void DrinkFirstPotion()
     {

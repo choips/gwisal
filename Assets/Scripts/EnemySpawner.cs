@@ -5,6 +5,7 @@ using UnityEngine.AI;            // NavMesh.SamplePosition 사용
 // 몬스터 스포너
 // 스포너 위치를 중심으로 spawnRadius 안의 NavMesh 위 랜덤 위치에
 // spawnInterval마다 적을 생성하며, 동시에 maxEnemies마리까지만 유지합니다.
+// 플레이어와 minDistanceFromPlayer보다 가까운 위치에는 생성하지 않습니다 (눈앞에 갑자기 나타나는 것 방지).
 public class EnemySpawner : MonoBehaviour
 {
     [Header("스폰 설정")]
@@ -20,6 +21,9 @@ public class EnemySpawner : MonoBehaviour
     [Tooltip("이 스포너가 동시에 유지할 최대 적 수")]
     public int maxEnemies = 5; // 최대 몬스터 수
 
+    [Tooltip("플레이어와 이 거리(m)보다 가까운 곳에는 적을 생성하지 않음")]
+    public float minDistanceFromPlayer = 6f; // 플레이어와의 최소 거리
+
     [Header("NavMesh 위치 탐색")]
     [Tooltip("랜덤 위치에서 이 거리 안의 NavMesh 지점을 찾음")]
     [SerializeField] private float navMeshSampleDistance = 2f;
@@ -32,6 +36,8 @@ public class EnemySpawner : MonoBehaviour
     [SerializeField] private int currentEnemyCount;
 
     public int CurrentEnemyCount => currentEnemyCount;
+
+    private Transform player; // 거리 확인용 플레이어 (처음 필요할 때 씬에서 찾음)
 
     private void Start()
     {
@@ -62,9 +68,13 @@ public class EnemySpawner : MonoBehaviour
     // NavMesh 위의 랜덤 위치를 찾아 적 1마리 생성
     private void TrySpawnEnemy()
     {
-        if (!TryGetRandomNavMeshPosition(out Vector3 spawnPosition))
+        if (!TryGetRandomNavMeshPosition(out Vector3 spawnPosition, out bool foundOnlyNearPlayer))
         {
-            Debug.LogWarning($"{gameObject.name}: 스폰 반경 안에서 NavMesh 위치를 찾지 못했습니다. 스포너가 바닥 근처에 있는지 확인해 주세요.");
+            // 플레이어가 스폰 범위 한가운데에 있어 이번에 자리를 못 찾은 것은 정상이므로 조용히 다음 주기에 다시 시도
+            if (!foundOnlyNearPlayer)
+            {
+                Debug.LogWarning($"{gameObject.name}: 스폰 반경 안에서 NavMesh 위치를 찾지 못했습니다. 스포너가 바닥 근처에 있는지 확인해 주세요.");
+            }
             return;
         }
 
@@ -85,9 +95,13 @@ public class EnemySpawner : MonoBehaviour
         currentEnemyCount++;
     }
 
-    // 스폰 반경 안의 랜덤 위치 중 NavMesh 위에 있는 지점을 찾음
-    private bool TryGetRandomNavMeshPosition(out Vector3 result)
+    // 스폰 반경 안의 랜덤 위치 중 NavMesh 위에 있고 플레이어와 충분히 떨어진 지점을 찾음
+    // foundOnlyNearPlayer: NavMesh 위 지점은 찾았지만 전부 플레이어와 너무 가까워서 실패했으면 true
+    private bool TryGetRandomNavMeshPosition(out Vector3 result, out bool foundOnlyNearPlayer)
     {
+        foundOnlyNearPlayer = false;
+        Transform playerTransform = GetPlayer();
+
         for (int i = 0; i < maxSpawnAttempts; i++)
         {
             // 구 안의 랜덤 위치에서 높이 성분은 버리고 스포너와 같은 높이의 평면 위 점으로 사용
@@ -95,15 +109,38 @@ public class EnemySpawner : MonoBehaviour
             randomOffset.y = 0f;
             Vector3 candidate = transform.position + randomOffset;
 
-            if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, navMeshSampleDistance, NavMesh.AllAreas))
+            if (!NavMesh.SamplePosition(candidate, out NavMeshHit hit, navMeshSampleDistance, NavMesh.AllAreas)) continue;
+
+            if (playerTransform != null && GetFlatDistance(hit.position, playerTransform.position) < minDistanceFromPlayer)
             {
-                result = hit.position;
-                return true;
+                foundOnlyNearPlayer = true;
+                continue;
             }
+
+            result = hit.position;
+            return true;
         }
 
         result = Vector3.zero;
         return false;
+    }
+
+    // 높이 차이는 무시한 바닥 기준 거리
+    private static float GetFlatDistance(Vector3 a, Vector3 b)
+    {
+        a.y = 0f;
+        b.y = 0f;
+        return Vector3.Distance(a, b);
+    }
+
+    private Transform GetPlayer()
+    {
+        if (player == null)
+        {
+            PlayerStats stats = FindFirstObjectByType<PlayerStats>();
+            if (stats != null) player = stats.transform;
+        }
+        return player;
     }
 
     // 이 스포너가 만든 적이 죽었을 때 Enemy가 호출
@@ -120,6 +157,13 @@ public class EnemySpawner : MonoBehaviour
 
         // 스포너 중심 위치 표시
         Gizmos.DrawSphere(transform.position, 0.3f);
+
+        // Play 중에는 플레이어 주변의 "생성 금지" 범위를 노란 원으로 표시
+        if (Application.isPlaying && player != null)
+        {
+            Gizmos.color = Color.yellow;
+            DrawCircle(player.position, minDistanceFromPlayer, 48);
+        }
     }
 
     // 선택했을 때는 반투명한 구로 범위를 한 번 더 강조

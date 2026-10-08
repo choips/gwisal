@@ -35,6 +35,12 @@ public class PlayerController : MonoBehaviour
     [Tooltip("클릭 지점 주변에서 NavMesh 위의 유효한 지점을 찾는 반경")]
     [SerializeField] private float navMeshSampleRadius = 1f;
 
+    [Tooltip("바닥을 클릭한 위치에 띄울 표시 이펙트 프리팹 (비워두면 생략)")]
+    [SerializeField] private GameObject clickMarkerPrefab;
+
+    [Tooltip("표시 이펙트를 확실히 지우기 위한 최대 유지 시간(초)")]
+    [SerializeField] private float clickMarkerMaxLifetime = 1f;
+
     [Header("공격 설정")]
     [Tooltip("이 거리 안에 적이 들어오면 멈추고 공격합니다")]
     public float attackRange = 2.0f; // 공격 사거리
@@ -78,6 +84,7 @@ public class PlayerController : MonoBehaviour
     private float nextAttackTime = 0f; // 다음 공격이 가능한 시각 (게임 시작 후 경과 초)
     private float nextSkillTime = 0f;  // 다음 부적 스킬 사용이 가능한 시각
     private float nextAoeTime = 0f;    // 다음 광역 스킬 사용이 가능한 시각
+    private GameObject currentClickMarker; // 지금 바닥에 떠 있는 클릭 표시
 
     // 스킬바 UI가 읽어가는 남은 쿨타임(초, 0이면 사용 가능)
     public float AmuletCooldownRemaining => Mathf.Max(0f, nextSkillTime - Time.time);

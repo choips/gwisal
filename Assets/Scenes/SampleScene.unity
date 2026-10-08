@@ -3387,6 +3387,8 @@ MonoBehaviour:
   maxRayDistance: 100
   moveWhileHolding: 1
   navMeshSampleRadius: 1
+  clickMarkerPrefab: {fileID: 2591833224740589462, guid: ef212a6cf54147042b37c9cf5b37405c, type: 3}
+  clickMarkerMaxLifetime: 1
   attackRange: 2
   attackRate: 1
   rotationSpeed: 10

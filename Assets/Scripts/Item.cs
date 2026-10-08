@@ -9,24 +9,23 @@ public class Item : MonoBehaviour
 
     private bool isPickedUp; // 이미 주운 아이템인지 여부 (중복 획득 방지)
 
-    // 아이템 획득 처리
+    // 아이템 획득 처리 (가방이 가득 차 있으면 바닥에 그대로 남김)
     public void PickUp()
     {
         if (isPickedUp) return;
-        isPickedUp = true;
-
-        Debug.Log($"아이템 획득: {data.DisplayName} ({data.StatDescription})");
 
         if (InventoryManager.Instance != null)
         {
             // 이 오브젝트는 곧 파괴되므로 인벤토리에는 복사본을 넣음
-            InventoryManager.Instance.AddItem(new ItemData(data));
+            if (!InventoryManager.Instance.AddItem(new ItemData(data))) return;
         }
         else
         {
             Debug.LogWarning("씬에 InventoryManager가 없어 인벤토리에 추가하지 못했습니다.");
         }
 
+        isPickedUp = true;
+        Debug.Log($"아이템 획득: {data.DisplayName} ({data.StatDescription})");
         Destroy(gameObject);
     }
 }

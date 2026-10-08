@@ -2,12 +2,13 @@ using System.Collections.Generic;
 using TMPro;                     // TMP_Text, TextMeshProUGUI 사용
 using UnityEngine;
 using UnityEngine.InputSystem;   // 새 Input System (Keyboard.current) 사용
-using UnityEngine.UI;            // Button 사용
+using UnityEngine.UI;            // Button, GridLayoutGroup 사용
 
 // 인벤토리 + 장비 관리자 (싱글톤)
 // - 어디서든 InventoryManager.Instance로 접근해서 아이템을 추가할 수 있습니다.
 // - 'I' 키로 인벤토리 UI 패널을 열고 닫습니다.
-// - 아이템마다 버튼을 만들어 목록에 나열하고, 버튼을 클릭하면 그 아이템을 장착합니다.
+// - 가방은 디아블로식 격자(기본 6×5 = 30칸)로 보여 주고, 칸을 클릭하면 그 아이템을 장착합니다.
+// - 가방이 가득 차면 더 이상 아이템을 주울 수 없습니다.
 // - 무기·방어구 장비 칸 버튼을 클릭하면 장착 중인 장비를 해제해 가방으로 돌려보냅니다.
 // - 기력 물약은 같은 것끼리 한 칸으로 묶어 보여 주고, 클릭하거나 단축키(1)를 누르면 마십니다.
 public class InventoryManager : MonoBehaviour
@@ -23,13 +24,7 @@ public class InventoryManager : MonoBehaviour
     [Tooltip("'I' 키로 열고 닫을 인벤토리 패널")]
     [SerializeField] private GameObject inventoryPanel;
 
-    [Tooltip("아이템 버튼들이 생성될 부모 (Scroll View의 Content)")]
-    [SerializeField] private Transform itemListParent;
-
-    [Tooltip("아이템 한 칸으로 쓸 버튼 프리팹 (자식에 TextMeshPro 텍스트 포함)")]
-    [SerializeField] private Button itemButtonPrefab;
-
-    [Tooltip("(선택) 장착 중인 장비와 보유 개수를 표시할 텍스트")]
+    [Tooltip("(선택) 장착 중인 장비와 가방 사용 칸 수를 표시할 텍스트 (이 글꼴을 가방 칸 글자에도 사용)")]
     [SerializeField] private TextMeshProUGUI equipmentText;
 
     [Tooltip("(선택) 아이템 버튼에 마우스를 올리면 띄울 툴팁 창")]
@@ -45,6 +40,30 @@ public class InventoryManager : MonoBehaviour
     [Tooltip("장비 칸이 비어 있을 때 글자 색")]
     [SerializeField] private Color emptySlotColor = new Color(0.6f, 0.6f, 0.6f); // 회색
 
+    [Header("격자 가방")]
+    [Tooltip("가방 칸들이 자동으로 만들어질 부모 (InventoryPanel 안의 빈 오브젝트 BagGrid)")]
+    [SerializeField] private RectTransform bagGrid;
+
+    [Tooltip("한 줄에 놓을 칸 수 (가로)")]
+    [SerializeField] private int bagColumns = 6;
+
+    [Tooltip("가방 전체 칸 수 (6열이면 30칸 = 5줄)")]
+    [SerializeField] private int bagCapacity = 30;
+
+    [Tooltip("칸 하나의 크기 (픽셀)")]
+    [SerializeField] private float slotSize = 56f;
+
+    [Tooltip("칸 사이 간격 (픽셀)")]
+    [SerializeField] private float slotSpacing = 4f;
+
+    [Tooltip("칸 배경 색")]
+    [SerializeField] private Color slotColor = new Color(0.12f, 0.12f, 0.15f, 0.95f);
+
+    [Header("아이템 아이콘 (비워 두면 검/갑/약 글자로 표시)")]
+    [SerializeField] private Sprite weaponIcon;
+    [SerializeField] private Sprite armorIcon;
+    [SerializeField] private Sprite potionIcon;
+
     [Header("설정")]
     [Tooltip("게임 시작 시 인벤토리를 열어 둘지 여부")]
     [SerializeField] private bool openOnStart = false;
@@ -59,8 +78,14 @@ public class InventoryManager : MonoBehaviour
 
     private PlayerStats playerStats; // 장착 시 능력치를 바꿀 플레이어
 
+    private readonly List<ItemSlotUI> bagSlots = new List<ItemSlotUI>(); // 코드로 만든 가방 칸들
+
     public ItemData EquippedWeapon => equippedWeapon;
     public ItemData EquippedArmor => equippedArmor;
+
+    // 지금 가방에서 차지하고 있는 칸 수 (같은 물약 묶음은 1칸)
+    public int UsedSlotCount => GetBagEntries().Count;
+    public int BagCapacity => bagCapacity;
 
     private void Awake()
     {
@@ -126,13 +151,30 @@ public class InventoryManager : MonoBehaviour
         inventoryPanel.SetActive(!inventoryPanel.activeSelf);
     }
 
-    // 아이템을 가방에 추가하고 UI 갱신
-    public void AddItem(ItemData item)
+    // 아이템을 가방에 추가하고 UI 갱신 (가방이 가득 차서 못 넣으면 false)
+    public bool AddItem(ItemData item)
     {
-        if (item == null || item.IsEmpty) return;
+        if (item == null || item.IsEmpty) return false;
+
+        if (!HasRoomFor(item))
+        {
+            Debug.Log($"가방이 가득 찼습니다! ({bagCapacity}칸) {item.DisplayName}을(를) 주울 수 없습니다.");
+            return false;
+        }
 
         inventory.Add(item);
         RefreshUI();
+        return true;
+    }
+
+    // 이 아이템을 가방에 넣을 자리가 있는지 (같은 이름 물약 묶음이 이미 있으면 칸이 늘지 않으므로 항상 가능)
+    public bool HasRoomFor(ItemData item)
+    {
+        if (item.IsConsumable && inventory.Exists(other => other.IsConsumable && other.itemName == item.itemName))
+        {
+            return true;
+        }
+        return UsedSlotCount < bagCapacity;
     }
 
     // 가방 전체를 주어진 목록으로 교체하고 UI 갱신 (세이브 불러오기용)
@@ -148,6 +190,12 @@ public class InventoryManager : MonoBehaviour
                     inventory.Add(item);
                 }
             }
+        }
+
+        // 저장된 아이템을 버리지 않도록 그대로 불러오되, 칸이 모자라면 넘친 아이템은 칸에 보이지 않음
+        if (UsedSlotCount > bagCapacity)
+        {
+            Debug.LogWarning($"불러온 아이템이 가방 칸 수({bagCapacity})보다 많아 일부가 보이지 않습니다.");
         }
         RefreshUI();
     }
@@ -242,6 +290,7 @@ public class InventoryManager : MonoBehaviour
     public void UnequipWeapon()
     {
         if (equippedWeapon == null) return;
+        if (!CheckRoomToUnequip(equippedWeapon)) return;
 
         PlayerStats stats = GetUsablePlayerStats();
         if (stats == null) return;
@@ -254,12 +303,22 @@ public class InventoryManager : MonoBehaviour
     public void UnequipArmor()
     {
         if (equippedArmor == null) return;
+        if (!CheckRoomToUnequip(equippedArmor)) return;
 
         PlayerStats stats = GetUsablePlayerStats();
         if (stats == null) return;
 
         RemoveArmor(stats);
         RefreshUI();
+    }
+
+    // 장비를 벗어 가방에 넣을 자리가 있는지 확인 (없으면 안내 후 false)
+    private bool CheckRoomToUnequip(ItemData equipped)
+    {
+        if (HasRoomFor(equipped)) return true;
+
+        Debug.Log($"가방이 가득 차서 {equipped.DisplayName}을(를) 해제할 수 없습니다.");
+        return false;
     }
 
     // 무기 장착: 기존 무기가 있으면 먼저 해제(가방으로)한 뒤 새 무기 장착
@@ -340,56 +399,97 @@ public class InventoryManager : MonoBehaviour
         return playerStats;
     }
 
-    // 아이템 버튼 목록과 장비 텍스트를 현재 데이터에 맞게 다시 만듦
+    // 가방 칸과 장비 표시를 현재 데이터에 맞게 갱신
     private void RefreshUI()
     {
         RefreshEquipmentText();
         RefreshSlotButton(weaponSlotButton, equippedWeapon, "무기");
         RefreshSlotButton(armorSlotButton, equippedArmor, "방어구");
 
-        if (itemListParent == null || itemButtonPrefab == null) return;
+        if (bagGrid == null) return;
 
-        // 기존 버튼 제거 (Destroy는 프레임 끝에 처리되므로, 그 전까지 목록 배치에서 빠지도록 먼저 비활성화)
-        for (int i = itemListParent.childCount - 1; i >= 0; i--)
+        EnsureBagSlots();
+
+        // 앞 칸부터 차례로 채우고, 남은 칸은 비움
+        List<BagEntry> entries = GetBagEntries();
+        for (int i = 0; i < bagSlots.Count; i++)
         {
-            GameObject oldButton = itemListParent.GetChild(i).gameObject;
-            oldButton.SetActive(false);
-            Destroy(oldButton);
+            if (i < entries.Count)
+            {
+                bagSlots[i].Show(entries[i].item, entries[i].count, GetIcon(entries[i].item));
+            }
+            else
+            {
+                bagSlots[i].Clear();
+            }
         }
+    }
 
-        // 소모품(물약)은 같은 이름끼리 한 칸으로 묶기 위해 개수를 먼저 셈
-        Dictionary<string, int> consumableCounts = new Dictionary<string, int>();
+    // 가방 칸 하나에 들어갈 내용 (물약은 같은 이름끼리 묶어 count에 개수)
+    private struct BagEntry
+    {
+        public ItemData item;
+        public int count;
+    }
+
+    // 가방 목록을 칸 단위로 정리 (장비는 1개당 1칸, 같은 이름 물약은 묶어서 1칸)
+    private List<BagEntry> GetBagEntries()
+    {
+        List<BagEntry> entries = new List<BagEntry>();
+        Dictionary<string, int> consumableIndex = new Dictionary<string, int>(); // 물약 이름 → entries 위치
+
         foreach (ItemData item in inventory)
         {
-            if (!item.IsConsumable) continue;
-            consumableCounts.TryGetValue(item.itemName, out int count);
-            consumableCounts[item.itemName] = count + 1;
+            if (item.IsConsumable && consumableIndex.TryGetValue(item.itemName, out int index))
+            {
+                BagEntry stack = entries[index];
+                stack.count++;
+                entries[index] = stack;
+                continue;
+            }
+
+            if (item.IsConsumable)
+            {
+                consumableIndex[item.itemName] = entries.Count;
+            }
+            entries.Add(new BagEntry { item = item, count = 1 });
         }
-        HashSet<string> shownConsumables = new HashSet<string>(); // 이미 버튼을 만든 소모품 이름
 
-        // 아이템마다 버튼을 새로 생성 (묶인 소모품은 첫 번째 것만)
-        foreach (ItemData item in inventory)
+        return entries;
+    }
+
+    // 가방 칸이 아직 없으면 bagCapacity개만큼 한 번만 만들어 둠 (이후에는 내용만 바꿔 끼움)
+    private void EnsureBagSlots()
+    {
+        if (bagSlots.Count > 0) return;
+
+        // 칸을 격자 모양으로 자동 배치해 주는 Grid Layout Group 설정
+        if (!bagGrid.TryGetComponent(out GridLayoutGroup grid))
         {
-            if (item.IsConsumable && !shownConsumables.Add(item.itemName)) continue;
+            grid = bagGrid.gameObject.AddComponent<GridLayoutGroup>();
+        }
+        grid.cellSize = new Vector2(slotSize, slotSize);
+        grid.spacing = new Vector2(slotSpacing, slotSpacing);
+        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount; // 한 줄에 bagColumns칸 고정
+        grid.constraintCount = Mathf.Max(1, bagColumns);
+        grid.childAlignment = TextAnchor.UpperCenter;
 
-            Button button = Instantiate(itemButtonPrefab, itemListParent);
+        TMP_FontAsset font = equipmentText != null ? equipmentText.font : null;
+        for (int i = 0; i < bagCapacity; i++)
+        {
+            bagSlots.Add(ItemSlotUI.Create(bagGrid, font, itemTooltip, UseItem, slotColor));
+        }
+    }
 
-            TMP_Text label = button.GetComponentInChildren<TMP_Text>();
-            if (label != null)
-            {
-                string countText = item.IsConsumable ? $" ×{consumableCounts[item.itemName]}" : "";
-                label.text = $"{item.DisplayName}{countText}  ({item.StatDescription})";
-                label.color = item.NameColor;
-            }
-
-            // 이 버튼을 누르면 "이 버튼의 아이템"을 장착(장비) 또는 사용(물약)하도록 클릭 이벤트 연결
-            button.onClick.AddListener(() => UseItem(item));
-
-            // 마우스를 올리면 이 아이템의 툴팁이 뜨도록 연결
-            if (itemTooltip != null)
-            {
-                button.gameObject.AddComponent<ItemTooltipTrigger>().Setup(item, itemTooltip);
-            }
+    // 아이템 종류에 맞는 아이콘 그림
+    private Sprite GetIcon(ItemData item)
+    {
+        switch (item.itemType)
+        {
+            case ItemType.Weapon: return weaponIcon;
+            case ItemType.Armor: return armorIcon;
+            case ItemType.ManaPotion: return potionIcon;
+            default: return null;
         }
     }
 
@@ -443,9 +543,10 @@ public class InventoryManager : MonoBehaviour
             text += $"방어구: {armorLine}\n";
         }
 
-        text += inventory.Count > 0
-            ? $"보유 아이템: {inventory.Count}개 (클릭: 장착/사용)"
-            : "(가방이 비어 있음)";
+        int usedSlots = UsedSlotCount;
+        text += usedSlots > 0
+            ? $"가방 {usedSlots} / {bagCapacity}칸 (클릭: 장착/사용)"
+            : $"가방 0 / {bagCapacity}칸 (비어 있음)";
 
         equipmentText.text = text;
     }

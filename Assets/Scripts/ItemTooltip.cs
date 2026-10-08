@@ -75,7 +75,8 @@ public class ItemTooltip : MonoBehaviour
     }
 
     // 아이템 툴팁 표시 (아이템 버튼에 마우스가 올라갔을 때 호출)
-    public void Show(ItemData item)
+    // isEquipped: 장비 칸의 장착 중인 아이템이면 true (비교 대신 "해제하면 바뀌는 능력치"를 보여 줌)
+    public void Show(ItemData item, bool isEquipped = false)
     {
         if (item == null) return;
 
@@ -83,7 +84,7 @@ public class ItemTooltip : MonoBehaviour
         gameObject.SetActive(true); // 처음 켜질 때는 여기서 Awake가 먼저 실행됨
         if (contentText == null) return;
 
-        string content = BuildContent(item);
+        string content = BuildContent(item, isEquipped);
         contentText.text = content;
 
         // 글 길이에 맞춰 창 크기 조절 (너비는 최대 maxTextWidth까지, 넘으면 줄바꿈되어 높이가 늘어남)
@@ -137,19 +138,22 @@ public class ItemTooltip : MonoBehaviour
     }
 
     // 툴팁에 들어갈 글 만들기 (TextMeshPro 서식 태그 사용)
-    private string BuildContent(ItemData item)
+    private string BuildContent(ItemData item, bool isEquipped)
     {
         string rarityHex = ColorUtility.ToHtmlStringRGB(item.RarityColor);
         string hintHex = ColorUtility.ToHtmlStringRGB(hintColor);
 
+        string body = isEquipped ? BuildUnequipPreview(item) : BuildComparison(item);
+        string hint = isEquipped ? "클릭하여 해제" : "클릭하여 장착";
+
         return $"<size=125%><color=#{rarityHex}>{item.itemName}</color></size>\n"
              + $"<color=#{rarityHex}>{item.RarityName}</color> {item.TypeName}\n"
              + $"\n{item.StatDescription}\n"
-             + $"\n{BuildComparison(item)}\n"
-             + $"\n<color=#{hintHex}>클릭하여 장착</color>";
+             + $"\n{body}\n"
+             + $"\n<color=#{hintHex}>{hint}</color>";
     }
 
-    // 같은 종류의 장착 중인 장비와 비교한 결과
+    // 가방 아이템: 같은 종류의 장착 중인 장비와 비교한 결과
     private string BuildComparison(ItemData item)
     {
         ItemData equipped = GetEquippedItem(item.itemType);
@@ -161,6 +165,19 @@ public class ItemTooltip : MonoBehaviour
             ? $"<color=#{hintHex}>장착 중:</color> <color=#{ColorUtility.ToHtmlStringRGB(equipped.RarityColor)}>{equipped.itemName}</color> ({equipped.StatDescription})"
             : $"<color=#{hintHex}>장착 중인 {item.TypeName} 없음</color>";
 
+        return $"{equippedLine}\n{BuildDifference(item, difference)}";
+    }
+
+    // 장착 중인 아이템: 해제하면 줄어드는 능력치
+    private string BuildUnequipPreview(ItemData item)
+    {
+        string hintHex = ColorUtility.ToHtmlStringRGB(hintColor);
+        return $"<color=#{hintHex}>해제하면</color>\n{BuildDifference(item, -item.statValue)}";
+    }
+
+    // 능력치 변화량 한 줄(▲ 초록 / ▼ 빨강 / 변화 없음)과 "현재 → 변경 후" 한 줄
+    private string BuildDifference(ItemData item, float difference)
+    {
         string differenceLine;
         if (difference > 0f)
         {
@@ -175,7 +192,7 @@ public class ItemTooltip : MonoBehaviour
             differenceLine = $"<color=#{ColorUtility.ToHtmlStringRGB(sameColor)}>변화 없음</color>";
         }
 
-        // 지금 능력치와 장착 후 능력치 (예: "공격력 15 → 20")
+        // 지금 능력치와 바뀐 뒤 능력치 (예: "공격력 15 → 20")
         PlayerStats stats = GetPlayerStats();
         if (stats != null)
         {
@@ -183,7 +200,7 @@ public class ItemTooltip : MonoBehaviour
             differenceLine += $"\n{item.StatName} {FormatNumber(current)} → {FormatNumber(current + difference)}";
         }
 
-        return $"{equippedLine}\n{differenceLine}";
+        return differenceLine;
     }
 
     // 종류에 맞는 장착 중인 장비 (없으면 null)

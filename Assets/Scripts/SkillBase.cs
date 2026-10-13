@@ -1,0 +1,66 @@
+using UnityEngine;
+
+// 모든 플레이어 스킬의 공통 부분 (직접 붙이지 않고, 스킬별 스크립트가 상속해서 사용)
+// - 스킬 데이터(SkillData)에서 쿨타임·기력 소모·피해 배율을 읽어 옵니다.
+// - 쿨타임 계산과 기력 지불을 대신 처리합니다.
+// - PlayerSkills가 스킬 칸의 입력(누름 / 누르고 있음 / 뗌 / 취소)을 이 스크립트에 전달합니다.
+// 스킬별 스크립트는 필요한 입력 함수만 골라서 덮어씁니다(override).
+//   예) 부적 투사체: 누르는 순간 발사 / 부적 폭발: 누르고 있는 동안 조준, 떼면 폭발
+public abstract class SkillBase : MonoBehaviour
+{
+    [Tooltip("이 스킬의 데이터 (Project 창의 Skill Data 파일을 끌어다 놓기)")]
+    [SerializeField] protected SkillData data;
+
+    protected PlayerStats stats;           // 기력·공격력을 가진 플레이어 능력치
+    protected PlayerController controller; // 바닥 위치 찾기·이동 멈추기 등을 도와주는 플레이어 조작 스크립트
+
+    private float nextUseTime; // 다음에 쓸 수 있는 시각 (게임 시작 후 경과 초)
+
+    public SkillData Data => data;
+    public float Cooldown => data != null ? data.cooldown : 0f;
+    public float ManaCost => data != null ? data.manaCost : 0f;
+    public float DamageMultiplier => data != null ? data.damageMultiplier : 1f;
+
+    // 남은 쿨타임(초, 0이면 사용 가능) — 스킬바 UI가 읽어 감
+    public float CooldownRemaining => Mathf.Max(0f, nextUseTime - Time.time);
+    public bool IsOnCooldown => Time.time < nextUseTime;
+
+    // 기력이 충분한지 (스킬바 아이콘을 어둡게 할지 정할 때 사용)
+    public bool HasEnoughMana => stats == null || stats.currentMP >= ManaCost;
+
+    protected virtual void Awake()
+    {
+        stats = GetComponent<PlayerStats>();
+        controller = GetComponent<PlayerController>();
+
+        if (data == null)
+        {
+            Debug.LogWarning($"{GetType().Name}: Skill Data가 연결되지 않았습니다. Player의 이 컴포넌트에 Skill Data 파일을 끌어다 놓으세요.");
+        }
+    }
+
+    // 스킬 칸 키를 누른 순간
+    public virtual void OnInputPressed(Vector2 pointerPosition) { }
+
+    // 스킬 칸 키를 누르고 있는 동안 매 프레임 (누른 순간 프레임 포함, 뗀 순간 프레임 제외)
+    public virtual void OnInputHeld(Vector2 pointerPosition) { }
+
+    // 스킬 칸 키를 뗀 순간
+    public virtual void OnInputReleased(Vector2 pointerPosition) { }
+
+    // 조준 취소 (취소 키, 사망 등) — 조준 원 같은 표시를 정리
+    public virtual void CancelInput() { }
+
+    // 쿨타임 시작 (스킬을 실제로 쓴 뒤 호출)
+    protected void StartCooldown()
+    {
+        nextUseTime = Time.time + Cooldown;
+    }
+
+    // 기력 지불: 충분하면 소모하고 true, 부족하면 "기력이 부족합니다!" 알림 후 false
+    protected bool TryPayMana()
+    {
+        if (ManaCost <= 0f) return true;
+        return stats != null && stats.UseMP(ManaCost);
+    }
+}

@@ -2521,7 +2521,6 @@ MonoBehaviour:
   armorIcon: {fileID: 21300000, guid: 07da0a9eb4e79ab44b93230671e00bad, type: 3}
   potionIcon: {fileID: 21300000, guid: 50859c4074d108947814eff573e287fc, type: 3}
   openOnStart: 0
-  potionKey: 41
 --- !u!4 &543694091
 Transform:
   m_ObjectHideFlags: 0
@@ -4464,6 +4463,7 @@ GameObject:
   - component: {fileID: 1487634037}
   - component: {fileID: 1487634036}
   - component: {fileID: 1487634042}
+  - component: {fileID: 1487634043}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -4656,6 +4656,25 @@ MonoBehaviour:
   damageTextColor: {r: 0.75, g: 0.35, b: 1, a: 1}
   respawnInvincibleTime: 2
   blinkInterval: 0.1
+--- !u!114 &1487634043
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1487634035}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9f88c8efa0702a41b02f3f4c19decc1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerSkills
+  slots:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
 --- !u!1 &1494356108
 GameObject:
   m_ObjectHideFlags: 0

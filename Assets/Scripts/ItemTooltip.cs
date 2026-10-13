@@ -1,6 +1,5 @@
 using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem;   // 새 Input System (Mouse.current) 사용
 using UnityEngine.UI;            // Image 사용
 
 // 아이템 툴팁 (인벤토리의 아이템 버튼에 마우스를 올리면 나타나는 설명 창)
@@ -113,10 +112,7 @@ public class ItemTooltip : MonoBehaviour
     // 마우스 커서 오른쪽 아래에 창을 두되, 화면 밖으로 나가면 반대쪽(왼쪽/위쪽)으로 뒤집음
     private void FollowMouse()
     {
-        Mouse mouse = Mouse.current;
-        if (mouse == null) return;
-
-        Vector2 mousePosition = mouse.position.ReadValue();
+        Vector2 mousePosition = GameInput.PointerPosition; // 커서 위치 (Point 행동)
 
         // Canvas Scaler 때문에 실제 화면에서는 창이 scaleFactor배 크기로 그려짐
         float scale = rootCanvas != null ? rootCanvas.scaleFactor : 1f;

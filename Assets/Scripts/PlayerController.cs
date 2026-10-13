@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.AI;            // NavMeshAgent, NavMesh 사용
 using UnityEngine.EventSystems;  // UI 위에 마우스가 있는지 확인 (EventSystem) 사용
-using UnityEngine.InputSystem;   // 새 Input System (Mouse.current) 사용
+using UnityEngine.InputSystem;   // 새 Input System (InputAction, Keyboard.current) 사용
 
 // 디아블로 스타일 클릭 이동 + 적/아이템 타겟팅 컨트롤러
 // 마우스 좌클릭 위치로 Raycast를 쏴서
@@ -17,6 +17,7 @@ public class PlayerController : MonoBehaviour
 {
     private const string EnemyTag = "Enemy"; // 적 오브젝트에 붙일 태그 이름
     private const string ItemTag = "Item";   // 아이템 오브젝트에 붙일 태그 이름
+    private const int AmuletSkillSlot = 2;   // 부적 투사체를 쓰는 스킬 칸 번호 (기본: 마우스 우클릭)
 
     [Header("참조")]
     [Tooltip("Raycast를 쏠 카메라 (비워두면 Main Camera를 자동 사용)")]
@@ -237,34 +238,32 @@ public class PlayerController : MonoBehaviour
         nextAoeTime = Time.time + aoeCooldown;
     }
 
-    // 마우스 입력 처리 (좌클릭: 이동/공격/줍기, 우클릭: 부적 스킬)
+    // 커서 입력 처리 (선택 행동 = 좌클릭: 이동/공격/줍기, 스킬 2번 칸 = 우클릭: 부적 스킬)
+    // 키 연결은 Assets/InputSystem_Actions의 Player 묶음에서 바꿉니다.
     private void HandleMouseInput()
     {
-        // 마우스가 연결되어 있지 않으면 아무것도 하지 않음
-        Mouse mouse = Mouse.current;
-        if (mouse == null) return;
-
         // 인벤토리 같은 UI 위를 클릭한 경우 뒤쪽 바닥으로 이동하지 않도록 무시
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
-        Vector2 mousePosition = mouse.position.ReadValue();
+        Vector2 pointerPosition = GameInput.PointerPosition;
 
-        // 우클릭: 쿨타임이 지났다면 커서 방향으로 부적 발사
-        if (mouse.rightButton.wasPressedThisFrame && Time.time >= nextSkillTime)
+        // 스킬 2번 칸(우클릭): 쿨타임이 지났다면 커서 방향으로 부적 발사
+        if (GameInput.GetSkill(AmuletSkillSlot).WasPressedThisFrame() && Time.time >= nextSkillTime)
         {
-            CastAmulet(mousePosition);
+            CastAmulet(pointerPosition);
         }
 
-        if (mouse.leftButton.wasPressedThisFrame)
+        InputAction select = GameInput.Select;
+        if (select.WasPressedThisFrame())
         {
             // 새로 클릭한 순간: 적/아이템/바닥 중 무엇인지 판단해서 처리
-            HandleClick(mousePosition, true);
+            HandleClick(pointerPosition, true);
         }
-        else if (moveWhileHolding && mouse.leftButton.isPressed && target == null)
+        else if (moveWhileHolding && select.IsPressed() && target == null)
         {
-            // 누르고 있는 중: 적이나 아이템을 타겟팅하고 있지 않을 때만 마우스를 따라 이동
+            // 누르고 있는 중: 적이나 아이템을 타겟팅하고 있지 않을 때만 커서를 따라 이동
             // (대상을 클릭한 채 버튼을 계속 누르고 있어도 타겟이 풀리지 않도록 하기 위함)
-            HandleClick(mousePosition, false);
+            HandleClick(pointerPosition, false);
         }
     }
 

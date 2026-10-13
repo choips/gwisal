@@ -1,16 +1,17 @@
 using UnityEngine;
 using UnityEngine.AI;            // NavMeshAgent, NavMesh 사용
 using UnityEngine.EventSystems;  // UI 위에 마우스가 있는지 확인 (EventSystem) 사용
-using UnityEngine.InputSystem;   // 새 Input System (InputAction, Keyboard.current) 사용
+using UnityEngine.InputSystem;   // 새 Input System (InputAction) 사용
 
 // 디아블로 스타일 클릭 이동 + 적/아이템 타겟팅 컨트롤러
+// 입력은 키를 직접 읽지 않고 GameInput의 행동으로 읽습니다 (키 연결: Assets/InputSystem_Actions의 Player 묶음).
 // 마우스 좌클릭 위치로 Raycast를 쏴서
 //  - 바닥(Ground 레이어)을 클릭하면 그 위치로 이동하고
 //  - 적(Enemy 태그)을 클릭하면 타겟으로 지정해 다가간 뒤 사거리 안에서 공격하고
 //  - 아이템(Item 태그)을 클릭하면 다가가서 줍습니다.
-// 마우스 우클릭 시 커서 방향으로 부적(투사체)을 발사합니다.
-// Q 키를 누르고 있으면 커서 위치에 폭발 범위(조준 원)가 보이고,
-// Q 키를 떼면 기력(MP)을 소모해 그 위치에 광역 폭발을 일으킵니다. (조준 중 ESC: 취소)
+// 마우스 우클릭(스킬 2번 칸) 시 커서 방향으로 부적(투사체)을 발사합니다.
+// Q 키(스킬 3번 칸)를 누르고 있으면 커서 위치에 폭발 범위(조준 원)가 보이고,
+// 떼면 기력(MP)을 소모해 그 위치에 광역 폭발을 일으킵니다. (조준 중 ESC: 취소)
 [RequireComponent(typeof(NavMeshAgent))]
 [RequireComponent(typeof(PlayerStats))]
 public class PlayerController : MonoBehaviour
@@ -18,6 +19,7 @@ public class PlayerController : MonoBehaviour
     private const string EnemyTag = "Enemy"; // 적 오브젝트에 붙일 태그 이름
     private const string ItemTag = "Item";   // 아이템 오브젝트에 붙일 태그 이름
     private const int AmuletSkillSlot = 2;   // 부적 투사체를 쓰는 스킬 칸 번호 (기본: 마우스 우클릭)
+    private const int AoESkillSlot = 3;      // 부적 폭발을 쓰는 스킬 칸 번호 (기본: Q 키)
 
     [Header("참조")]
     [Tooltip("Raycast를 쏠 카메라 (비워두면 Main Camera를 자동 사용)")]
@@ -130,45 +132,44 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        HandleKeyboardInput();
+        HandleAoEAimInput();
         HandleMouseInput();
         UpdateTargeting();
     }
 
-    // 키보드 입력 처리 (Q 누름: 조준 시작 → Q 뗌: 폭발, 조준 중 ESC: 취소)
-    private void HandleKeyboardInput()
+    // 광역 스킬 조준 입력 처리 (스킬 3번 칸 누름: 조준 시작 → 뗌: 폭발, 조준 중 취소 행동: 취소)
+    // 기본 키: 스킬 3번 칸 = Q, 취소 = ESC (Assets/InputSystem_Actions의 Player 묶음에서 변경)
+    private void HandleAoEAimInput()
     {
-        Keyboard keyboard = Keyboard.current;
-        Mouse mouse = Mouse.current;
-        if (keyboard == null || mouse == null) return;
+        InputAction aoeAction = GameInput.GetSkill(AoESkillSlot);
 
-        if (keyboard.qKey.wasPressedThisFrame)
+        if (aoeAction.WasPressedThisFrame())
         {
             isAimingAoE = true;
         }
 
         if (!isAimingAoE) return;
 
-        if (keyboard.escapeKey.wasPressedThisFrame)
+        if (GameInput.Cancel.WasPressedThisFrame())
         {
             StopAimingAoE();
             return;
         }
 
-        Vector2 mousePosition = mouse.position.ReadValue();
+        Vector2 pointerPosition = GameInput.PointerPosition;
 
-        // Q를 짧게 톡 치면 누름과 뗌이 거의 동시에 일어나 바로 폭발함 (예전 조작과 같은 느낌)
-        if (keyboard.qKey.wasReleasedThisFrame)
+        // 키를 짧게 톡 치면 누름과 뗌이 같은 프레임에 일어나 바로 폭발함 (예전 조작과 같은 느낌)
+        if (aoeAction.WasReleasedThisFrame())
         {
             StopAimingAoE();
             if (Time.time >= nextAoeTime)
             {
-                CastAoE(mousePosition);
+                CastAoE(pointerPosition);
             }
             return;
         }
 
-        UpdateAoEIndicator(mousePosition);
+        UpdateAoEIndicator(pointerPosition);
     }
 
     // 조준 중: 마우스가 가리키는 바닥에 폭발 범위 원을 표시 (바닥 밖을 가리키면 숨김)

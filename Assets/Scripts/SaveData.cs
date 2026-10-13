@@ -1,15 +1,13 @@
 using System.Collections.Generic;
+using UnityEngine;
 
-// 세이브 파일(JSON)에 저장할 데이터 묶음
-// MonoBehaviour가 아닌 순수 C# 클래스이며, JsonUtility로 변환하려면 [System.Serializable]이 필요합니다.
-// JsonUtility는 public 필드만 저장하므로 모든 변수를 public으로 선언합니다.
+// 옛 세이브 형식 (버전 1·2, 파일: SaveData.json) — 옛 파일을 읽어 버전 3으로 바꿀 때만 사용합니다.
+// 버전 3부터는 캐릭터별 CharacterSaveData(Character_칸번호.json) + 계정 공용 AccountSaveData(Account.json)에 저장합니다.
+// JsonUtility는 public 필드만 읽으므로 모든 변수를 public으로 선언합니다. (칸 이름을 바꾸면 옛 파일을 못 읽음)
 [System.Serializable]
 public class SaveData
 {
-    // 저장 형식 버전 (1: 기력 없음, 2: 기력 추가)
-    public const int CurrentVersion = 2;
-
-    // 이 파일이 어떤 형식으로 저장되었는지 (예전 파일에는 값이 없어서 0으로 읽힘)
+    // 이 파일이 어떤 형식으로 저장되었는지 (버전 1 파일에는 값이 없어서 0으로 읽힘)
     public int version;
 
     // 플레이어 상태
@@ -22,10 +20,46 @@ public class SaveData
     public float maxMP;        // 최대 기력 (버전 2부터)
     public float currentMP;    // 현재 기력 (버전 2부터)
 
-    // 인벤토리 (가방)
+    // 인벤토리 (가방) — 아이템을 이름으로 저장
     public List<ItemData> inventoryItems = new List<ItemData>();
 
     // 장착 중인 장비 (장착하지 않았다면 이름이 빈 아이템으로 저장됨)
     public ItemData equippedWeapon;
     public ItemData equippedArmor;
+
+    // 버전 3 캐릭터 세이브로 변환 (아이템은 이름으로 기본 아이템을 찾고, 못 찾으면 건너뜀)
+    public CharacterSaveData ToCharacterSaveData()
+    {
+        CharacterSaveData data = new CharacterSaveData
+        {
+            version = CharacterSaveData.CurrentVersion,
+            level = level,
+            currentXP = currentXP,
+            requiredXP = requiredXP,
+            currentHP = currentHP,
+            // 기력은 버전 2부터 저장됨. 버전 1 파일이면 가득 채움 (불러올 때 최대 기력으로 줄어듦)
+            currentMP = version >= 2 ? currentMP : float.MaxValue,
+        };
+
+        int skipped = 0;
+        if (inventoryItems != null)
+        {
+            foreach (ItemData item in inventoryItems)
+            {
+                if (item == null || item.IsEmpty) continue;
+
+                SavedItem saved = SavedItem.FromItem(item);
+                if (saved != null) data.inventoryItems.Add(saved);
+                else skipped++;
+            }
+        }
+
+        if (equippedWeapon != null && !equippedWeapon.IsEmpty && equippedWeapon.Base == null) skipped++;
+        if (equippedArmor != null && !equippedArmor.IsEmpty && equippedArmor.Base == null) skipped++;
+        data.AddEquipment(SavedEquipment.WeaponSlot, equippedWeapon);
+        data.AddEquipment(SavedEquipment.ArmorSlot, equippedArmor);
+
+        Debug.Log($"옛 세이브(버전 {version})를 버전 {CharacterSaveData.CurrentVersion}으로 변환했습니다. 가방 {data.inventoryItems.Count}개, 장비 {data.equipment.Count}개, 찾지 못해 건너뛴 아이템 {skipped}개");
+        return data;
+    }
 }

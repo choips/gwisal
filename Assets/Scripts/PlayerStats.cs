@@ -307,30 +307,23 @@ public class PlayerStats : MonoBehaviour
         NotificationUI.Show(Loc.Format("notice.level_up", level), NotificationUI.NoticeType.Success);
     }
 
-    // 세이브 데이터로 능력치를 덮어씀 (사망 상태였다면 부활)
+    // 캐릭터 세이브로 능력치를 덮어씀 (사망 상태였다면 부활)
     // 장비는 이보다 먼저 복원되어 있어야 함 (최대 체력·기력이 장비를 포함해 정해진 뒤 현재 체력·기력을 넣기 위해 — GameController 참고)
-    // 저장된 최대 체력·최대 기력·공격력은 쓰지 않고 레벨·장비로 다시 계산 (세이브 형식은 그대로)
-    public void ApplySaveData(SaveData data)
+    // 최대 체력·최대 기력·무기 피해는 저장하지 않고 레벨·장비로 다시 계산
+    public void ApplyCharacterData(CharacterSaveData data)
     {
-        level = data.level;
+        level = Mathf.Max(1, data.level);
         ApplyLevelToStats();
         currentXP = data.currentXP;
 
-        // 예전 형식의 세이브처럼 값이 없으면 0이 들어오므로 기본값으로 보정
+        // 값이 없으면 0이 들어오므로 기본값으로 보정
         requiredXP = data.requiredXP > 0f ? data.requiredXP : 100f;
 
         // 사망한 상태로 저장된 경우에도 쓰러진 채로 시작하지 않도록 체력을 채움
         currentHP = data.currentHP > 0f ? Mathf.Min(data.currentHP, maxHP) : maxHP;
 
-        // 기력은 버전 2부터 저장됨. 예전 세이브 파일이면 기력을 가득 채움
-        if (data.version >= 2)
-        {
-            currentMP = Mathf.Clamp(data.currentMP, 0f, maxMP);
-        }
-        else
-        {
-            currentMP = maxMP;
-        }
+        // 옛 세이브(버전 1)는 기력이 아주 큰 값으로 변환되어 와서 여기서 최대 기력으로 맞춰짐
+        currentMP = Mathf.Clamp(data.currentMP, 0f, maxMP);
 
         if (IsDead)
         {

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 // 아이템 종류
@@ -18,7 +19,23 @@ public enum ItemRarity
     Unique  // 유니크 (주황색)
 }
 
-// 아이템 한 개의 정보 (기본 아이템 ID, 종류, 등급, 숨겨진 아이템 레벨, 능력치 증가량)
+// 아이템에 붙은 무작위 옵션 하나 (예: 공격 속도 +15%) — 옵션 ID와 굴린 수치
+[System.Serializable]
+public class ItemAffix
+{
+    public string affixId = "";
+    public float value;
+
+    public ItemAffix() { }
+
+    public ItemAffix(string affixId, float value)
+    {
+        this.affixId = affixId;
+        this.value = value;
+    }
+}
+
+// 아이템 한 개의 정보 (기본 아이템 ID, 종류, 등급, 숨겨진 아이템 레벨, 능력치 증가량, 옵션 목록)
 // 바닥 아이템(Item), 인벤토리, 장비 슬롯, 세이브 파일에서 모두 이 형식을 사용합니다.
 // 이름·아이콘은 baseId로 찾은 기본 아이템(ItemBase)에서 가져옵니다.
 // MonoBehaviour가 아닌 순수 C# 클래스이며, Inspector 표시와 JSON 저장을 위해 [System.Serializable]을 붙입니다.
@@ -38,6 +55,9 @@ public class ItemData
 
     [Tooltip("숨겨진 아이템 레벨 (떨어뜨린 귀신의 몬스터 레벨, 플레이어에게 보이지 않음)")]
     public int itemLevel = 1;
+
+    [Tooltip("붙은 무작위 옵션 목록 (옵션 굴리기는 아이템 & 파밍 단계에서, 지금은 항상 비어 있음)")]
+    public List<ItemAffix> affixes = new List<ItemAffix>();
 
     // 찾아 둔 기본 아이템 (저장하지 않음)
     [System.NonSerialized] private ItemBase cachedBase;
@@ -66,6 +86,15 @@ public class ItemData
         baseId = source.baseId;
         itemLevel = source.itemLevel;
         cachedBase = source.cachedBase;
+
+        affixes = new List<ItemAffix>();
+        if (source.affixes != null)
+        {
+            foreach (ItemAffix affix in source.affixes)
+            {
+                if (affix != null) affixes.Add(new ItemAffix(affix.affixId, affix.value));
+            }
+        }
     }
 
     // JSON에서 불러온 빈 칸(이름도 ID도 없음)인지 확인

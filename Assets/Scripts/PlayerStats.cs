@@ -5,6 +5,7 @@ using UnityEngine.AI;            // NavMeshAgent 사용 (사망 시 이동 정�
 using UnityEngine.UI;            // Image 사용
 
 // 플레이어의 능력치(레벨, 경험치, 체력, 기력, 공격력)와 성장(레벨업)을 관리하는 스크립트
+// 최대 체력·최대 기력·기력 회복은 능력치 계산기(Stats: BalanceConfig의 레벨 기본값 + 장비 수정치)에서 받아 옵니다.
 // 체력바/기력바/경험치바 UI(Image의 Fill Amount)도 매 프레임 갱신합니다.
 public class PlayerStats : MonoBehaviour
 {
@@ -14,6 +15,7 @@ public class PlayerStats : MonoBehaviour
     public float requiredXP = 100f;     // 다음 레벨까지 필요한 경험치
 
     [Header("체력 / 공격력")]
+    [Tooltip("최대 체력 — 플레이 중에는 레벨·장비로 자동 계산됨 (BalanceConfig에서 조정, 여기서 바꿔도 덮어씀)")]
     public float maxHP = 100f;          // 최대 체력
     public float currentHP;             // 현재 체력
     public float attackPower = 10f;     // 공격력 (한 번 공격 시 주는 데미지)
@@ -26,16 +28,11 @@ public class PlayerStats : MonoBehaviour
     public float critMultiplier = 2f;                 // 치명타 배율
 
     [Header("기력(MP)")]
+    [Tooltip("최대 기력 — 플레이 중에는 레벨·장비로 자동 계산됨 (BalanceConfig에서 조정, 여기서 바꿔도 덮어씀)")]
     public float maxMP = 100f;          // 최대 기력
     public float currentMP;             // 현재 기력
 
-    [Tooltip("1초마다 자연 회복되는 기력")]
-    [SerializeField] private float mpRegenPerSecond = 5f;
-
-    [Header("레벨업 시 성장치")]
-    [Tooltip("레벨업할 때마다 늘어나는 최대 체력")]
-    [SerializeField] private float hpPerLevel = 20f;
-
+    [Header("레벨업 시 성장치 (최대 체력·기력은 BalanceConfig)")]
     [Tooltip("레벨업할 때마다 늘어나는 공격력")]
     [SerializeField] private float attackPerLevel = 5f;
 
@@ -89,8 +86,11 @@ public class PlayerStats : MonoBehaviour
     public event Action Died;
     public event Action Revived;
 
-    // 새 능력치 계산기 (레벨 기본값 + 장비 수정치 → 최종값). S1-6 1단계에서는 계산만 하고 아직 게임에 쓰지 않음 (F1 메뉴에서 비교)
+    // 새 능력치 계산기 (레벨 기본값 + 장비 수정치 → 최종값)
+    // S1-6 2단계부터 최대 체력·최대 기력·기력 회복은 여기서 옴 (공격은 3단계에서 전환)
     public CharacterStats Stats { get; private set; }
+
+    private float manaRegenPerSecond; // 초당 기력 회복 (능력치 계산기에서 받아 둔 값)
 
     private Vector3 spawnPosition;    // 부활할 위치 (게임 시작 위치)
     private Quaternion spawnRotation; // 부활할 때 바라볼 방향
@@ -115,7 +115,48 @@ public class PlayerStats : MonoBehaviour
         if (Stats == null) return;
 
         balanceConfig.ApplyPlayerBase(Stats, level);
+        SyncFromStats();
+    }
+
+    // 장비가 주는 능력치 추가 (InventoryManager가 장착할 때 호출, item = 출처)
+    public void AddEquipmentBonus(ItemData item, StatType stat, float value)
+    {
+        if (Stats == null || item == null) return;
+
+        Stats.AddModifier(new StatModifier(stat, StatModifierType.Flat, value, item));
+        SyncFromStats();
+    }
+
+    // 장비가 주던 능력치를 모두 지움 (InventoryManager가 벗을 때 호출)
+    public void RemoveEquipmentBonus(ItemData item)
+    {
+        if (Stats == null || item == null) return;
+
+        if (Stats.RemoveModifiersFromSource(item))
+        {
+            SyncFromStats();
+        }
+    }
+
+    // 능력치 계산기의 최종값을 최대 체력·최대 기력·기력 회복에 반영
+    // 최대치가 늘거나 줄면 현재 체력·기력도 같은 만큼 늘리거나 줄임 (장비를 벗었다 다시 껴서 체력을 채우는 것 방지)
+    // 살아 있으면 현재 체력은 최소 1 (장비를 벗다가 죽지 않도록)
+    private void SyncFromStats()
+    {
         Stats.Refresh();
+
+        float newMaxHP = Stats.Get(StatType.MaxHealth);
+        float newMaxMP = Stats.Get(StatType.MaxMana);
+
+        currentHP += newMaxHP - maxHP;
+        currentMP += newMaxMP - maxMP;
+
+        maxHP = newMaxHP;
+        maxMP = newMaxMP;
+        manaRegenPerSecond = Stats.Get(StatType.ManaRegen);
+
+        currentHP = Mathf.Clamp(currentHP, IsDead ? 0f : 1f, maxHP);
+        currentMP = Mathf.Clamp(currentMP, 0f, maxMP);
     }
 
     private void Start()
@@ -169,7 +210,7 @@ public class PlayerStats : MonoBehaviour
 
         if (currentMP >= maxMP) return;
 
-        currentMP = Mathf.Min(currentMP + mpRegenPerSecond * Time.deltaTime, maxMP);
+        currentMP = Mathf.Min(currentMP + manaRegenPerSecond * Time.deltaTime, maxMP);
     }
 
     // 치명타 판정: 확률에 당첨되면 배율만큼 커진 데미지를 돌려주고 isCritical = true
@@ -238,27 +279,27 @@ public class PlayerStats : MonoBehaviour
         }
     }
 
-    // 레벨업: 레벨 +1, 최대 체력/공격력 증가, 체력/기력 회복, 필요 경험치 증가
+    // 레벨업: 레벨 +1, 최대 체력·기력 증가(BalanceConfig) / 공격력 증가, 체력/기력 회복, 필요 경험치 증가
     private void LevelUp()
     {
         level++;
-        maxHP += hpPerLevel;
+        ApplyLevelToStats();
         attackPower += attackPerLevel;
         currentHP = maxHP;
         currentMP = maxMP;
         requiredXP *= xpMultiplier;
-        ApplyLevelToStats();
 
         NotificationUI.Show($"레벨 업! (레벨 {level})", NotificationUI.NoticeType.Success);
     }
 
     // 세이브 데이터로 능력치를 덮어씀 (사망 상태였다면 부활)
+    // 장비는 이보다 먼저 복원되어 있어야 함 (최대 체력·기력이 장비를 포함해 정해진 뒤 현재 체력·기력을 넣기 위해 — GameController 참고)
+    // 저장된 최대 체력·최대 기력은 쓰지 않고 레벨·장비로 다시 계산 (세이브 형식은 그대로)
     public void ApplySaveData(SaveData data)
     {
         level = data.level;
         ApplyLevelToStats();
         currentXP = data.currentXP;
-        maxHP = data.maxHP;
         attackPower = data.attackPower;
 
         // 예전 형식의 세이브처럼 값이 없으면 0이 들어오므로 기본값으로 보정
@@ -270,7 +311,6 @@ public class PlayerStats : MonoBehaviour
         // 기력은 버전 2부터 저장됨. 예전 세이브 파일이면 기력을 가득 채움
         if (data.version >= 2)
         {
-            if (data.maxMP > 0f) maxMP = data.maxMP;
             currentMP = Mathf.Clamp(data.currentMP, 0f, maxMP);
         }
         else

@@ -65,13 +65,14 @@ public class GameController : MonoBehaviour
             return;
         }
 
-        stats.ApplySaveData(data);
-
+        // 장비를 먼저 복원 → 최대 체력이 장비를 포함해 정해진 뒤 저장된 현재 체력을 넣음
         if (InventoryManager.Instance != null)
         {
             InventoryManager.Instance.SetItems(data.inventoryItems);
             InventoryManager.Instance.SetEquipment(data.equippedWeapon, data.equippedArmor);
         }
+
+        stats.ApplySaveData(data);
 
         NotificationUI.Show("게임 불러오기 완료!", NotificationUI.NoticeType.Success);
     }

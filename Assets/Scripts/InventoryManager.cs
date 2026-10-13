@@ -203,11 +203,24 @@ public class InventoryManager : MonoBehaviour
     }
 
     // 장비 슬롯을 그대로 복원 (세이브 불러오기용)
-    // 저장된 공격력/체력에는 이미 장비 수치가 포함되어 있으므로 능력치는 건드리지 않음
+    // 방어구: 이전 방어구의 최대 체력 보너스를 지우고 새 방어구의 보너스를 붙임 (최대 체력은 레벨·장비로 다시 계산)
+    // 무기: 저장된 공격력에 이미 무기 수치가 포함되어 있으므로 능력치는 건드리지 않음 (S1-6 3단계에서 전환)
     public void SetEquipment(ItemData weapon, ItemData armor)
     {
+        PlayerStats stats = GetPlayerStats();
+        if (stats != null && equippedArmor != null)
+        {
+            stats.RemoveEquipmentBonus(equippedArmor);
+        }
+
         equippedWeapon = weapon == null || weapon.IsEmpty ? null : weapon;
         equippedArmor = armor == null || armor.IsEmpty ? null : armor;
+
+        if (stats != null && equippedArmor != null)
+        {
+            stats.AddEquipmentBonus(equippedArmor, StatType.MaxHealth, equippedArmor.statValue);
+        }
+
         RefreshUI();
     }
 
@@ -345,8 +358,7 @@ public class InventoryManager : MonoBehaviour
         }
 
         equippedArmor = armor;
-        stats.maxHP += armor.statValue;
-        stats.currentHP += armor.statValue;
+        stats.AddEquipmentBonus(armor, StatType.MaxHealth, armor.statValue); // 최대 체력과 현재 체력이 함께 늘어남
         Debug.Log($"방어구 장착: 최대 체력이 {armor.statValue} 증가했습니다!");
     }
 
@@ -362,11 +374,8 @@ public class InventoryManager : MonoBehaviour
     // 장착 중인 방어구를 빼서 가방에 넣고 최대 체력을 되돌림
     private void RemoveArmor(PlayerStats stats)
     {
-        stats.maxHP -= equippedArmor.statValue;
-
-        // 장착할 때 늘어난 만큼 현재 체력도 줄임 (장착·해제를 반복해 체력을 채우는 것 방지)
-        // 단, 장비를 벗다가 죽지는 않도록 최소 1은 남김
-        stats.currentHP = Mathf.Clamp(stats.currentHP - equippedArmor.statValue, 1f, stats.maxHP);
+        // 장착할 때 늘어난 만큼 현재 체력도 줄어듦 (장착·해제를 반복해 체력을 채우는 것 방지, 최소 1은 남김)
+        stats.RemoveEquipmentBonus(equippedArmor);
 
         inventory.Add(equippedArmor);
         Debug.Log($"방어구 해제: {equippedArmor.DisplayName} (최대 체력 -{equippedArmor.statValue})");

@@ -319,6 +319,10 @@ MonoBehaviour:
     m_Key: item.name.potion_mana
     m_Metadata:
       m_Items: []
+  - m_Id: 6394540802048
+    m_Key: item.display_name
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

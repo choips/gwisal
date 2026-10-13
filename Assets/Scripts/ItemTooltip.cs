@@ -155,7 +155,7 @@ public class ItemTooltip : MonoBehaviour
             typeLine = $"<color=#{nameHex}>{item.RarityName}</color> {item.TypeName}";
         }
 
-        return $"<size=125%><color=#{nameHex}>{item.itemName}</color></size>\n"
+        return $"<size=125%><color=#{nameHex}>{item.Name}</color></size>\n"
              + $"{typeLine}\n"
              + $"\n{item.StatDescription}\n"
              + $"\n{body}\n"
@@ -187,7 +187,7 @@ public class ItemTooltip : MonoBehaviour
 
         string hintHex = ColorUtility.ToHtmlStringRGB(hintColor);
         string equippedLine = equipped != null
-            ? $"<color=#{hintHex}>{Loc.Get("tooltip.equipped")}</color> <color=#{ColorUtility.ToHtmlStringRGB(equipped.NameColor)}>{equipped.itemName}</color> ({equipped.StatDescription})"
+            ? $"<color=#{hintHex}>{Loc.Get("tooltip.equipped")}</color> <color=#{ColorUtility.ToHtmlStringRGB(equipped.NameColor)}>{equipped.Name}</color> ({equipped.StatDescription})"
             : $"<color=#{hintHex}>{Loc.Format("tooltip.nothing_equipped", item.TypeName)}</color>";
 
         return $"{equippedLine}\n{BuildDifference(item, difference)}";

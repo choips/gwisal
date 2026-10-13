@@ -412,10 +412,10 @@ public class Enemy : MonoBehaviour
             Debug.LogWarning("씬에서 PlayerStats를 찾지 못해 경험치를 지급하지 못했습니다.");
         }
 
-        // LootDropper가 붙어 있는 적만 아이템을 드랍 (챔피언·유니크는 더 많이, 더 좋은 등급으로)
+        // LootDropper가 붙어 있는 적만 아이템을 드랍 (챔피언·유니크는 더 많이, 더 좋은 등급으로, 아이템 레벨 = 몬스터 레벨)
         if (TryGetComponent(out LootDropper lootDropper))
         {
-            lootDropper.DropItem(transform.position, lootDropCount, lootRarityMultiplier);
+            lootDropper.DropItem(transform.position, lootDropCount, lootRarityMultiplier, level);
         }
 
         // 자신을 생성한 스포너에게 사망을 알려 적 수를 줄이게 함

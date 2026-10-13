@@ -169,10 +169,10 @@ public class InventoryManager : MonoBehaviour
         return true;
     }
 
-    // 이 아이템을 가방에 넣을 자리가 있는지 (같은 이름 물약 묶음이 이미 있으면 칸이 늘지 않으므로 항상 가능)
+    // 이 아이템을 가방에 넣을 자리가 있는지 (같은 물약 묶음이 이미 있으면 칸이 늘지 않으므로 항상 가능)
     public bool HasRoomFor(ItemData item)
     {
-        if (item.IsConsumable && inventory.Exists(other => other.IsConsumable && other.itemName == item.itemName))
+        if (item.IsConsumable && inventory.Exists(other => other.IsConsumable && other.BaseKey == item.BaseKey))
         {
             return true;
         }
@@ -288,7 +288,7 @@ public class InventoryManager : MonoBehaviour
         if (!stats.RestoreMP(potion.statValue)) return;
 
         inventory.Remove(potion);
-        NotificationUI.Show(Loc.Format("notice.potion_used", potion.itemName, potion.statValue), NotificationUI.NoticeType.Success);
+        NotificationUI.Show(Loc.Format("notice.potion_used", potion.Name, potion.statValue), NotificationUI.NoticeType.Success);
         RefreshUI();
     }
 
@@ -450,22 +450,22 @@ public class InventoryManager : MonoBehaviour
         }
     }
 
-    // 가방 칸 하나에 들어갈 내용 (물약은 같은 이름끼리 묶어 count에 개수)
+    // 가방 칸 하나에 들어갈 내용 (물약은 같은 기본 아이템끼리 묶어 count에 개수)
     private struct BagEntry
     {
         public ItemData item;
         public int count;
     }
 
-    // 가방 목록을 칸 단위로 정리 (장비는 1개당 1칸, 같은 이름 물약은 묶어서 1칸)
+    // 가방 목록을 칸 단위로 정리 (장비는 1개당 1칸, 같은 기본 아이템 물약은 묶어서 1칸)
     private List<BagEntry> GetBagEntries()
     {
         List<BagEntry> entries = new List<BagEntry>();
-        Dictionary<string, int> consumableIndex = new Dictionary<string, int>(); // 물약 이름 → entries 위치
+        Dictionary<string, int> consumableIndex = new Dictionary<string, int>(); // 물약 기본 아이템 ID → entries 위치
 
         foreach (ItemData item in inventory)
         {
-            if (item.IsConsumable && consumableIndex.TryGetValue(item.itemName, out int index))
+            if (item.IsConsumable && consumableIndex.TryGetValue(item.BaseKey, out int index))
             {
                 BagEntry stack = entries[index];
                 stack.count++;
@@ -475,7 +475,7 @@ public class InventoryManager : MonoBehaviour
 
             if (item.IsConsumable)
             {
-                consumableIndex[item.itemName] = entries.Count;
+                consumableIndex[item.BaseKey] = entries.Count;
             }
             entries.Add(new BagEntry { item = item, count = 1 });
         }
@@ -506,9 +506,11 @@ public class InventoryManager : MonoBehaviour
         }
     }
 
-    // 아이템 아이콘: 이름과 같은 전용 아이콘이 있으면 그것, 없으면 종류별 공용 아이콘
+    // 아이템 아이콘: 기본 아이템(ItemBase)의 아이콘 → (옛 방식) 이름과 같은 Resources 그림 → 종류별 공용 아이콘
     private Sprite GetIcon(ItemData item)
     {
+        if (item.Icon != null) return item.Icon;
+
         Sprite itemIcon = GetItemIcon(item.itemName);
         if (itemIcon != null) return itemIcon;
 

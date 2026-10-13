@@ -317,50 +317,75 @@ MonoBehaviour:
       itemType: 0
       rarity: 0
       statValue: 5
+      baseId: 
+      itemLevel: 1
     weight: 30
+    baseItem: {fileID: 11400000, guid: e90ef59817d780142af443aea641463f, type: 2}
   - item:
       itemName: "\uBCF5\uC22D\uC544\uB098\uBB34 \uAC80"
       itemType: 0
       rarity: 0
       statValue: 8
+      baseId: 
+      itemLevel: 1
     weight: 20
+    baseItem: {fileID: 11400000, guid: 145ab03c06f0dd2468385998c3876eed, type: 2}
   - item:
       itemName: "\uB3C4\uC0AC\uC758 \uC9C0\uD321\uC774"
       itemType: 0
       rarity: 0
       statValue: 11
+      baseId: 
+      itemLevel: 1
     weight: 10
+    baseItem: {fileID: 11400000, guid: 80929b6a6a22a9f4297ab3a0e088d308, type: 2}
   - item:
       itemName: "\uBCBC\uB77D \uB9DE\uC740 \uB300\uCD94\uB098\uBB34 \uAC80"
       itemType: 0
       rarity: 0
       statValue: 15
+      baseId: 
+      itemLevel: 1
     weight: 5
+    baseItem: {fileID: 11400000, guid: 211b1efa271d1b54b86ccae9b426b967, type: 2}
   - item:
       itemName: "\uBB34\uBA85 \uB3C4\uD3EC"
       itemType: 1
       rarity: 0
       statValue: 15
+      baseId: 
+      itemLevel: 1
     weight: 30
+    baseItem: {fileID: 11400000, guid: a5d1db57778a9ea499f9a210417190cd, type: 2}
   - item:
       itemName: "\uAC00\uC8FD \uAC11\uC637"
       itemType: 1
       rarity: 0
       statValue: 20
+      baseId: 
+      itemLevel: 1
     weight: 20
+    baseItem: {fileID: 11400000, guid: 8c3c7a67179104b46b67c9466e9f2f8a, type: 2}
   - item:
       itemName: "\uBE44\uB2E8 \uB3C4\uD3EC"
       itemType: 1
       rarity: 0
       statValue: 30
+      baseId: 
+      itemLevel: 1
     weight: 10
+    baseItem: {fileID: 11400000, guid: 9690fc994e21f5e4da1f9f13ae0115f6, type: 2}
   - item:
       itemName: "\uC0AC\uC2AC \uAC11\uC637"
       itemType: 1
       rarity: 0
       statValue: 40
+      baseId: 
+      itemLevel: 1
     weight: 5
+    baseItem: {fileID: 11400000, guid: e78411886bcb0b34382e81464b28dce3, type: 2}
   potionDropChance: 0.3
+  potionItem: {fileID: 11400000, guid: 7d936b2aff4fad6438b38c6abef402cb, type: 2}
   potionName: "\uAE30\uB825 \uBB3C\uC57D"
   potionRestoreAmount: 50
   potionColor: {r: 0.2, g: 0.45, b: 1, a: 1}

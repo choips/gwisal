@@ -18,12 +18,14 @@ public enum ItemRarity
     Unique  // 유니크 (주황색)
 }
 
-// 아이템 한 개의 정보 (이름, 종류, 등급, 능력치 증가량)
+// 아이템 한 개의 정보 (기본 아이템 ID, 종류, 등급, 숨겨진 아이템 레벨, 능력치 증가량)
 // 바닥 아이템(Item), 인벤토리, 장비 슬롯, 세이브 파일에서 모두 이 형식을 사용합니다.
+// 이름·아이콘은 baseId로 찾은 기본 아이템(ItemBase)에서 가져옵니다.
 // MonoBehaviour가 아닌 순수 C# 클래스이며, Inspector 표시와 JSON 저장을 위해 [System.Serializable]을 붙입니다.
 [System.Serializable]
 public class ItemData
 {
+    [Tooltip("(옛 방식) 한국어 이름 — 기본 아이템 ID가 없는 옛 세이브·옛 드랍 표 아이템을 찾을 때만 사용")]
     public string itemName = "알 수 없는 아이템";
     public ItemType itemType = ItemType.Weapon;
     public ItemRarity rarity = ItemRarity.Normal;
@@ -31,7 +33,28 @@ public class ItemData
     [Tooltip("무기: 공격력 증가량 / 방어구: 최대 체력 증가량 / 기력 물약: 기력 회복량")]
     public float statValue = 5f;
 
+    [Tooltip("기본 아이템 ID (ItemBase의 itemId, 예: weapon_old_dagger)")]
+    public string baseId = "";
+
+    [Tooltip("숨겨진 아이템 레벨 (떨어뜨린 귀신의 몬스터 레벨, 플레이어에게 보이지 않음)")]
+    public int itemLevel = 1;
+
+    // 찾아 둔 기본 아이템 (저장하지 않음)
+    [System.NonSerialized] private ItemBase cachedBase;
+
     public ItemData() { }
+
+    // 기본 아이템으로 새 아이템을 만듦 (드랍할 때)
+    public ItemData(ItemBase baseItem, ItemRarity rarity, int itemLevel, float statValue)
+    {
+        cachedBase = baseItem;
+        baseId = baseItem.itemId;
+        itemName = baseItem.displayName;
+        itemType = baseItem.itemType;
+        this.rarity = rarity;
+        this.itemLevel = itemLevel;
+        this.statValue = statValue;
+    }
 
     // 같은 내용의 새 아이템을 만듦 (바닥 아이템이 파괴되어도 인벤토리의 아이템은 따로 유지)
     public ItemData(ItemData source)
@@ -40,16 +63,51 @@ public class ItemData
         itemType = source.itemType;
         rarity = source.rarity;
         statValue = source.statValue;
+        baseId = source.baseId;
+        itemLevel = source.itemLevel;
+        cachedBase = source.cachedBase;
     }
 
-    // JSON에서 불러온 빈 칸(이름 없음)인지 확인
-    public bool IsEmpty => string.IsNullOrEmpty(itemName);
+    // JSON에서 불러온 빈 칸(이름도 ID도 없음)인지 확인
+    public bool IsEmpty => string.IsNullOrEmpty(baseId) && string.IsNullOrEmpty(itemName);
+
+    // 기본 아이템 (ID로 찾고, ID가 없는 옛 아이템은 이름으로 찾아 ID를 채움 — 못 찾으면 null)
+    public ItemBase Base
+    {
+        get
+        {
+            if (cachedBase != null) return cachedBase;
+
+            ItemDatabase database = ItemDatabase.Instance;
+            if (database == null) return null;
+
+            if (!string.IsNullOrEmpty(baseId))
+            {
+                cachedBase = database.Find(baseId);
+            }
+            else
+            {
+                cachedBase = database.FindByOldName(itemName);
+                if (cachedBase != null) baseId = cachedBase.itemId;
+            }
+            return cachedBase;
+        }
+    }
+
+    // 같은 기본 아이템인지 구분하는 값 (물약 묶음용: 기본 아이템 ID, 못 찾으면 옛 이름)
+    public string BaseKey => Base != null ? Base.itemId : itemName;
+
+    // 화면에 보일 이름 (예: "낡은 단검" — 기본 아이템을 못 찾으면 옛 이름)
+    public string Name => Base != null ? Base.LocalizedName : itemName;
+
+    // 기본 아이템의 아이콘 (없으면 null)
+    public Sprite Icon => Base != null ? Base.icon : null;
 
     // 장착하는 대신 사용하면 사라지는 소모품인지 (물약 등)
     public bool IsConsumable => itemType == ItemType.ManaPotion;
 
-    // 화면 표시용 이름 (예: "[Rare] 낡은 단검", 등급이 없는 소모품은 "기력 물약")
-    public string DisplayName => IsConsumable ? itemName : $"[{rarity}] {itemName}";
+    // 화면 표시용 이름 (예: "[레어] 낡은 단검", 등급이 없는 소모품은 "기력 물약")
+    public string DisplayName => IsConsumable ? Name : Loc.Format("item.display_name", RarityName, Name);
 
     // 종류 이름 (예: "무기") — 화면 글자 표 "UI"에서 가져옴
     public string TypeName => GetTypeName(itemType);

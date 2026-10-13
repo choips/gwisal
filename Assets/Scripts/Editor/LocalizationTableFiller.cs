@@ -49,6 +49,7 @@ public static class LocalizationTableFiller
         { "item.letter.weapon",       "검" },
         { "item.letter.armor",        "갑" },
         { "item.letter.mana_potion",  "약" },
+        { "item.display_name",        "[{0}] {1}" },
 
         // 인벤토리 (InventoryManager)
         { "inventory.slot_equipped",  "{0}: {1} ({2})" },

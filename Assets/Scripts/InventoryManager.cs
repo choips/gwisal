@@ -1,12 +1,11 @@
 using System.Collections.Generic;
 using TMPro;                     // TMP_Text, TextMeshProUGUI 사용
 using UnityEngine;
-using UnityEngine.InputSystem;   // 새 Input System (Keyboard.current) 사용
 using UnityEngine.UI;            // Button, GridLayoutGroup 사용
 
 // 인벤토리 + 장비 관리자 (싱글톤)
 // - 어디서든 InventoryManager.Instance로 접근해서 아이템을 추가할 수 있습니다.
-// - 'I' 키로 인벤토리 UI 패널을 열고 닫습니다.
+// - 인벤토리 행동(기본 I 키)으로 인벤토리 UI 패널을 열고 닫습니다.
 // - 가방은 디아블로식 격자(기본 6×5 = 30칸)로 보여 주고, 칸을 클릭하면 그 아이템을 장착합니다.
 // - 가방이 가득 차면 더 이상 아이템을 주울 수 없습니다.
 // - 무기·방어구 장비 칸 버튼을 클릭하면 장착 중인 장비를 해제해 가방으로 돌려보냅니다.
@@ -72,9 +71,6 @@ public class InventoryManager : MonoBehaviour
     [Tooltip("게임 시작 시 인벤토리를 열어 둘지 여부")]
     [SerializeField] private bool openOnStart = false;
 
-    [Tooltip("기력 물약(Mana Potion)을 마시는 단축키 (인벤토리를 닫아 두어도 사용 가능)")]
-    [SerializeField] private Key potionKey = Key.Digit1;
-
     // 장착 중인 장비 (없으면 null)
     // Inspector에 노출하면 Unity가 빈 객체를 자동으로 채워 null 검사가 어려워지므로 직렬화하지 않음
     private ItemData equippedWeapon;
@@ -130,18 +126,16 @@ public class InventoryManager : MonoBehaviour
         RefreshUI();
     }
 
+    // 키 연결은 Assets/InputSystem_Actions의 Player 묶음에서 바꿉니다 (Inventory: I 키, UsePotion: 1 키)
     private void Update()
     {
-        // 키보드가 연결되어 있지 않으면 아무것도 하지 않음
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard == null) return;
-
-        if (keyboard.iKey.wasPressedThisFrame)
+        if (GameInput.Inventory.WasPressedThisFrame())
         {
             ToggleInventory();
         }
 
-        if (keyboard[potionKey].wasPressedThisFrame)
+        // 기력 물약(Mana Potion)은 인벤토리를 닫아 두어도 마실 수 있음
+        if (GameInput.UsePotion.WasPressedThisFrame())
         {
             DrinkFirstPotion();
         }

@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;   // 새 Input System (Keyboard.current) 사용
 
 // 게임 전체 단축키 관리자 (씬에 하나 배치)
-// S 키: 현재 플레이어 상태와 인벤토리를 저장
-// L 키: 저장된 데이터를 불러와 플레이어 상태와 인벤토리를 덮어씀
+// 빠른 저장(QuickSave, 기본 S 키): 현재 플레이어 상태와 인벤토리를 저장
+// 빠른 불러오기(QuickLoad, 기본 L 키): 저장된 데이터를 불러와 플레이어 상태와 인벤토리를 덮어씀
+// 키 연결은 Assets/InputSystem_Actions의 Player 묶음에서 바꿉니다.
 public class GameController : MonoBehaviour
 {
     [Tooltip("저장/불러오기할 플레이어 (비워두면 씬에서 자동으로 찾음)")]
@@ -12,15 +12,11 @@ public class GameController : MonoBehaviour
 
     private void Update()
     {
-        // 키보드가 연결되어 있지 않으면 아무것도 하지 않음
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard == null) return;
-
-        if (keyboard.sKey.wasPressedThisFrame)
+        if (GameInput.QuickSave.WasPressedThisFrame())
         {
             SaveCurrentGame();
         }
-        else if (keyboard.lKey.wasPressedThisFrame)
+        else if (GameInput.QuickLoad.WasPressedThisFrame())
         {
             LoadSavedGame();
         }

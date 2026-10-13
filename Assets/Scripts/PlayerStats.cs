@@ -68,6 +68,10 @@ public class PlayerStats : MonoBehaviour
     [Tooltip("플레이어가 받은 데미지 숫자의 색 (치명타 빨강과 구분)")]
     [SerializeField] private Color damageTextColor = new Color(0.75f, 0.35f, 1f); // 보라색
 
+    [Header("능력치 계산 (새 구조, S1-6 전환 중)")]
+    [Tooltip("밸런스 숫자 모음 파일 (Project 창의 BalanceConfig를 끌어다 놓기, 비워 두면 코드의 기본 숫자 사용)")]
+    [SerializeField] private BalanceConfig balanceConfig;
+
     [Header("부활")]
     [Tooltip("부활 직후 피해를 받지 않는 시간(초)")]
     [SerializeField] private float respawnInvincibleTime = 2f; // 부활 후 무적 시간
@@ -85,10 +89,34 @@ public class PlayerStats : MonoBehaviour
     public event Action Died;
     public event Action Revived;
 
+    // 새 능력치 계산기 (레벨 기본값 + 장비 수정치 → 최종값). S1-6 1단계에서는 계산만 하고 아직 게임에 쓰지 않음 (F1 메뉴에서 비교)
+    public CharacterStats Stats { get; private set; }
+
     private Vector3 spawnPosition;    // 부활할 위치 (게임 시작 위치)
     private Quaternion spawnRotation; // 부활할 때 바라볼 방향
     private float invincibleUntil;    // 무적이 끝나는 시각
     private Renderer[] renderers;     // 무적 중 깜빡일 캐릭터 외형
+
+    private void Awake()
+    {
+        if (balanceConfig == null)
+        {
+            Debug.LogWarning("PlayerStats: Balance Config가 연결되지 않아 코드의 기본 숫자를 사용합니다. Player의 Player Stats에 BalanceConfig 파일을 끌어다 놓으세요.");
+            balanceConfig = ScriptableObject.CreateInstance<BalanceConfig>();
+        }
+
+        Stats = new CharacterStats(balanceConfig);
+        ApplyLevelToStats();
+    }
+
+    // 현재 레벨에 맞는 기본값(체력·기력 등)을 능력치 계산기에 넣음 (레벨이 바뀔 때마다 호출)
+    private void ApplyLevelToStats()
+    {
+        if (Stats == null) return;
+
+        balanceConfig.ApplyPlayerBase(Stats, level);
+        Stats.Refresh();
+    }
 
     private void Start()
     {
@@ -219,6 +247,7 @@ public class PlayerStats : MonoBehaviour
         currentHP = maxHP;
         currentMP = maxMP;
         requiredXP *= xpMultiplier;
+        ApplyLevelToStats();
 
         NotificationUI.Show($"레벨 업! (레벨 {level})", NotificationUI.NoticeType.Success);
     }
@@ -227,6 +256,7 @@ public class PlayerStats : MonoBehaviour
     public void ApplySaveData(SaveData data)
     {
         level = data.level;
+        ApplyLevelToStats();
         currentXP = data.currentXP;
         maxHP = data.maxHP;
         attackPower = data.attackPower;

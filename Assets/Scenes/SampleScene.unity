@@ -4498,6 +4498,9 @@ MonoBehaviour:
   attackRate: 1
   rotationSpeed: 10
   pickupRange: 1.5
+  stickDeadZone: 0.2
+  stickMoveLookAhead: 1.5
+  gamepadInteractRadius: 6
 --- !u!195 &1487634037
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -4649,6 +4652,7 @@ MonoBehaviour:
   damageTextPrefab: {fileID: 3157025288564402360, guid: da3cf388195c4b748b2f4899062edbfb, type: 3}
   damageTextHeight: 1.5
   damageTextColor: {r: 0.75, g: 0.35, b: 1, a: 1}
+  balanceConfig: {fileID: 11400000, guid: f8c4312088e570d429f9dce0cedcb568, type: 2}
   respawnInvincibleTime: 2
   blinkInterval: 0.1
 --- !u!114 &1487634043
@@ -4670,6 +4674,8 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
+  autoAimRadius: 12
+  noTargetAimDistance: 5
 --- !u!114 &1487634044
 MonoBehaviour:
   m_ObjectHideFlags: 0

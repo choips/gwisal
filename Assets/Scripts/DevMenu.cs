@@ -10,7 +10,7 @@ public class DevMenu : MonoBehaviour
 {
     private const float ReferenceScreenHeight = 1080f; // 이 화면 높이에서 창이 아래 크기 그대로 보임 (화면이 크면 함께 커짐)
     private const float MeterRefreshInterval = 0.25f;  // DPS 글자를 새로 만드는 간격(초) (매 프레임 문자열을 만들지 않기 위함)
-    private static readonly Rect WindowRect = new Rect(10f, 10f, 300f, 260f); // 기준 화면에서 창의 위치·크기
+    private static readonly Rect WindowRect = new Rect(10f, 10f, 320f, 340f); // 기준 화면에서 창의 위치·크기
 
     private bool isOpen;     // 메뉴가 열려 있는지
     private float guiScale = 1f; // 화면 크기에 맞춘 창 확대 배율
@@ -22,6 +22,10 @@ public class DevMenu : MonoBehaviour
     private float nextMeterRefreshTime;          // 다음에 DPS 글자를 새로 만들 시각
     private string meterDamageLabel = "누적 피해: 0"; // 누적 피해·적중 횟수·최대 한 방
     private string meterDpsLabel = "DPS: 0";         // 초당 피해·측정 시간
+
+    private int shownStatsVersion = -1;              // 표시 중인 새 능력치의 계산 번호 (바뀔 때만 글자를 새로 만듦)
+    private string statsDefenseLabel = "체력 - / 기력 -"; // 새 능력치: 체력·기력
+    private string statsAttackLabel = "무기 피해 -";      // 새 능력치: 무기 피해·치명타
 
     // 첫 씬이 열린 직후 메뉴 오브젝트를 한 번 만듦 (씬이 바뀌어도 유지)
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -50,6 +54,7 @@ public class DevMenu : MonoBehaviour
         {
             UpdateLevelLabel();
             UpdateMeterLabels();
+            UpdateStatsLabels();
 
             guiScale = Mathf.Max(1f, Screen.height / ReferenceScreenHeight);
             DevCheats.MenuScreenRect = new Rect(WindowRect.x * guiScale, WindowRect.y * guiScale,
@@ -94,6 +99,11 @@ public class DevMenu : MonoBehaviour
             nextMeterRefreshTime = 0f; // 바로 0으로 보이게 함
         }
 
+        GUILayout.Space(8f);
+        GUILayout.Label("새 능력치 계산 (비교용)");
+        GUILayout.Label(statsDefenseLabel);
+        GUILayout.Label(statsAttackLabel);
+
         GUILayout.EndArea();
     }
 
@@ -117,6 +127,20 @@ public class DevMenu : MonoBehaviour
 
         shownLevel = level;
         levelLabel = level >= 0 ? $"레벨: {level}" : "레벨: - (플레이어 없음)";
+    }
+
+    // 새 능력치 계산기의 최종값이 바뀌었을 때만 글자를 새로 만듦
+    private void UpdateStatsLabels()
+    {
+        CharacterStats stats = playerStats != null ? playerStats.Stats : null;
+        if (stats == null) return;
+
+        stats.Refresh();
+        if (stats.Version == shownStatsVersion) return;
+        shownStatsVersion = stats.Version;
+
+        statsDefenseLabel = $"체력 {stats.Get(StatType.MaxHealth):0} / 기력 {stats.Get(StatType.MaxMana):0} (초당 회복 {stats.Get(StatType.ManaRegen):0.#})";
+        statsAttackLabel = $"무기 피해 {stats.Get(StatType.WeaponDamageMin):0}~{stats.Get(StatType.WeaponDamageMax):0} / 치명타 {stats.Get(StatType.CritChance) * 100f:0}% · +{stats.Get(StatType.CritDamage) * 100f:0}%";
     }
 
     // DPS 측정 글자를 일정 간격으로만 새로 만듦

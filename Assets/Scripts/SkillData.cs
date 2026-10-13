@@ -28,7 +28,7 @@ public class SkillData : ScriptableObject
     [Min(0f)] public float manaCost = 0f;
 
     [Header("피해")]
-    [Tooltip("플레이어 공격력에 곱해지는 배율 (2 = 공격력의 2배). 능력치 시스템(S1-6) 이후에는 무기 피해 배율로 바뀝니다.")]
+    [Tooltip("무기 피해에 곱해지는 배율 (2 = 무기 피해의 200%)")]
     [Min(0f)] public float damageMultiplier = 2f;
 
     [Header("생성할 오브젝트")]

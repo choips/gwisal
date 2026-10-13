@@ -2,7 +2,7 @@ using UnityEngine;
 
 // 도사의 원거리 스킬 '부적' 투사체
 // 생성된 방향(앞쪽)으로 날아가다가 적(Enemy 태그)에 닿으면 데미지를 주고 사라집니다.
-// 데미지는 발사한 순간 플레이어 공격력 × 배율로 정해집니다 (레벨업·무기 장착 시 함께 강해짐).
+// 데미지는 발사한 순간 플레이어의 무기 피해 × 배율로 정해집니다 (무기 장착 시 함께 강해짐, DamageCalculator 공식).
 // 아무것도 맞히지 못하면 일정 시간 뒤 오브젝트 풀로 돌아갑니다 (풀 오브젝트라 상태 초기화는 OnEnable에서).
 // 판정 상자(Box Collider)는 바닥 아래 ~ 머리 위(약 -0.1 ~ 1.9m)까지 세로로 길게 잡아, 키 작은 적도 높이 차이로 빗나가지 않게 합니다.
 // (프리팹 크기 Y가 0.05라서 Size Y 40 = 실제 2m, Center Y 6 = 실제 0.3m 위 / 발사 높이가 바뀌면 함께 조정)
@@ -15,7 +15,7 @@ public class AmuletProjectile : MonoBehaviour
     [Tooltip("1초에 날아가는 거리")]
     public float speed = 15f; // 이동 속도
 
-    [Tooltip("플레이어 공격력에 곱해지는 배율 (2 = 공격력의 2배, 공격력 10이면 데미지 20)")]
+    [Tooltip("무기 피해에 곱해지는 배율 (2 = 무기 피해의 200%, 무기 피해 8~12면 데미지 16~24) — 스킬로 쏘면 Skill Data의 배율로 덮어씀")]
     public float attackPowerMultiplier = 2f; // 공격력 배율
 
     [Tooltip("생성 후 이 시간(초)이 지나면 자동으로 사라짐 (풀로 반납)")]
@@ -56,7 +56,7 @@ public class AmuletProjectile : MonoBehaviour
         owner = stats;
         if (owner != null)
         {
-            damage = owner.attackPower * attackPowerMultiplier;
+            damage = owner.RollWeaponDamage(attackPowerMultiplier, true); // 무기 피해 × 배율 (치명타는 맞을 때 판정)
         }
     }
 

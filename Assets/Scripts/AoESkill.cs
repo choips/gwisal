@@ -4,7 +4,7 @@ using UnityEngine;
 // 도사의 광역 스킬 '부적 폭발'
 // 생성된 첫 프레임에 폭발 반경 안의 모든 적(Enemy 태그)에게 데미지를 주고,
 // 폭발 이펙트가 퍼졌다가 옅어지며 1초 뒤 오브젝트 풀로 돌아갑니다 (풀 오브젝트라 상태 초기화는 OnEnable에서).
-// 데미지는 플레이어 공격력 × 배율로 정해집니다 (레벨업·무기 장착 시 함께 강해짐).
+// 데미지는 플레이어의 무기 피해 × 배율로 정해집니다 (무기 장착 시 함께 강해짐, DamageCalculator 공식).
 public class AoESkill : MonoBehaviour
 {
     private const string EnemyTag = "Enemy"; // 데미지를 줄 대상의 태그
@@ -19,7 +19,7 @@ public class AoESkill : MonoBehaviour
     [Tooltip("폭발 반경 (이 거리 안의 적이 모두 피해를 입음)")]
     public float explosionRadius = 3f;
 
-    [Tooltip("플레이어 공격력에 곱해지는 배율 (2 = 공격력의 2배, 공격력 10이면 데미지 20)")]
+    [Tooltip("무기 피해에 곱해지는 배율 (2 = 무기 피해의 200%, 무기 피해 8~12면 데미지 16~24) — 스킬로 쓰면 Skill Data의 배율로 덮어씀")]
     public float attackPowerMultiplier = 2f; // 공격력 배율
 
     [Tooltip("폭발 후 이펙트가 사라질 때까지의 시간(초)")]
@@ -49,7 +49,7 @@ public class AoESkill : MonoBehaviour
         owner = stats;
         if (owner != null)
         {
-            damage = owner.attackPower * attackPowerMultiplier;
+            damage = owner.RollWeaponDamage(attackPowerMultiplier, true); // 무기 피해 × 배율 (치명타는 적마다 판정)
         }
     }
 

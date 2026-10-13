@@ -485,7 +485,8 @@ public class PlayerController : MonoBehaviour
     {
         if (targetEnemy == null || stats == null) return;
 
-        float damage = stats.RollDamage(stats.attackPower, out bool isCritical);
+        // 기본 공격 = 무기 피해의 100% (스킬이 아니므로 스킬 피해 % 미적용)
+        float damage = stats.RollDamage(stats.RollWeaponDamage(1f, false), out bool isCritical);
         Debug.Log(isCritical ? $"치명타! {damage}의 데미지" : $"적중! {damage}의 데미지");
         targetEnemy.TakeDamage(damage, isCritical);
 

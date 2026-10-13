@@ -203,25 +203,39 @@ public class InventoryManager : MonoBehaviour
     }
 
     // 장비 슬롯을 그대로 복원 (세이브 불러오기용)
-    // 방어구: 이전 방어구의 최대 체력 보너스를 지우고 새 방어구의 보너스를 붙임 (최대 체력은 레벨·장비로 다시 계산)
-    // 무기: 저장된 공격력에 이미 무기 수치가 포함되어 있으므로 능력치는 건드리지 않음 (S1-6 3단계에서 전환)
+    // 이전 장비의 보너스를 지우고 새 장비의 보너스를 붙임 (공격·최대 체력은 레벨·장비로 다시 계산)
     public void SetEquipment(ItemData weapon, ItemData armor)
     {
         PlayerStats stats = GetPlayerStats();
-        if (stats != null && equippedArmor != null)
+        if (stats != null)
         {
+            stats.RemoveEquipmentBonus(equippedWeapon);
             stats.RemoveEquipmentBonus(equippedArmor);
         }
 
         equippedWeapon = weapon == null || weapon.IsEmpty ? null : weapon;
         equippedArmor = armor == null || armor.IsEmpty ? null : armor;
 
-        if (stats != null && equippedArmor != null)
+        if (stats != null)
         {
-            stats.AddEquipmentBonus(equippedArmor, StatType.MaxHealth, equippedArmor.statValue);
+            if (equippedWeapon != null) AddWeaponBonus(stats, equippedWeapon);
+            if (equippedArmor != null) AddArmorBonus(stats, equippedArmor);
         }
 
         RefreshUI();
+    }
+
+    // 무기 보너스: 무기 피해 최소·최대에 같은 값을 더함 (평균이 예전 "공격력 +N"과 같음)
+    private static void AddWeaponBonus(PlayerStats stats, ItemData weapon)
+    {
+        stats.AddEquipmentBonus(weapon, StatType.WeaponDamageMin, weapon.statValue);
+        stats.AddEquipmentBonus(weapon, StatType.WeaponDamageMax, weapon.statValue);
+    }
+
+    // 방어구 보너스: 최대 체력 (최대 체력과 현재 체력이 함께 늘어남)
+    private static void AddArmorBonus(PlayerStats stats, ItemData armor)
+    {
+        stats.AddEquipmentBonus(armor, StatType.MaxHealth, armor.statValue);
     }
 
     // 가방의 아이템 버튼을 클릭했을 때: 소모품이면 사용, 장비면 장착
@@ -345,8 +359,8 @@ public class InventoryManager : MonoBehaviour
         }
 
         equippedWeapon = weapon;
-        stats.attackPower += weapon.statValue;
-        Debug.Log($"무기 장착: 공격력이 {weapon.statValue} 증가했습니다!");
+        AddWeaponBonus(stats, weapon);
+        Debug.Log($"무기 장착: 무기 피해가 {weapon.statValue} 증가했습니다!");
     }
 
     // 방어구 장착: 기존 방어구가 있으면 먼저 해제(가방으로)한 뒤 새 방어구 장착
@@ -358,14 +372,14 @@ public class InventoryManager : MonoBehaviour
         }
 
         equippedArmor = armor;
-        stats.AddEquipmentBonus(armor, StatType.MaxHealth, armor.statValue); // 최대 체력과 현재 체력이 함께 늘어남
+        AddArmorBonus(stats, armor);
         Debug.Log($"방어구 장착: 최대 체력이 {armor.statValue} 증가했습니다!");
     }
 
-    // 장착 중인 무기를 빼서 가방에 넣고 공격력을 되돌림
+    // 장착 중인 무기를 빼서 가방에 넣고 무기 피해를 되돌림
     private void RemoveWeapon(PlayerStats stats)
     {
-        stats.attackPower -= equippedWeapon.statValue;
+        stats.RemoveEquipmentBonus(equippedWeapon);
         inventory.Add(equippedWeapon);
         Debug.Log($"무기 해제: {equippedWeapon.DisplayName} (공격력 -{equippedWeapon.statValue})");
         equippedWeapon = null;

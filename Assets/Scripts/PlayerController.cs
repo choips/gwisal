@@ -329,19 +329,20 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // 클릭한 바닥 위치에 표시 이펙트 생성 (이전 표시는 바로 지워서 하나만 보이게 함)
+    // 클릭한 바닥 위치에 표시 이펙트 생성 (오브젝트 풀 사용, 이전 표시는 바로 반납해서 하나만 보이게 함)
     private void SpawnClickMarker(Vector3 position)
     {
         if (clickMarkerPrefab == null) return;
 
+        // 이전 표시를 풀로 돌려보냄 (이미 끝나서 돌아가 있으면 무시됨)
         if (currentClickMarker != null)
         {
-            Destroy(currentClickMarker);
+            ObjectPoolManager.Release(currentClickMarker);
         }
 
         // 바닥과 겹쳐 깜빡이지 않도록 아주 살짝 띄움
-        currentClickMarker = Instantiate(clickMarkerPrefab, position + Vector3.up * 0.02f, Quaternion.identity);
-        Destroy(currentClickMarker, clickMarkerMaxLifetime);
+        currentClickMarker = ObjectPoolManager.Spawn(clickMarkerPrefab, position + Vector3.up * 0.02f, Quaternion.identity);
+        ObjectPoolManager.Release(currentClickMarker, clickMarkerMaxLifetime);
     }
 
     // 적을 타겟으로 지정

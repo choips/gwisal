@@ -90,9 +90,9 @@ public class AmuletProjectile : MonoBehaviour
         if (hitEffectPrefab == null) return;
 
         Vector3 hitPoint = hitCollider.ClosestPoint(transform.position);
-        GameObject effect = Instantiate(hitEffectPrefab, hitPoint, Quaternion.LookRotation(-transform.forward));
+        GameObject effect = ObjectPoolManager.Spawn(hitEffectPrefab, hitPoint, Quaternion.LookRotation(-transform.forward));
 
-        // 파티클의 Stop Action 설정을 빠뜨려도 이펙트가 쌓이지 않도록 일정 시간 뒤 제거
-        Destroy(effect, hitEffectMaxLifetime);
+        // 파티클이 끝나면 PooledEffect가 반납하지만, 혹시 끝나지 않아도 쌓이지 않도록 일정 시간 뒤 반납
+        ObjectPoolManager.Release(effect, hitEffectMaxLifetime);
     }
 }

@@ -116,7 +116,33 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    public float AoeCooldownRemaining => Mathf.Max(0f, nextAoeTime - Time.time);
+    public float AoeCooldownRemaining
+    {
+        get
+        {
+            SkillBase newSkill = GetNewSkill(AoESkillSlot);
+            return newSkill != null ? newSkill.CooldownRemaining : Mathf.Max(0f, nextAoeTime - Time.time);
+        }
+    }
+
+    // 스킬바 UI가 읽어가는 부적 폭발의 전체 쿨타임(초)과 기력 소모량
+    public float AoeCooldown
+    {
+        get
+        {
+            SkillBase newSkill = GetNewSkill(AoESkillSlot);
+            return newSkill != null ? newSkill.Cooldown : aoeCooldown;
+        }
+    }
+
+    public float AoeManaCost
+    {
+        get
+        {
+            SkillBase newSkill = GetNewSkill(AoESkillSlot);
+            return newSkill != null ? newSkill.ManaCost : aoeCost;
+        }
+    }
 
     private void Awake()
     {
@@ -148,6 +174,7 @@ public class PlayerController : MonoBehaviour
         targetItem = null;
         isAttacking = false;
         StopAimingAoE();
+        if (playerSkills != null) playerSkills.CancelAllSkills();
     }
 
     private void Update()
@@ -159,8 +186,11 @@ public class PlayerController : MonoBehaviour
 
     // 광역 스킬 조준 입력 처리 (스킬 3번 칸 누름: 조준 시작 → 뗌: 폭발, 조준 중 취소 행동: 취소)
     // 기본 키: 스킬 3번 칸 = Q, 취소 = ESC (Assets/InputSystem_Actions의 Player 묶음에서 변경)
+    // (옛 코드 — PlayerSkills의 3번 칸에 새 스킬이 있으면 그쪽이 처리하므로 건너뜀)
     private void HandleAoEAimInput()
     {
+        if (GetNewSkill(AoESkillSlot) != null) return;
+
         InputAction aoeAction = GameInput.GetSkill(AoESkillSlot);
 
         if (aoeAction.WasPressedThisFrame())

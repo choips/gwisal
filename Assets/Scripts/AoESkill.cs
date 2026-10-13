@@ -37,7 +37,7 @@ public class AoESkill : MonoBehaviour
     private PlayerStats owner;       // 폭발을 일으킨 플레이어 (치명타 판정용, 없으면 치명타 없음)
     private float damage = FallbackDamage; // 치명타 판정 전 기본 데미지
 
-    // 시전한 플레이어를 기억하고 데미지를 정함 (PlayerController가 생성 직후, Start보다 먼저 호출)
+    // 시전한 플레이어를 기억하고 데미지를 정함 (시전한 스크립트가 생성 직후, Start보다 먼저 호출)
     public void SetOwner(PlayerStats stats)
     {
         owner = stats;
@@ -45,6 +45,13 @@ public class AoESkill : MonoBehaviour
         {
             damage = owner.attackPower * attackPowerMultiplier;
         }
+    }
+
+    // 스킬 데이터의 피해 배율로 폭발시킬 때 사용 (AmuletExplosionSkill이 생성 직후 호출)
+    public void SetOwner(PlayerStats stats, float damageMultiplier)
+    {
+        attackPowerMultiplier = damageMultiplier;
+        SetOwner(stats);
     }
 
     private void Start()

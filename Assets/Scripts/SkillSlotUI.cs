@@ -84,8 +84,8 @@ public class SkillSlotUI : MonoBehaviour
         {
             case SkillSlotType.AmuletExplosion:
                 remaining = controller.AoeCooldownRemaining;
-                cooldown = controller.aoeCooldown;
-                mpCost = controller.aoeCost;
+                cooldown = controller.AoeCooldown;
+                mpCost = controller.AoeManaCost;
                 break;
 
             default: // SkillSlotType.Amulet

@@ -186,9 +186,14 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // 플레이어 주변 반경 안의 가장 가까운 적 (게임패드 스킬 자동 조준에서 사용)
+    public bool TryFindNearestEnemy(float radius, out Transform nearestEnemy)
+    {
+        return TryFindNearest(EnemyTag, radius, out nearestEnemy);
+    }
+
     // 플레이어 주변 반경 안에서 해당 태그를 가진 가장 가까운 대상 찾기 (없으면 false)
-    // 스킬 자동 조준(게임패드)에서도 사용
-    public bool TryFindNearest(string targetTag, float radius, out Transform nearest)
+    private bool TryFindNearest(string targetTag, float radius, out Transform nearest)
     {
         nearest = null;
         Vector3 center = transform.position;
@@ -240,6 +245,23 @@ public class PlayerController : MonoBehaviour
 
         groundPoint = hit.point;
         return true;
+    }
+
+    // 월드 위치 바로 아래의 바닥(Ground 레이어) 좌표 구하기 (바닥이 없으면 false, groundPoint는 원래 위치)
+    // 게임패드 자동 조준에서 적의 발밑·캐릭터 앞쪽 바닥을 찾을 때 사용
+    public bool TryGetGroundPointBelow(Vector3 worldPoint, out Vector3 groundPoint)
+    {
+        const float probeHeight = 10f; // 이만큼 위에서 아래로 광선을 쏨 (적의 몸 안에서 시작하지 않도록)
+
+        Vector3 origin = worldPoint + Vector3.up * probeHeight;
+        if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, probeHeight * 3f, groundLayer, QueryTriggerInteraction.Ignore))
+        {
+            groundPoint = hit.point;
+            return true;
+        }
+
+        groundPoint = worldPoint;
+        return false;
     }
 
     // 커서 입력 처리 (선택 행동 = 좌클릭: 이동/공격/줍기)

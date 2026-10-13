@@ -1,14 +1,14 @@
 using UnityEngine;
 
 // 부적 투사체(Amulet Projectile) 스킬 (Player에 붙이고, PlayerSkills의 스킬 칸에 연결)
-// 스킬 칸 키를 누르는 순간 커서가 가리키는 바닥 방향으로 몸을 돌리고 부적을 발사합니다.
+// 스킬 칸 키를 누르는 순간 겨눈 방향(마우스 커서 / 게임패드는 가장 가까운 적)으로 몸을 돌리고 부적을 발사합니다.
 // 쿨타임·기력 소모·피해 배율·부적 프리팹은 Skill Data 파일(SkillData_AmuletProjectile)에서 정합니다.
 public class AmuletProjectileSkill : SkillBase
 {
     [Tooltip("부적이 생성될 위치 (Player의 자식 오브젝트 FirePoint, 비워 두면 Player 위치)")]
     [SerializeField] private Transform firePoint; // 발사 위치
 
-    public override void OnInputPressed(Vector2 pointerPosition)
+    public override void OnInputPressed(SkillAim aim)
     {
         if (IsOnCooldown) return;
 
@@ -20,8 +20,9 @@ public class AmuletProjectileSkill : SkillBase
 
         if (controller == null) return;
 
-        // 커서가 가리키는 바닥 좌표 (바닥이 아니면 발사하지 않음)
-        if (!controller.TryGetGroundPoint(pointerPosition, out Vector3 groundPoint)) return;
+        // 겨눈 바닥 위치 (마우스가 바닥 밖을 가리키면 발사하지 않음)
+        if (!aim.HasPoint) return;
+        Vector3 groundPoint = aim.Point;
 
         if (!TryPayMana()) return;
 

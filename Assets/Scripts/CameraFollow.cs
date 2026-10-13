@@ -78,6 +78,14 @@ public class CameraFollow : MonoBehaviour
         }
     }
 
+    // 미끄러지지 않고 대상 위치로 바로 맞춤 (지역 이동처럼 플레이어가 순간이동했을 때)
+    public void SnapToTarget()
+    {
+        if (target == null) return;
+        velocity = Vector3.zero;
+        transform.position = target.position + offset * currentZoom;
+    }
+
     private void HandleZoom()
     {
         if (enableZoom && !IsPointerOverUI())

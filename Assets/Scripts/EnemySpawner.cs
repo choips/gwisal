@@ -1,3 +1,4 @@
+using System.Collections;           // IEnumerator 사용 (지역 준비를 기다리는 Start)
 using System.Collections.Generic;
 using TMPro;                     // TMP_FontAsset 사용 (머리 위 이름표 글꼴)
 using UnityEngine;
@@ -107,12 +108,16 @@ public class EnemySpawner : MonoBehaviour
     private float levelHealthMultiplier = 1f; // 몬스터 레벨에 따른 체력 배율
     private float levelDamageMultiplier = 1f; // 몬스터 레벨에 따른 피해 배율
 
-    private void Start()
+    // 지역 씬이 막 불러와진 순간에는 플레이어가 아직 입구로 옮겨지기 전이므로,
+    // RegionManager가 지역 준비(활성 씬 지정·플레이어 배치)를 마칠 때까지 기다렸다가 배치함
+    private IEnumerator Start()
     {
+        while (RegionManager.IsBusy) yield return null;
+
         if (enemyPrefab == null)
         {
             Debug.LogWarning($"{gameObject.name}: Enemy Prefab이 연결되지 않아 몬스터를 배치하지 않습니다.");
-            return;
+            yield break;
         }
 
         if (labelFont == null && enemyPrefab.TryGetComponent(out LootDropper lootDropper))
@@ -127,7 +132,7 @@ public class EnemySpawner : MonoBehaviour
         if (activeTypes.Count == 0)
         {
             Debug.LogWarning($"{gameObject.name}: 출현할 귀신 종류가 없어 몬스터를 배치하지 않습니다. Enemy Types에 데이터 파일을 넣어 주세요.");
-            return;
+            yield break;
         }
 
         // 몬스터 레벨 배율은 플레이어가 가진 밸런스 숫자 모음(BalanceConfig)에서 계산

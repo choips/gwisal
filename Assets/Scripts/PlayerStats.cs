@@ -349,6 +349,13 @@ public class PlayerStats : MonoBehaviour
         Revived?.Invoke();
     }
 
+    // 부활 위치 바꾸기 (지역에 들어올 때 RegionManager가 그 지역 입구로 정함)
+    public void SetSpawnPoint(Vector3 position, Quaternion rotation)
+    {
+        spawnPosition = position;
+        spawnRotation = rotation;
+    }
+
     // 부활 버튼: 시작 위치로 돌아가 체력/기력을 가득 채우고 잠시 무적
     public void Respawn()
     {

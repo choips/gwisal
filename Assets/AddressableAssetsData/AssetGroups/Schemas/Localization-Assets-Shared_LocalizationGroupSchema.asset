@@ -12,4 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c2a6cbe3350d4236a61c288cd10ec63e, type: 3}
   m_Name: Localization-Assets-Shared_LocalizationGroupSchema
   m_EditorClassIdentifier: Unity.Localization.Editor::UnityEditor.Localization.Addressables.LocalizationGroupSchema
-  m_Group: {fileID: 0}
+  m_Group: {fileID: 11400000, guid: 35ae4d00c16b2d243a6b6971eb82833b, type: 2}

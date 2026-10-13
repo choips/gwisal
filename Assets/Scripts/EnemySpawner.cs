@@ -165,7 +165,7 @@ public class EnemySpawner : MonoBehaviour
 
         hasPopulated = true;
         Debug.Log($"몬스터 배치 완료 (레벨 {monsterLevel}): 일반 무리 {normalPacks}개, 챔피언 무리 {championPacks}개, 유니크 무리 {uniquePacks}개 (총 {currentEnemyCount}마리)");
-        NotificationUI.Show($"이 지역에 챔피언 무리 {championPacks}개와 유니크 몬스터 {uniquePacks}마리가 도사리고 있습니다");
+        NotificationUI.Show(Loc.Format("notice.area_threats", championPacks, uniquePacks));
     }
 
     // count개의 무리 자리를 찾아 spawnPack으로 채움 (실제로 배치한 무리 수를 돌려줌)
@@ -262,7 +262,7 @@ public class EnemySpawner : MonoBehaviour
 
         if (hasPopulated && currentEnemyCount == 0)
         {
-            NotificationUI.Show("이 지역의 모든 요괴를 처치했습니다!", NotificationUI.NoticeType.Success);
+            NotificationUI.Show(Loc.Get("notice.area_cleared"), NotificationUI.NoticeType.Success);
         }
     }
 

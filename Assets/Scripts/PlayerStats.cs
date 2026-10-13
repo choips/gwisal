@@ -244,7 +244,7 @@ public class PlayerStats : MonoBehaviour
 
         if (currentMP < amount)
         {
-            NotificationUI.Show("기력이 부족합니다!", NotificationUI.NoticeType.Warning);
+            NotificationUI.Show(Loc.Get("notice.mana_not_enough"), NotificationUI.NoticeType.Warning);
             return false;
         }
 
@@ -259,7 +259,7 @@ public class PlayerStats : MonoBehaviour
 
         if (currentMP >= maxMP)
         {
-            NotificationUI.Show("기력이 이미 가득 차 있습니다.");
+            NotificationUI.Show(Loc.Get("notice.mana_full"));
             return false;
         }
 
@@ -303,7 +303,7 @@ public class PlayerStats : MonoBehaviour
         currentMP = maxMP;
         requiredXP *= xpMultiplier;
 
-        NotificationUI.Show($"레벨 업! (레벨 {level})", NotificationUI.NoticeType.Success);
+        NotificationUI.Show(Loc.Format("notice.level_up", level), NotificationUI.NoticeType.Success);
     }
 
     // 세이브 데이터로 능력치를 덮어씀 (사망 상태였다면 부활)

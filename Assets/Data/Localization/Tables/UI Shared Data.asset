@@ -13,8 +13,60 @@ MonoBehaviour:
   m_Name: UI Shared Data
   m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Tables.SharedTableData
   m_TableCollectionName: UI
-  m_TableCollectionNameGuidString: 00000000000000000000000000000000
-  m_Entries: []
+  m_TableCollectionNameGuidString: ee25a8e2b43d2ff479f0591dd2dbdc32
+  m_Entries:
+  - m_Id: 1517584465920
+    m_Key: notice.save_done
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1517622214656
+    m_Key: notice.load_done
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1517622214657
+    m_Key: notice.load_no_save
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1517622214658
+    m_Key: notice.mana_not_enough
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1517622214659
+    m_Key: notice.mana_full
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1517622214660
+    m_Key: notice.level_up
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1517622214661
+    m_Key: notice.bag_full
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1517622214662
+    m_Key: notice.bag_full_unequip
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1517622214663
+    m_Key: notice.no_mana_potion
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1517622214664
+    m_Key: notice.potion_used
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1517622214665
+    m_Key: notice.dead_cannot_use
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1517622214666
+    m_Key: notice.area_threats
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1517622214667
+    m_Key: notice.area_cleared
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

@@ -160,7 +160,7 @@ public class InventoryManager : MonoBehaviour
 
         if (!HasRoomFor(item))
         {
-            NotificationUI.Show($"가방이 가득 찼습니다! ({bagCapacity}칸)", NotificationUI.NoticeType.Warning);
+            NotificationUI.Show(Loc.Format("notice.bag_full", bagCapacity), NotificationUI.NoticeType.Warning);
             return false;
         }
 
@@ -270,7 +270,7 @@ public class InventoryManager : MonoBehaviour
         ItemData potion = inventory.Find(item => item.itemType == ItemType.ManaPotion);
         if (potion == null)
         {
-            NotificationUI.Show("기력 물약이 없습니다.", NotificationUI.NoticeType.Warning);
+            NotificationUI.Show(Loc.Get("notice.no_mana_potion"), NotificationUI.NoticeType.Warning);
             return;
         }
 
@@ -288,7 +288,7 @@ public class InventoryManager : MonoBehaviour
         if (!stats.RestoreMP(potion.statValue)) return;
 
         inventory.Remove(potion);
-        NotificationUI.Show($"{potion.itemName} 사용! 기력 +{potion.statValue}", NotificationUI.NoticeType.Success);
+        NotificationUI.Show(Loc.Format("notice.potion_used", potion.itemName, potion.statValue), NotificationUI.NoticeType.Success);
         RefreshUI();
     }
 
@@ -346,7 +346,7 @@ public class InventoryManager : MonoBehaviour
     {
         if (HasRoomFor(equipped)) return true;
 
-        NotificationUI.Show("가방이 가득 차서 장비를 벗을 수 없습니다.", NotificationUI.NoticeType.Warning);
+        NotificationUI.Show(Loc.Get("notice.bag_full_unequip"), NotificationUI.NoticeType.Warning);
         return false;
     }
 
@@ -408,7 +408,7 @@ public class InventoryManager : MonoBehaviour
 
         if (stats.IsDead)
         {
-            NotificationUI.Show("사망한 상태에서는 아이템을 쓸 수 없습니다.", NotificationUI.NoticeType.Warning);
+            NotificationUI.Show(Loc.Get("notice.dead_cannot_use"), NotificationUI.NoticeType.Warning);
             return null;
         }
 

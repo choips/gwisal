@@ -323,6 +323,18 @@ MonoBehaviour:
     m_Key: item.display_name
     m_Metadata:
       m_Items: []
+  - m_Id: 14488675106816
+    m_Key: region.name.Region_01
+    m_Metadata:
+      m_Items: []
+  - m_Id: 14488696078336
+    m_Key: region.name.Region_02
+    m_Metadata:
+      m_Items: []
+  - m_Id: 14488696078337
+    m_Key: region.exit_label
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

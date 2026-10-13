@@ -110,6 +110,11 @@ public static class LocalizationTableFiller
         { "item.name.armor_silk_robe",        "비단 도포" },
         { "item.name.armor_chainmail",        "사슬 갑옷" },
         { "item.name.potion_mana",            "기력 물약" },
+
+        // 지역 이름 (RegionManager, 키 = region.name.씬이름) · 출구 이름표 (RegionExit)
+        { "region.name.Region_01",            "백팔 계단" },
+        { "region.name.Region_02",            "안개 산길" },
+        { "region.exit_label",                "{0} 가는 길" },
     };
 
     [MenuItem("귀살/화면 글자 표 채우기")]

@@ -2657,6 +2657,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RegionManager
   startRegionScene: Region_01
   startEntryId: start
+  fadeDuration: 0.4
+  titleFont: {fileID: 11400000, guid: 20b2501f3882aa348a32afafa525a93f, type: 2}
+  titleFontSize: 64
+  titleColor: {r: 0.95, g: 0.9, b: 0.8, a: 1}
+  titleShowTime: 2
+  titleFadeTime: 0.6
   currentRegionScene: 
 --- !u!4 &785131904
 Transform:

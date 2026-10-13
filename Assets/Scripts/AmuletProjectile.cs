@@ -30,7 +30,7 @@ public class AmuletProjectile : MonoBehaviour
     private PlayerStats owner; // 부적을 던진 플레이어 (치명타 판정용, 없으면 치명타 없음)
     private float damage = FallbackDamage; // 치명타 판정 전 기본 데미지
 
-    // 발사한 플레이어를 기억하고 데미지를 정함 (PlayerController가 생성 직후 호출)
+    // 발사한 플레이어를 기억하고 데미지를 정함 (발사한 스크립트가 생성 직후 호출)
     // 날아가는 도중 레벨업해도 데미지가 바뀌지 않도록 발사 순간의 공격력으로 고정
     public void SetOwner(PlayerStats stats)
     {
@@ -39,6 +39,13 @@ public class AmuletProjectile : MonoBehaviour
         {
             damage = owner.attackPower * attackPowerMultiplier;
         }
+    }
+
+    // 스킬 데이터의 피해 배율로 발사할 때 사용 (AmuletProjectileSkill이 생성 직후 호출)
+    public void SetOwner(PlayerStats stats, float damageMultiplier)
+    {
+        attackPowerMultiplier = damageMultiplier;
+        SetOwner(stats);
     }
 
     private void Start()

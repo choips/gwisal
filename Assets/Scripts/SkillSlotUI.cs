@@ -90,7 +90,7 @@ public class SkillSlotUI : MonoBehaviour
 
             default: // SkillSlotType.Amulet
                 remaining = controller.AmuletCooldownRemaining;
-                cooldown = controller.skillCooldown;
+                cooldown = controller.AmuletCooldown;
                 mpCost = 0f; // 부적 투사체는 기력을 쓰지 않음
                 break;
         }

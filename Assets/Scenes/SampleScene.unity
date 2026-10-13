@@ -4464,6 +4464,7 @@ GameObject:
   - component: {fileID: 1487634036}
   - component: {fileID: 1487634042}
   - component: {fileID: 1487634043}
+  - component: {fileID: 1487634044}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -4670,11 +4671,25 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerSkills
   slots:
   - {fileID: 0}
+  - {fileID: 1487634044}
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
-  - {fileID: 0}
+--- !u!114 &1487634044
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1487634035}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 834dc1508c0e5ba428cce196db6a3bf9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AmuletProjectileSkill
+  data: {fileID: 11400000, guid: 98244eb966c5f294e8348c9f26a58954, type: 2}
+  firePoint: {fileID: 1494356109}
 --- !u!1 &1494356108
 GameObject:
   m_ObjectHideFlags: 0

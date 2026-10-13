@@ -84,6 +84,7 @@ public class PlayerController : MonoBehaviour
 
     private NavMeshAgent agent;   // 캐릭터 길찾기 이동 컴포넌트
     private PlayerStats stats;    // 플레이어 능력치 (공격력 등)
+    private PlayerSkills playerSkills; // 스킬 칸 관리자 (칸에 새 스킬이 있으면 아래의 옛 스킬 코드는 쉼)
     private Transform target;     // 현재 타겟팅 중인 대상 (적 또는 아이템, 없으면 null)
     private Enemy targetEnemy;    // 타겟이 적일 때: 체력 관리 스크립트
     private Item targetItem;      // 타겟이 아이템일 때: 아이템 스크립트
@@ -95,14 +96,33 @@ public class PlayerController : MonoBehaviour
     private AoESkill aoeTemplate;      // 폭발 프리팹의 AoESkill (조준 원 크기를 실제 폭발 반경과 맞추기 위해 읽음)
     private GameObject currentClickMarker; // 지금 바닥에 떠 있는 클릭 표시
 
-    // 스킬바 UI가 읽어가는 남은 쿨타임(초, 0이면 사용 가능)
-    public float AmuletCooldownRemaining => Mathf.Max(0f, nextSkillTime - Time.time);
+    // 스킬바 UI가 읽어가는 남은 쿨타임(초, 0이면 사용 가능) — 스킬 칸에 새 스킬이 있으면 그 스킬의 값
+    public float AmuletCooldownRemaining
+    {
+        get
+        {
+            SkillBase newSkill = GetNewSkill(AmuletSkillSlot);
+            return newSkill != null ? newSkill.CooldownRemaining : Mathf.Max(0f, nextSkillTime - Time.time);
+        }
+    }
+
+    // 스킬바 UI가 읽어가는 부적 투사체의 전체 쿨타임(초)
+    public float AmuletCooldown
+    {
+        get
+        {
+            SkillBase newSkill = GetNewSkill(AmuletSkillSlot);
+            return newSkill != null ? newSkill.Cooldown : skillCooldown;
+        }
+    }
+
     public float AoeCooldownRemaining => Mathf.Max(0f, nextAoeTime - Time.time);
 
     private void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
         stats = GetComponent<PlayerStats>();
+        playerSkills = GetComponent<PlayerSkills>();
         if (stats == null)
         {
             Debug.LogWarning("Player에 PlayerStats 컴포넌트가 없어 공격할 수 없습니다. Add Component로 추가해 주세요.");
@@ -195,9 +215,26 @@ public class PlayerController : MonoBehaviour
         if (aoeIndicator != null) aoeIndicator.Hide();
     }
 
+    // 스킬 칸(1~6)에 PlayerSkills의 새 스킬이 들어 있으면 그 스킬, 없으면 null
+    private SkillBase GetNewSkill(int slotNumber)
+    {
+        return playerSkills != null ? playerSkills.GetSkill(slotNumber) : null;
+    }
+
+    // 스킬을 쓸 때: 타겟과 이동을 멈추고 지정한 바닥 지점을 바라봄 (높이는 무시하고 Y축 회전만)
+    public void StopAndFace(Vector3 point)
+    {
+        ClearTarget();
+        agent.ResetPath();
+
+        Vector3 lookPoint = new Vector3(point.x, transform.position.y, point.z);
+        transform.LookAt(lookPoint);
+    }
+
     // 화면상의 마우스 좌표가 가리키는 바닥(Ground 레이어) 좌표 구하기 (바닥이 아니면 false)
     // 적이 커서 아래에 있어도 Ground 레이어만 검사하므로 광선이 적을 통과해 바닥에 맞음
-    private bool TryGetGroundPoint(Vector2 screenPosition, out Vector3 groundPoint)
+    // 스킬 스크립트도 조준 위치를 구할 때 사용
+    public bool TryGetGroundPoint(Vector2 screenPosition, out Vector3 groundPoint)
     {
         groundPoint = Vector3.zero;
         if (mainCamera == null) return false;
@@ -249,7 +286,9 @@ public class PlayerController : MonoBehaviour
         Vector2 pointerPosition = GameInput.PointerPosition;
 
         // 스킬 2번 칸(우클릭): 쿨타임이 지났다면 커서 방향으로 부적 발사
-        if (GameInput.GetSkill(AmuletSkillSlot).WasPressedThisFrame() && Time.time >= nextSkillTime)
+        // (옛 코드 — PlayerSkills의 2번 칸에 새 스킬이 있으면 그쪽이 처리하므로 건너뜀)
+        if (GetNewSkill(AmuletSkillSlot) == null
+            && GameInput.GetSkill(AmuletSkillSlot).WasPressedThisFrame() && Time.time >= nextSkillTime)
         {
             CastAmulet(pointerPosition);
         }

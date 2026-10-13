@@ -198,6 +198,18 @@ public class PlayerStats : MonoBehaviour
         }
     }
 
+    // 개발자 메뉴: 경험치를 모으지 않고 바로 count만큼 레벨업 (보통 레벨업과 똑같이 성장, 모아 둔 경험치는 0으로)
+    public void DevLevelUp(int count)
+    {
+        if (IsDead || count <= 0) return;
+
+        currentXP = 0f;
+        for (int i = 0; i < count; i++)
+        {
+            LevelUp();
+        }
+    }
+
     // 레벨업: 레벨 +1, 최대 체력/공격력 증가, 체력/기력 회복, 필요 경험치 증가
     private void LevelUp()
     {

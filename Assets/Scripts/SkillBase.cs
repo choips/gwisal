@@ -38,9 +38,9 @@ public abstract class SkillBase : MonoBehaviour
     public float ManaCost => data != null ? data.manaCost : 0f;
     public float DamageMultiplier => data != null ? data.damageMultiplier : 1f;
 
-    // 남은 쿨타임(초, 0이면 사용 가능) — 스킬바 UI가 읽어 감
-    public float CooldownRemaining => Mathf.Max(0f, nextUseTime - Time.time);
-    public bool IsOnCooldown => Time.time < nextUseTime;
+    // 남은 쿨타임(초, 0이면 사용 가능) — 스킬바 UI가 읽어 감 (개발자 메뉴의 쿨타임 없음이 켜져 있으면 항상 0)
+    public float CooldownRemaining => DevCheats.NoCooldown ? 0f : Mathf.Max(0f, nextUseTime - Time.time);
+    public bool IsOnCooldown => !DevCheats.NoCooldown && Time.time < nextUseTime;
 
     // 기력이 충분한지 (스킬바 아이콘을 어둡게 할지 정할 때 사용)
     public bool HasEnoughMana => stats == null || stats.currentMP >= ManaCost;
@@ -71,7 +71,8 @@ public abstract class SkillBase : MonoBehaviour
     // 쿨타임 시작 (스킬을 실제로 쓴 뒤 호출)
     protected void StartCooldown()
     {
-        nextUseTime = Time.time + Cooldown;
+        // 쿨타임 없음 중에 쓴 스킬은 나중에 치트를 꺼도 쿨타임이 남지 않게 함
+        nextUseTime = DevCheats.NoCooldown ? Time.time : Time.time + Cooldown;
     }
 
     // 기력 지불: 충분하면 소모하고 true, 부족하면 "기력이 부족합니다!" 알림 후 false

@@ -84,7 +84,8 @@ public class PlayerSkills : MonoBehaviour
         }
 
         Vector2 pointerPosition = GameInput.PointerPosition;
-        bool pointerOverUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+        bool pointerOverUI = (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            || DevCheats.IsPointerOverMenu(pointerPosition); // 개발자 메뉴(F1) 창 위도 UI로 취급
 
         for (int i = 0; i < slots.Length; i++)
         {

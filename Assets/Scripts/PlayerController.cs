@@ -273,6 +273,9 @@ public class PlayerController : MonoBehaviour
 
         Vector2 pointerPosition = GameInput.PointerPosition;
 
+        // 개발자 메뉴(F1) 창을 클릭한 경우도 무시
+        if (DevCheats.IsPointerOverMenu(pointerPosition)) return;
+
         // 게임패드 A 버튼은 HandleGamepadSelect가 처리 (커서 위치를 쓰지 않음)
         InputAction select = GameInput.Select;
         if (GameInput.IsFromGamepad(select)) return;

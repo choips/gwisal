@@ -130,7 +130,16 @@ public class PlayerStats : MonoBehaviour
     // 시간에 따라 기력을 서서히 회복 (최대치를 넘지 않음)
     private void RegenerateMP()
     {
-        if (IsDead || currentMP >= maxMP) return;
+        if (IsDead) return;
+
+        // 개발자 메뉴의 기력 무한: 항상 가득 채움
+        if (DevCheats.InfiniteMana)
+        {
+            currentMP = maxMP;
+            return;
+        }
+
+        if (currentMP >= maxMP) return;
 
         currentMP = Mathf.Min(currentMP + mpRegenPerSecond * Time.deltaTime, maxMP);
     }
@@ -147,6 +156,8 @@ public class PlayerStats : MonoBehaviour
     // 기력 소모: 충분하면 소모하고 true, 부족하면 false
     public bool UseMP(float amount)
     {
+        if (DevCheats.InfiniteMana) return true; // 개발자 메뉴의 기력 무한: 소모하지 않음
+
         if (currentMP < amount)
         {
             NotificationUI.Show("기력이 부족합니다!", NotificationUI.NoticeType.Warning);
@@ -276,7 +287,7 @@ public class PlayerStats : MonoBehaviour
     // 적의 공격을 받아 체력 감소 (체력바는 Update의 UpdateUI에서 자동 갱신)
     public void TakeDamage(float damage)
     {
-        if (IsDead || IsInvincible) return;
+        if (IsDead || IsInvincible || DevCheats.GodMode) return; // 개발자 메뉴의 무적이면 피해 없음
 
         currentHP = Mathf.Max(currentHP - damage, 0f);
         Debug.Log($"플레이어 피격! 남은 체력: {currentHP} / {maxHP}");

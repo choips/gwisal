@@ -80,7 +80,7 @@ public class AoEIndicator : MonoBehaviour
         }
     }
 
-    // 바닥 위치에 원을 띄움 (조준하는 동안 PlayerController가 매 프레임 호출)
+    // 바닥 위치에 원을 띄움 (조준하는 동안 AmuletExplosionSkill이 매 프레임 호출)
     // groundPoint: 마우스가 가리키는 바닥 좌표, radius: 폭발 반경, isReady: 지금 쓸 수 있는지
     public void Show(Vector3 groundPoint, float radius, bool isReady)
     {

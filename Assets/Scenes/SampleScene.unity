@@ -3595,7 +3595,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ccb01021e739c944aa83d52f77027475, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SkillSlotUI
-  skill: 1
+  slotNumber: 3
   iconImage: {fileID: 1321160129}
   cooldownOverlay: {fileID: 285968222}
   cooldownText: {fileID: 261235427}
@@ -4405,7 +4405,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ccb01021e739c944aa83d52f77027475, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SkillSlotUI
-  skill: 0
+  slotNumber: 2
   iconImage: {fileID: 1485528155}
   cooldownOverlay: {fileID: 459483024}
   cooldownText: {fileID: 492353439}
@@ -4498,13 +4498,6 @@ MonoBehaviour:
   attackRate: 1
   rotationSpeed: 10
   pickupRange: 1.5
-  skillCooldown: 1
-  amuletPrefab: {fileID: 6751474006132527408, guid: 9796ceb56c3cdb740bcd8ad5975fcec0, type: 3}
-  firePoint: {fileID: 1494356109}
-  aoePrefab: {fileID: 46571623352041738, guid: 4ceb102e68d073c4ab35a09d7b51ef2a, type: 3}
-  aoeCost: 20
-  aoeCooldown: 1
-  aoeIndicator: {fileID: 2059989775}
 --- !u!195 &1487634037
 NavMeshAgent:
   m_ObjectHideFlags: 0

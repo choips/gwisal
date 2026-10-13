@@ -9,17 +9,14 @@ using UnityEngine.InputSystem;   // 새 Input System (InputAction) 사용
 //  - 바닥(Ground 레이어)을 클릭하면 그 위치로 이동하고
 //  - 적(Enemy 태그)을 클릭하면 타겟으로 지정해 다가간 뒤 사거리 안에서 공격하고
 //  - 아이템(Item 태그)을 클릭하면 다가가서 줍습니다.
-// 마우스 우클릭(스킬 2번 칸) 시 커서 방향으로 부적(투사체)을 발사합니다.
-// Q 키(스킬 3번 칸)를 누르고 있으면 커서 위치에 폭발 범위(조준 원)가 보이고,
-// 떼면 기력(MP)을 소모해 그 위치에 광역 폭발을 일으킵니다. (조준 중 ESC: 취소)
+// 스킬은 PlayerSkills(스킬 칸 1~6)와 각 스킬 스크립트가 처리하고,
+// 이 스크립트는 스킬이 쓰는 바닥 위치 찾기(TryGetGroundPoint)와 멈추고 바라보기(StopAndFace)를 제공합니다.
 [RequireComponent(typeof(NavMeshAgent))]
 [RequireComponent(typeof(PlayerStats))]
 public class PlayerController : MonoBehaviour
 {
     private const string EnemyTag = "Enemy"; // 적 오브젝트에 붙일 태그 이름
     private const string ItemTag = "Item";   // 아이템 오브젝트에 붙일 태그 이름
-    private const int AmuletSkillSlot = 2;   // 부적 투사체를 쓰는 스킬 칸 번호 (기본: 마우스 우클릭)
-    private const int AoESkillSlot = 3;      // 부적 폭발을 쓰는 스킬 칸 번호 (기본: Q 키)
 
     [Header("참조")]
     [Tooltip("Raycast를 쏠 카메라 (비워두면 Main Camera를 자동 사용)")]
@@ -59,90 +56,15 @@ public class PlayerController : MonoBehaviour
     [Tooltip("이 거리 안에 아이템이 들어오면 멈추고 줍습니다")]
     public float pickupRange = 1.5f; // 아이템 획득 사거리
 
-    [Header("부적 스킬 설정 (마우스 우클릭)")]
-    [Tooltip("부적 스킬을 다시 쓸 수 있을 때까지의 대기 시간(초)")]
-    public float skillCooldown = 1f; // 스킬 쿨타임
-
-    [Tooltip("발사할 부적 프리팹 (AmuletProjectile 스크립트가 붙어 있어야 합니다)")]
-    public GameObject amuletPrefab; // 부적 프리팹
-
-    [Tooltip("부적이 생성될 위치 (플레이어 자식으로 만든 빈 오브젝트)")]
-    public Transform firePoint; // 발사 위치
-
-    [Header("광역 스킬 설정 (Q 키)")]
-    [Tooltip("커서 위치에 생성할 광역 폭발 프리팹 (AoESkill 스크립트가 붙어 있어야 합니다)")]
-    public GameObject aoePrefab; // 광역 스킬 프리팹
-
-    [Tooltip("광역 스킬 1회 사용 시 소모되는 기력")]
-    public float aoeCost = 20f; // 스킬 소모 MP
-
-    [Tooltip("광역 스킬을 다시 쓸 수 있을 때까지의 대기 시간(초, 0이면 쿨타임 없음)")]
-    public float aoeCooldown = 1f; // 광역 스킬 쿨타임
-
-    [Tooltip("Q 키를 누르고 있는 동안 폭발 범위를 바닥에 보여 줄 조준 원 (비워두면 조준 원 없이 Q를 뗄 때 바로 폭발)")]
-    [SerializeField] private AoEIndicator aoeIndicator; // 조준 원
-
     private NavMeshAgent agent;   // 캐릭터 길찾기 이동 컴포넌트
     private PlayerStats stats;    // 플레이어 능력치 (공격력 등)
-    private PlayerSkills playerSkills; // 스킬 칸 관리자 (칸에 새 스킬이 있으면 아래의 옛 스킬 코드는 쉼)
+    private PlayerSkills playerSkills; // 스킬 칸 관리자 (사망 시 조준 취소용)
     private Transform target;     // 현재 타겟팅 중인 대상 (적 또는 아이템, 없으면 null)
     private Enemy targetEnemy;    // 타겟이 적일 때: 체력 관리 스크립트
     private Item targetItem;      // 타겟이 아이템일 때: 아이템 스크립트
     private bool isAttacking;     // 사거리 안에 들어와 멈춘(공격 중인) 상태인지 여부
     private float nextAttackTime = 0f; // 다음 공격이 가능한 시각 (게임 시작 후 경과 초)
-    private float nextSkillTime = 0f;  // 다음 부적 스킬 사용이 가능한 시각
-    private float nextAoeTime = 0f;    // 다음 광역 스킬 사용이 가능한 시각
-    private bool isAimingAoE;          // Q 키를 누르고 폭발 위치를 조준하는 중인지 여부
-    private AoESkill aoeTemplate;      // 폭발 프리팹의 AoESkill (조준 원 크기를 실제 폭발 반경과 맞추기 위해 읽음)
     private GameObject currentClickMarker; // 지금 바닥에 떠 있는 클릭 표시
-
-    // 스킬바 UI가 읽어가는 남은 쿨타임(초, 0이면 사용 가능) — 스킬 칸에 새 스킬이 있으면 그 스킬의 값
-    public float AmuletCooldownRemaining
-    {
-        get
-        {
-            SkillBase newSkill = GetNewSkill(AmuletSkillSlot);
-            return newSkill != null ? newSkill.CooldownRemaining : Mathf.Max(0f, nextSkillTime - Time.time);
-        }
-    }
-
-    // 스킬바 UI가 읽어가는 부적 투사체의 전체 쿨타임(초)
-    public float AmuletCooldown
-    {
-        get
-        {
-            SkillBase newSkill = GetNewSkill(AmuletSkillSlot);
-            return newSkill != null ? newSkill.Cooldown : skillCooldown;
-        }
-    }
-
-    public float AoeCooldownRemaining
-    {
-        get
-        {
-            SkillBase newSkill = GetNewSkill(AoESkillSlot);
-            return newSkill != null ? newSkill.CooldownRemaining : Mathf.Max(0f, nextAoeTime - Time.time);
-        }
-    }
-
-    // 스킬바 UI가 읽어가는 부적 폭발의 전체 쿨타임(초)과 기력 소모량
-    public float AoeCooldown
-    {
-        get
-        {
-            SkillBase newSkill = GetNewSkill(AoESkillSlot);
-            return newSkill != null ? newSkill.Cooldown : aoeCooldown;
-        }
-    }
-
-    public float AoeManaCost
-    {
-        get
-        {
-            SkillBase newSkill = GetNewSkill(AoESkillSlot);
-            return newSkill != null ? newSkill.ManaCost : aoeCost;
-        }
-    }
 
     private void Awake()
     {
@@ -159,11 +81,6 @@ public class PlayerController : MonoBehaviour
         {
             mainCamera = Camera.main;
         }
-
-        if (aoePrefab != null)
-        {
-            aoeTemplate = aoePrefab.GetComponent<AoESkill>();
-        }
     }
 
     // 사망 등으로 조작이 꺼질 때 타겟과 조준을 잊어서, 부활 후 이전 행동을 이어가지 않도록 함
@@ -173,82 +90,13 @@ public class PlayerController : MonoBehaviour
         targetEnemy = null;
         targetItem = null;
         isAttacking = false;
-        StopAimingAoE();
         if (playerSkills != null) playerSkills.CancelAllSkills();
     }
 
     private void Update()
     {
-        HandleAoEAimInput();
         HandleMouseInput();
         UpdateTargeting();
-    }
-
-    // 광역 스킬 조준 입력 처리 (스킬 3번 칸 누름: 조준 시작 → 뗌: 폭발, 조준 중 취소 행동: 취소)
-    // 기본 키: 스킬 3번 칸 = Q, 취소 = ESC (Assets/InputSystem_Actions의 Player 묶음에서 변경)
-    // (옛 코드 — PlayerSkills의 3번 칸에 새 스킬이 있으면 그쪽이 처리하므로 건너뜀)
-    private void HandleAoEAimInput()
-    {
-        if (GetNewSkill(AoESkillSlot) != null) return;
-
-        InputAction aoeAction = GameInput.GetSkill(AoESkillSlot);
-
-        if (aoeAction.WasPressedThisFrame())
-        {
-            isAimingAoE = true;
-        }
-
-        if (!isAimingAoE) return;
-
-        if (GameInput.Cancel.WasPressedThisFrame())
-        {
-            StopAimingAoE();
-            return;
-        }
-
-        Vector2 pointerPosition = GameInput.PointerPosition;
-
-        // 키를 짧게 톡 치면 누름과 뗌이 같은 프레임에 일어나 바로 폭발함 (예전 조작과 같은 느낌)
-        if (aoeAction.WasReleasedThisFrame())
-        {
-            StopAimingAoE();
-            if (Time.time >= nextAoeTime)
-            {
-                CastAoE(pointerPosition);
-            }
-            return;
-        }
-
-        UpdateAoEIndicator(pointerPosition);
-    }
-
-    // 조준 중: 마우스가 가리키는 바닥에 폭발 범위 원을 표시 (바닥 밖을 가리키면 숨김)
-    private void UpdateAoEIndicator(Vector2 screenPosition)
-    {
-        if (aoeIndicator == null || aoeTemplate == null) return;
-
-        if (!TryGetGroundPoint(screenPosition, out Vector3 groundPoint))
-        {
-            aoeIndicator.Hide();
-            return;
-        }
-
-        // 쿨타임이 끝났고 기력도 충분해야 "사용 가능"(금색), 아니면 빨간색
-        bool isReady = Time.time >= nextAoeTime && stats != null && stats.currentMP >= aoeCost;
-        aoeIndicator.Show(groundPoint, aoeTemplate.explosionRadius, isReady);
-    }
-
-    // 조준 끝내기 (조준 원 숨김)
-    private void StopAimingAoE()
-    {
-        isAimingAoE = false;
-        if (aoeIndicator != null) aoeIndicator.Hide();
-    }
-
-    // 스킬 칸(1~6)에 PlayerSkills의 새 스킬이 들어 있으면 그 스킬, 없으면 null
-    private SkillBase GetNewSkill(int slotNumber)
-    {
-        return playerSkills != null ? playerSkills.GetSkill(slotNumber) : null;
     }
 
     // 스킬을 쓸 때: 타겟과 이동을 멈추고 지정한 바닥 지점을 바라봄 (높이는 무시하고 Y축 회전만)
@@ -279,34 +127,7 @@ public class PlayerController : MonoBehaviour
         return true;
     }
 
-    // 기력을 소모해 마우스가 가리키는 바닥 위치에 광역 폭발 생성
-    private void CastAoE(Vector2 screenPosition)
-    {
-        if (aoePrefab == null)
-        {
-            Debug.LogWarning("PlayerController에 Aoe Prefab이 연결되지 않아 광역 스킬을 쓸 수 없습니다.");
-            return;
-        }
-
-        // a. 마우스가 가리키는 바닥 위치 찾기 (바닥이 아닌 곳이면 기력을 쓰지 않고 취소)
-        if (!TryGetGroundPoint(screenPosition, out Vector3 groundPoint)) return;
-
-        // b. 기력이 충분한지 확인하고 소모
-        if (stats == null || !stats.UseMP(aoeCost)) return;
-
-        // c. 바닥 위치에 광역 폭발 생성
-        GameObject explosion = Instantiate(aoePrefab, groundPoint, Quaternion.identity);
-
-        // 폭발의 Start(데미지 처리)보다 먼저 실행되므로 치명타 판정에 시전자 정보를 쓸 수 있음
-        if (explosion.TryGetComponent(out AoESkill aoe))
-        {
-            aoe.SetOwner(stats);
-        }
-
-        nextAoeTime = Time.time + aoeCooldown;
-    }
-
-    // 커서 입력 처리 (선택 행동 = 좌클릭: 이동/공격/줍기, 스킬 2번 칸 = 우클릭: 부적 스킬)
+    // 커서 입력 처리 (선택 행동 = 좌클릭: 이동/공격/줍기)
     // 키 연결은 Assets/InputSystem_Actions의 Player 묶음에서 바꿉니다.
     private void HandleMouseInput()
     {
@@ -314,14 +135,6 @@ public class PlayerController : MonoBehaviour
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
         Vector2 pointerPosition = GameInput.PointerPosition;
-
-        // 스킬 2번 칸(우클릭): 쿨타임이 지났다면 커서 방향으로 부적 발사
-        // (옛 코드 — PlayerSkills의 2번 칸에 새 스킬이 있으면 그쪽이 처리하므로 건너뜀)
-        if (GetNewSkill(AmuletSkillSlot) == null
-            && GameInput.GetSkill(AmuletSkillSlot).WasPressedThisFrame() && Time.time >= nextSkillTime)
-        {
-            CastAmulet(pointerPosition);
-        }
 
         InputAction select = GameInput.Select;
         if (select.WasPressedThisFrame())
@@ -389,43 +202,6 @@ public class PlayerController : MonoBehaviour
         // 바닥과 겹쳐 깜빡이지 않도록 아주 살짝 띄움
         currentClickMarker = Instantiate(clickMarkerPrefab, position + Vector3.up * 0.02f, Quaternion.identity);
         Destroy(currentClickMarker, clickMarkerMaxLifetime);
-    }
-
-    // 마우스가 가리키는 바닥 방향으로 몸을 돌리고 부적을 발사
-    private void CastAmulet(Vector2 screenPosition)
-    {
-        if (amuletPrefab == null)
-        {
-            Debug.LogWarning("PlayerController에 Amulet Prefab이 연결되지 않아 부적을 발사할 수 없습니다.");
-            return;
-        }
-
-        // a. 마우스가 가리키는 바닥 좌표 구하기
-        if (!TryGetGroundPoint(screenPosition, out Vector3 groundPoint)) return;
-
-        // 스킬을 쓰는 동안에는 이동/공격을 멈춤 (이동 중이면 NavMeshAgent가 몸을 다시 진행 방향으로 돌려 버림)
-        ClearTarget();
-        agent.ResetPath();
-
-        // b. 마우스 좌표를 바라보도록 회전 (높이를 플레이어와 같게 맞춰 Y축 회전만 적용)
-        Vector3 lookPoint = new Vector3(groundPoint.x, transform.position.y, groundPoint.z);
-        transform.LookAt(lookPoint);
-
-        // c. 발사 위치에 부적 생성 (발사 위치에서 마우스 지점을 향하도록 수평 방향으로 회전)
-        Vector3 spawnPosition = firePoint != null ? firePoint.position : transform.position;
-        Vector3 direction = groundPoint - spawnPosition;
-        direction.y = 0f;
-        if (direction.sqrMagnitude < 0.0001f) direction = transform.forward;
-
-        GameObject amulet = Instantiate(amuletPrefab, spawnPosition, Quaternion.LookRotation(direction));
-
-        // 치명타 판정을 할 수 있도록 시전자(플레이어)를 알려 줌
-        if (amulet.TryGetComponent(out AmuletProjectile projectile))
-        {
-            projectile.SetOwner(stats);
-        }
-
-        nextSkillTime = Time.time + skillCooldown;
     }
 
     // 적을 타겟으로 지정

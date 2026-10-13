@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43865847b6fc7244db72eb5be0141402, type: 3}
+  m_Name: Item_weapon_jujube_sword
+  m_EditorClassIdentifier: Assembly-CSharp::ItemBase
+  itemId: weapon_jujube_sword
+  displayName: "\uB300\uCD94\uB098\uBB34 \uAC80"
+  oldNames:
+  - "\uBCBC\uB77D \uB9DE\uC740 \uB300\uCD94\uB098\uBB34 \uAC80"
+  itemType: 0
+  baseStatValue: 15
+  requiredLevel: 1
+  icon: {fileID: 21300000, guid: 4709b75d911f46fd9d344638fd9f840e, type: 3}

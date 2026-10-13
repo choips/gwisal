@@ -283,6 +283,42 @@ MonoBehaviour:
     m_Key: enemy.unique_suffix.2
     m_Metadata:
       m_Items: []
+  - m_Id: 5740992741376
+    m_Key: item.name.weapon_old_dagger
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5741022101504
+    m_Key: item.name.weapon_peachwood_sword
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5741022101505
+    m_Key: item.name.weapon_taoist_staff
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5741022101506
+    m_Key: item.name.weapon_jujube_sword
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5741022101507
+    m_Key: item.name.armor_cotton_robe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5741026295808
+    m_Key: item.name.armor_leather_armor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5741026295809
+    m_Key: item.name.armor_silk_robe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5741026295810
+    m_Key: item.name.armor_chainmail
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5741026295811
+    m_Key: item.name.potion_mana
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

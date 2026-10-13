@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43865847b6fc7244db72eb5be0141402, type: 3}
+  m_Name: Item_weapon_peachwood_sword
+  m_EditorClassIdentifier: Assembly-CSharp::ItemBase
+  itemId: weapon_peachwood_sword
+  displayName: "\uBCF5\uC22D\uC544\uB098\uBB34 \uAC80"
+  oldNames: []
+  itemType: 0
+  baseStatValue: 8
+  requiredLevel: 1
+  icon: {fileID: 21300000, guid: 816d904fc88348a1b70dd40936368c9f, type: 3}

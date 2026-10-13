@@ -98,6 +98,17 @@ public static class LocalizationTableFiller
         { "enemy.unique_suffix.0",    "왕" },
         { "enemy.unique_suffix.1",    "우두머리" },
         { "enemy.unique_suffix.2",    "대장" },
+
+        // 기본 아이템 이름 (ItemBase의 ID 기준: item.name.ID)
+        { "item.name.weapon_old_dagger",      "낡은 단검" },
+        { "item.name.weapon_peachwood_sword", "복숭아나무 검" },
+        { "item.name.weapon_taoist_staff",    "도사의 지팡이" },
+        { "item.name.weapon_jujube_sword",    "대추나무 검" },
+        { "item.name.armor_cotton_robe",      "무명 도포" },
+        { "item.name.armor_leather_armor",    "가죽 갑옷" },
+        { "item.name.armor_silk_robe",        "비단 도포" },
+        { "item.name.armor_chainmail",        "사슬 갑옷" },
+        { "item.name.potion_mana",            "기력 물약" },
     };
 
     [MenuItem("귀살/화면 글자 표 채우기")]

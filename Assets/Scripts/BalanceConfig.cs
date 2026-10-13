@@ -37,6 +37,13 @@ public class BalanceConfig : ScriptableObject
     [Tooltip("물리 피해 감소 상한 (0.85 = 85%)")]
     [Range(0f, 1f)] public float armorReductionCap = 0.85f;
 
+    [Header("적 레벨 성장: 레벨 1 값 × 성장률 ^ (몬스터 레벨 − 1)")]
+    [Tooltip("레벨 1마다 적 체력에 곱해지는 배율 (1.12 = 12%씩, 레벨 13 ≈ 3.9배)")]
+    [Min(1f)] public float enemyHealthGrowth = 1.12f;
+
+    [Tooltip("레벨 1마다 적 피해에 곱해지는 배율 (1.09 = 9%씩, 레벨 13 ≈ 2.8배)")]
+    [Min(1f)] public float enemyDamageGrowth = 1.09f;
+
     [Header("상한 (비율: 0.75 = 75%)")]
     [Range(0f, 1f)] public float critChanceCap = 0.75f;        // 치명타 확률
     [Min(0f)] public float attackSpeedCap = 1f;                // 공격 속도 (+100%)
@@ -59,6 +66,18 @@ public class BalanceConfig : ScriptableObject
         stats.SetBase(StatType.MaxHealth, baseMaxHealth + healthPerLevel * levelsGained);
         stats.SetBase(StatType.MaxMana, baseMaxMana + manaPerLevel * levelsGained);
         stats.SetBase(StatType.ManaRegen, baseManaRegen);
+    }
+
+    // 몬스터 레벨에 따른 적 체력 배율 (레벨 1이면 1)
+    public float GetEnemyHealthMultiplier(int monsterLevel)
+    {
+        return Mathf.Pow(enemyHealthGrowth, Mathf.Max(0, monsterLevel - 1));
+    }
+
+    // 몬스터 레벨에 따른 적 피해 배율 (레벨 1이면 1)
+    public float GetEnemyDamageMultiplier(int monsterLevel)
+    {
+        return Mathf.Pow(enemyDamageGrowth, Mathf.Max(0, monsterLevel - 1));
     }
 
     // 능력치의 상한 (상한이 없으면 아주 큰 수)

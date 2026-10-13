@@ -8,14 +8,20 @@ using UnityEngine.AI;            // NavMesh 사용
 // - 일반 무리: 같은 종류의 일반 몬스터 여러 마리
 // - 챔피언 무리: 챔피언 2~4마리 (일반의 2배 능력, 파란빛, 이름표 "챔피언 ○○")
 // - 유니크 무리: 이름 있는 유니크 1마리 (3배, 금빛) + 하수인 3~4마리 (1.5배)
-// 무리마다 몬스터 종류(잡귀·강시·아귀·도깨비)를 가중치 확률로 하나 골라 그 종류로만 채웁니다.
+// 무리마다 귀신 종류(잡귀·강시·아귀·도깨비 — EnemyData 파일)를 출현 가중치 확률로 하나 골라 그 종류로만 채웁니다.
 public class EnemySpawner : MonoBehaviour
 {
     [Header("몬스터")]
     [Tooltip("생성할 적 프리팹 (Enemy 스크립트와 NavMeshAgent가 붙어 있어야 합니다)")]
     public GameObject enemyPrefab;
 
-    [Tooltip("몬스터 종류 목록 (Enemy 프리팹 능력치에 배율을 곱해 종류마다 다르게 만듦)")]
+    [Tooltip("출현할 귀신 종류 (데이터 파일 + 출현 가중치). 비어 있으면 아래 옛 Monster Types 목록을 사용")]
+    [SerializeField] private List<EnemySpawnEntry> enemyTypes = new List<EnemySpawnEntry>();
+
+    [Tooltip("이 배치기가 만드는 몬스터의 레벨 (레벨마다 체력 ×1.12·피해 ×1.09, 플레이어 방어력 계산에도 쓰임)")]
+    [Min(1)] [SerializeField] private int monsterLevel = 1;
+
+    [Tooltip("(옛 방식 — S1-7 3단계에서 삭제 예정) 몬스터 종류 배율 목록. 위 Enemy Types가 비어 있을 때만 사용")]
     [SerializeField] private List<MonsterType> monsterTypes = new List<MonsterType>
     {
         //               이름     몸 색                              크기(너비, 키, 두께)            체력  공격  속도  쿨타임 경험치 가중치
@@ -103,9 +109,13 @@ public class EnemySpawner : MonoBehaviour
     private static readonly string[] UniqueSuffixes = { "왕", "우두머리", "대장" };
 
     private readonly List<Vector3> packCenters = new List<Vector3>(); // 이미 배치한 무리 중심들
+    private readonly List<EnemySpawnEntry> activeTypes = new List<EnemySpawnEntry>(); // 실제로 뽑을 귀신 종류 (빈 칸 제외)
+    private readonly List<EnemyData> legacyData = new List<EnemyData>(); // 옛 목록에서 임시로 만든 데이터 (끝날 때 정리)
     private Bounds mapBounds;     // NavMesh 전체를 감싸는 범위
     private Transform player;
     private bool hasPopulated;    // 배치를 마쳤는지 (마지막 한 마리 처치 알림용)
+    private float levelHealthMultiplier = 1f; // 몬스터 레벨에 따른 체력 배율
+    private float levelDamageMultiplier = 1f; // 몬스터 레벨에 따른 피해 배율
 
     private void Start()
     {
@@ -120,7 +130,76 @@ public class EnemySpawner : MonoBehaviour
             labelFont = lootDropper.LabelFont;
         }
 
+        PlayerStats stats = FindFirstObjectByType<PlayerStats>();
+        if (stats != null) player = stats.transform;
+
+        BuildActiveTypes();
+        if (activeTypes.Count == 0)
+        {
+            Debug.LogWarning($"{gameObject.name}: 출현할 귀신 종류가 없어 몬스터를 배치하지 않습니다. Enemy Types에 데이터 파일을 넣어 주세요.");
+            return;
+        }
+
+        // 몬스터 레벨 배율은 플레이어가 가진 밸런스 숫자 모음(BalanceConfig)에서 계산
+        BalanceConfig config = stats != null && stats.Stats != null ? stats.Stats.Config : null;
+        if (config != null)
+        {
+            levelHealthMultiplier = config.GetEnemyHealthMultiplier(monsterLevel);
+            levelDamageMultiplier = config.GetEnemyDamageMultiplier(monsterLevel);
+        }
+
         PopulateMap();
+    }
+
+    // 코드로 만든 임시 데이터는 자동으로 지워지지 않으므로 함께 정리
+    private void OnDestroy()
+    {
+        foreach (EnemyData data in legacyData)
+        {
+            if (data != null) Destroy(data);
+        }
+        legacyData.Clear();
+    }
+
+    // 뽑을 귀신 종류 목록 만들기: 새 Enemy Types를 쓰고, 비어 있으면 옛 Monster Types를 데이터로 바꿔서 씀
+    private void BuildActiveTypes()
+    {
+        activeTypes.Clear();
+        foreach (EnemySpawnEntry entry in enemyTypes)
+        {
+            if (entry != null && entry.data != null && entry.spawnWeight > 0f) activeTypes.Add(entry);
+        }
+        if (activeTypes.Count > 0) return;
+
+        // 옛 방식: Enemy 프리팹 기본값 × 종류별 배율 → 임시 데이터 (S1-7 3단계에서 삭제 예정)
+        if (!enemyPrefab.TryGetComponent(out Enemy prefabEnemy)) return;
+        float prefabSpeed = enemyPrefab.TryGetComponent(out NavMeshAgent prefabAgent) ? prefabAgent.speed : 3.5f;
+
+        foreach (MonsterType type in monsterTypes)
+        {
+            if (type == null || type.spawnWeight <= 0f) continue;
+
+            EnemyData data = ScriptableObject.CreateInstance<EnemyData>();
+            data.name = type.monsterName;
+            data.displayName = type.monsterName;
+            data.bodyColor = type.color;
+            data.bodyScale = type.scale;
+            data.maxHealth = prefabEnemy.maxHealth * type.healthMultiplier;
+            data.attackDamage = prefabEnemy.attackDamage * type.damageMultiplier;
+            data.attackCooldown = prefabEnemy.attackCooldown * type.attackCooldownMultiplier;
+            data.moveSpeed = prefabSpeed * type.speedMultiplier;
+            data.experienceReward = Mathf.Round(prefabEnemy.experienceReward * type.experienceMultiplier);
+            data.aggroRange = prefabEnemy.aggroRange;
+            data.attackRange = prefabEnemy.attackRange;
+
+            legacyData.Add(data);
+            activeTypes.Add(new EnemySpawnEntry(data, type.spawnWeight));
+        }
+
+        if (activeTypes.Count > 0)
+        {
+            Debug.Log($"{gameObject.name}: Enemy Types가 비어 있어 옛 Monster Types 목록({activeTypes.Count}종)을 사용합니다.");
+        }
     }
 
     // 맵 전체에 무리 배치 (강한 무리가 좋은 자리를 먼저 차지하도록 유니크 → 챔피언 → 일반 순서)
@@ -132,15 +211,12 @@ public class EnemySpawner : MonoBehaviour
             return;
         }
 
-        PlayerStats stats = FindFirstObjectByType<PlayerStats>();
-        if (stats != null) player = stats.transform;
-
         int uniquePacks = PlacePacks(uniquePackCount.Roll(), SpawnUniquePack);
         int championPacks = PlacePacks(championPackCount.Roll(), SpawnChampionPack);
         int normalPacks = PlacePacks(normalPackCount.Roll(), SpawnNormalPack);
 
         hasPopulated = true;
-        Debug.Log($"몬스터 배치 완료: 일반 무리 {normalPacks}개, 챔피언 무리 {championPacks}개, 유니크 무리 {uniquePacks}개 (총 {currentEnemyCount}마리)");
+        Debug.Log($"몬스터 배치 완료 (레벨 {monsterLevel}): 일반 무리 {normalPacks}개, 챔피언 무리 {championPacks}개, 유니크 무리 {uniquePacks}개 (총 {currentEnemyCount}마리)");
         NotificationUI.Show($"이 지역에 챔피언 무리 {championPacks}개와 유니크 몬스터 {uniquePacks}마리가 도사리고 있습니다");
     }
 
@@ -165,40 +241,40 @@ public class EnemySpawner : MonoBehaviour
 
     private void SpawnNormalPack(Vector3 center)
     {
-        MonsterType type = PickMonsterType();
+        EnemyData data = PickEnemyType();
         int size = normalPackSize.Roll();
         for (int i = 0; i < size; i++)
         {
-            SpawnMonster(GetMemberPosition(center), type, MonsterRank.Normal, null, Color.white);
+            SpawnMonster(GetMemberPosition(center), data, MonsterRank.Normal, null, Color.white);
         }
     }
 
     private void SpawnChampionPack(Vector3 center)
     {
-        MonsterType type = PickMonsterType();
+        EnemyData data = PickEnemyType();
         int size = championPackSize.Roll();
         for (int i = 0; i < size; i++)
         {
-            SpawnMonster(GetMemberPosition(center), type, MonsterRank.Champion, $"챔피언 {type.monsterName}", championColor);
+            SpawnMonster(GetMemberPosition(center), data, MonsterRank.Champion, $"챔피언 {data.displayName}", championColor);
         }
     }
 
     private void SpawnUniquePack(Vector3 center)
     {
-        MonsterType type = PickMonsterType();
-        string uniqueName = MakeUniqueName(type);
+        EnemyData data = PickEnemyType();
+        string uniqueName = MakeUniqueName(data);
 
-        SpawnMonster(center, type, MonsterRank.Unique, uniqueName, uniqueColor);
+        SpawnMonster(center, data, MonsterRank.Unique, uniqueName, uniqueColor);
 
         int minions = minionCount.Roll();
         for (int i = 0; i < minions; i++)
         {
-            SpawnMonster(GetMemberPosition(center), type, MonsterRank.Minion, $"{type.monsterName} 하수인", minionColor);
+            SpawnMonster(GetMemberPosition(center), data, MonsterRank.Minion, $"{data.displayName} 하수인", minionColor);
         }
     }
 
-    // 몬스터 한 마리 생성 → 종류 적용 → 등급 적용 → 모양·이름표
-    private void SpawnMonster(Vector3 position, MonsterType type, MonsterRank rank, string labelText, Color labelColor)
+    // 몬스터 한 마리 생성 → 데이터·레벨 적용 → 등급 적용 → 모양·이름표
+    private void SpawnMonster(Vector3 position, EnemyData data, MonsterRank rank, string labelText, Color labelColor)
     {
         Quaternion rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
         GameObject monsterObject = Instantiate(enemyPrefab, position, rotation);
@@ -210,16 +286,16 @@ public class EnemySpawner : MonoBehaviour
             return;
         }
 
-        string displayName = string.IsNullOrEmpty(labelText) ? type.monsterName : labelText;
+        string displayName = string.IsNullOrEmpty(labelText) ? data.displayName : labelText;
         monsterObject.name = displayName;
 
         enemy.SetSpawner(this);
-        enemy.ApplyMonsterType(type);
+        enemy.ApplyData(data, monsterLevel, levelHealthMultiplier, levelDamageMultiplier);
         enemy.ApplyRank(rank, GetPower(rank), GetLootDrops(rank), GetRarityBonus(rank));
-        enemy.SetBodyColor(GetBodyColor(type.color, rank));
+        enemy.SetBodyColor(GetBodyColor(data.bodyColor, rank));
 
         float rankScale = GetRankScale(rank);
-        Vector3 bodyScale = Vector3.Scale(monsterObject.transform.localScale, type.scale) * rankScale;
+        Vector3 bodyScale = Vector3.Scale(monsterObject.transform.localScale, data.bodyScale) * rankScale;
         monsterObject.transform.localScale = bodyScale;
 
         if (!string.IsNullOrEmpty(labelText) && labelFont != null)
@@ -297,34 +373,29 @@ public class EnemySpawner : MonoBehaviour
         return NavMesh.SamplePosition(candidate, out NavMeshHit hit, 1f, NavMesh.AllAreas) ? hit.position : center;
     }
 
-    // 가중치 확률로 몬스터 종류 하나 고르기 (목록이 비었으면 기본 잡귀)
-    private MonsterType PickMonsterType()
+    // 출현 가중치 확률로 귀신 종류 하나 고르기 (activeTypes에는 빈 칸·가중치 0이 없음 — Start에서 걸러 둠)
+    private EnemyData PickEnemyType()
     {
         float totalWeight = 0f;
-        foreach (MonsterType type in monsterTypes)
+        foreach (EnemySpawnEntry entry in activeTypes)
         {
-            if (type != null && type.spawnWeight > 0f) totalWeight += type.spawnWeight;
+            totalWeight += entry.spawnWeight;
         }
-        if (totalWeight <= 0f) return new MonsterType();
 
         float roll = Random.value * totalWeight;
-        MonsterType lastValid = null; // 계산 오차로 끝까지 못 고른 경우를 대비한 마지막 후보
-        foreach (MonsterType type in monsterTypes)
+        foreach (EnemySpawnEntry entry in activeTypes)
         {
-            if (type == null || type.spawnWeight <= 0f) continue;
-
-            lastValid = type;
-            roll -= type.spawnWeight;
-            if (roll < 0f) return type;
+            roll -= entry.spawnWeight;
+            if (roll < 0f) return entry.data;
         }
-        return lastValid;
+        return activeTypes[activeTypes.Count - 1].data; // 계산 오차로 끝까지 못 고른 경우 마지막 종류
     }
 
-    private static string MakeUniqueName(MonsterType type)
+    private static string MakeUniqueName(EnemyData data)
     {
         string prefix = UniquePrefixes[Random.Range(0, UniquePrefixes.Length)];
         string suffix = UniqueSuffixes[Random.Range(0, UniqueSuffixes.Length)];
-        return $"{prefix} {type.monsterName} {suffix}";
+        return $"{prefix} {data.displayName} {suffix}";
     }
 
     private float GetPower(MonsterRank rank)
@@ -420,5 +491,25 @@ public class EnemySpawner : MonoBehaviour
             Gizmos.DrawLine(previousPoint, nextPoint);
             previousPoint = nextPoint;
         }
+    }
+}
+
+// 배치기의 출현 목록 한 칸: 어떤 귀신이(데이터 파일) 얼마나 자주(가중치) 나오는지
+// 같은 귀신이라도 지역마다 출현 빈도가 다를 수 있어 가중치는 데이터 파일이 아니라 여기에 둠
+[System.Serializable]
+public class EnemySpawnEntry
+{
+    [Tooltip("귀신 데이터 파일 (Assets/Data/Enemies)")]
+    public EnemyData data;
+
+    [Tooltip("출현 가중치 (클수록 자주 나옴, 0이면 안 나옴)")]
+    [Min(0f)] public float spawnWeight = 10f;
+
+    public EnemySpawnEntry() { }
+
+    public EnemySpawnEntry(EnemyData enemyData, float weight)
+    {
+        data = enemyData;
+        spawnWeight = weight;
     }
 }

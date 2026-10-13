@@ -5,7 +5,8 @@ using UnityEngine.AI;            // NavMeshAgent 사용
 // 적의 체력(HP)과 AI를 관리하는 스크립트
 // - 플레이어가 인식 거리 안에 들어오면 쫓아가고, 공격 사거리 안이면 멈춰서 쿨타임마다 공격합니다.
 // - 피격 시 체력이 깎이고, 체력이 0 이하가 되면 오브젝트가 파괴(사망)됩니다.
-// - 배치기(EnemySpawner)가 생성 직후 몬스터 종류(잡귀·강시 등)와 등급(챔피언·유니크 등)을 적용합니다.
+// - 배치기(EnemySpawner)가 생성 직후 귀신 데이터(EnemyData: 잡귀·강시 등)·몬스터 레벨과 등급(챔피언·유니크 등)을 적용합니다.
+//   (아래 Inspector 숫자는 데이터가 적용되기 전의 기본값입니다)
 [RequireComponent(typeof(NavMeshAgent))]
 public class Enemy : MonoBehaviour
 {
@@ -63,6 +64,13 @@ public class Enemy : MonoBehaviour
     [Tooltip("치명타일 때 밀려나는 거리 배율")]
     [SerializeField] private float criticalKnockbackMultiplier = 2f;
 
+    [Header("데이터와 레벨 (배치기가 설정, Play 중 확인용)")]
+    [Tooltip("이 적에게 적용된 귀신 데이터 파일")]
+    [SerializeField] private EnemyData enemyData;
+
+    [Tooltip("몬스터 레벨 (체력·피해 배율, 플레이어 방어력 계산에 쓰임)")]
+    [SerializeField] private int level = 1;
+
     [Header("등급과 보상 (배치기가 설정, Play 중 확인용)")]
     [Tooltip("일반 / 챔피언 / 유니크 / 하수인")]
     [SerializeField] private MonsterRank rank = MonsterRank.Normal;
@@ -95,6 +103,8 @@ public class Enemy : MonoBehaviour
     public float HealthRatio => maxHealth > 0f ? Mathf.Clamp01(currentHealth / maxHealth) : 0f;
 
     public MonsterRank Rank => rank;
+    public EnemyData Data => enemyData;
+    public int Level => level;
 
     private void Awake()
     {
@@ -141,7 +151,27 @@ public class Enemy : MonoBehaviour
         spawner = owner;
     }
 
-    // 몬스터 종류 적용: 생성 직후 배치기가 호출해서 종류별 배율만큼 능력치를 바꿈
+    // 귀신 데이터 적용: 생성 직후 배치기가 호출해서 데이터 파일의 능력치로 바꿈 (등급 배율은 이 다음에 ApplyRank로)
+    // healthMultiplier·damageMultiplier: 몬스터 레벨에 따른 배율 (BalanceConfig의 적 레벨 성장)
+    public void ApplyData(EnemyData data, int monsterLevel, float healthMultiplier, float damageMultiplier)
+    {
+        if (data == null) return;
+
+        enemyData = data;
+        level = Mathf.Max(1, monsterLevel);
+
+        maxHealth = data.maxHealth * healthMultiplier;
+        currentHealth = maxHealth;
+        attackDamage = data.attackDamage * damageMultiplier;
+        attackCooldown = data.attackCooldown;
+        aggroRange = data.aggroRange;
+        attackRange = data.attackRange;
+        experienceReward = data.experienceReward;
+
+        if (agent != null) agent.speed = data.moveSpeed;
+    }
+
+    // (옛 방식, 지금은 쓰지 않음 — S1-7 3단계에서 삭제) 몬스터 종류 적용: 종류별 배율만큼 능력치를 바꿈
     public void ApplyMonsterType(MonsterType type)
     {
         maxHealth *= type.healthMultiplier;
@@ -242,7 +272,7 @@ public class Enemy : MonoBehaviour
     private void AttackPlayer()
     {
         Debug.Log($"{gameObject.name}의 공격! 플레이어에게 {attackDamage}의 데미지");
-        player.TakeDamage(attackDamage);
+        player.TakeDamage(attackDamage, level);
 
         nextAttackTime = Time.time + attackCooldown;
     }

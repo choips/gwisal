@@ -4636,13 +4636,8 @@ MonoBehaviour:
   maxHP: 100
   currentHP: 0
   attackPower: 10
-  critChance: 0.1
-  critMultiplier: 2
   maxMP: 100
   currentMP: 0
-  mpRegenPerSecond: 5
-  hpPerLevel: 20
-  attackPerLevel: 5
   xpMultiplier: 1.5
   hpBarFill: {fileID: 1357330582}
   mpBarFill: {fileID: 976682894}
@@ -5287,6 +5282,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemySpawner
   enemyPrefab: {fileID: 8190579268854747374, guid: 1457027d1a5734848a9db968052db66c, type: 3}
+  enemyTypes:
+  - data: {fileID: 11400000, guid: 721f82aa22b38df499dd090f3e671f5c, type: 2}
+    spawnWeight: 40
+  - data: {fileID: 11400000, guid: 8813989a38b9aca45845f67daf9c796b, type: 2}
+    spawnWeight: 25
+  - data: {fileID: 11400000, guid: 449f2fe3a1f588e4a94e359d42f1ce12, type: 2}
+    spawnWeight: 25
+  - data: {fileID: 11400000, guid: e512fa4446c22124f94ed819a07b9b11, type: 2}
+    spawnWeight: 10
+  monsterLevel: 1
   monsterTypes:
   - monsterName: "\uC7A1\uADC0"
     color: {r: 0.45, g: 0.55, b: 0.45, a: 1}

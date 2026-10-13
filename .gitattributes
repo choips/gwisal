@@ -1,0 +1,64 @@
+# Git LFS(큰 파일 전용 저장) 설정
+# 아래 확장자의 파일은 Git 기록에 내용 대신 "주소표(포인터)"만 남기고, 실제 파일은 LFS 저장소에 올립니다.
+# GitHub은 100MB가 넘는 파일을 거부하므로, 그림·모델·소리 같은 큰 파일은 반드시 여기에 등록합니다.
+# 에셋 팩 파일은 확장자가 대문자인 경우가 많아 대문자도 함께 등록합니다.
+# 새 확장자를 추가할 때는 그 종류의 파일을 프로젝트에 넣기 "전에" 등록해야 합니다.
+
+# 그림 (텍스처, 아이콘, 참고 이미지)
+*.png filter=lfs diff=lfs merge=lfs -text
+*.PNG filter=lfs diff=lfs merge=lfs -text
+*.jpg filter=lfs diff=lfs merge=lfs -text
+*.JPG filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.JPEG filter=lfs diff=lfs merge=lfs -text
+*.psd filter=lfs diff=lfs merge=lfs -text
+*.PSD filter=lfs diff=lfs merge=lfs -text
+*.tga filter=lfs diff=lfs merge=lfs -text
+*.TGA filter=lfs diff=lfs merge=lfs -text
+*.tif filter=lfs diff=lfs merge=lfs -text
+*.tiff filter=lfs diff=lfs merge=lfs -text
+*.gif filter=lfs diff=lfs merge=lfs -text
+*.bmp filter=lfs diff=lfs merge=lfs -text
+*.exr filter=lfs diff=lfs merge=lfs -text
+*.hdr filter=lfs diff=lfs merge=lfs -text
+
+# 3D 모델
+*.fbx filter=lfs diff=lfs merge=lfs -text
+*.FBX filter=lfs diff=lfs merge=lfs -text
+*.obj filter=lfs diff=lfs merge=lfs -text
+*.OBJ filter=lfs diff=lfs merge=lfs -text
+*.blend filter=lfs diff=lfs merge=lfs -text
+*.dae filter=lfs diff=lfs merge=lfs -text
+*.3ds filter=lfs diff=lfs merge=lfs -text
+*.max filter=lfs diff=lfs merge=lfs -text
+
+# 소리
+*.wav filter=lfs diff=lfs merge=lfs -text
+*.WAV filter=lfs diff=lfs merge=lfs -text
+*.mp3 filter=lfs diff=lfs merge=lfs -text
+*.MP3 filter=lfs diff=lfs merge=lfs -text
+*.ogg filter=lfs diff=lfs merge=lfs -text
+*.OGG filter=lfs diff=lfs merge=lfs -text
+*.aif filter=lfs diff=lfs merge=lfs -text
+*.aiff filter=lfs diff=lfs merge=lfs -text
+*.flac filter=lfs diff=lfs merge=lfs -text
+
+# 영상
+*.mp4 filter=lfs diff=lfs merge=lfs -text
+*.mov filter=lfs diff=lfs merge=lfs -text
+*.webm filter=lfs diff=lfs merge=lfs -text
+
+# 글꼴 원본 (TextMeshPro 글꼴 에셋 .asset은 글자 파일이라 제외)
+*.ttf filter=lfs diff=lfs merge=lfs -text
+*.TTF filter=lfs diff=lfs merge=lfs -text
+*.otf filter=lfs diff=lfs merge=lfs -text
+*.OTF filter=lfs diff=lfs merge=lfs -text
+
+# 압축 파일, 문서
+*.zip filter=lfs diff=lfs merge=lfs -text
+*.7z filter=lfs diff=lfs merge=lfs -text
+*.xlsx filter=lfs diff=lfs merge=lfs -text
+*.pdf filter=lfs diff=lfs merge=lfs -text
+
+# 조명 굽기(Bake) 결과 — Force Text 설정에서도 바이너리로 저장되는 Unity 파일
+LightingData.asset filter=lfs diff=lfs merge=lfs -text

@@ -46,6 +46,12 @@ public class EnemyHealthBar : MonoBehaviour
         }
     }
 
+    // 적이 풀에서 다시 나올 때 지난번(0에 가까운) 바 길이에서 차오르지 않도록 가득 찬 상태로 맞춤
+    private void OnEnable()
+    {
+        if (fillImage != null) fillImage.fillAmount = 1f;
+    }
+
     private void Start()
     {
         if (Camera.main != null)

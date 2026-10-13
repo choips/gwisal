@@ -433,9 +433,11 @@ public class PlayerController : MonoBehaviour
     // 매 프레임 타겟 종류에 따라 추적/공격 또는 추적/줍기 처리
     private void UpdateTargeting()
     {
-        if (target == null)
+        // 적은 죽으면 파괴되지 않고 풀로 돌아가 꺼질 뿐이라(null이 되지 않음) 죽었는지도 함께 확인
+        bool enemyGone = targetEnemy is not null && (targetEnemy == null || targetEnemy.IsDead);
+        if (target == null || enemyGone)
         {
-            // 적이 파괴(Destroy)되는 등 타겟이 사라졌다면 타겟 정보도 모두 정리
+            // 적이 죽거나 아이템이 주워지는 등 타겟이 사라졌다면 타겟 정보도 모두 정리
             // (Unity의 != null은 파괴된 오브젝트를 null로 취급하므로, 참조가 남아 있는지는 is not null로 검사)
             if (targetEnemy is not null || targetItem is not null || isAttacking) ClearTarget();
             return;

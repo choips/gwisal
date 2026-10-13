@@ -101,12 +101,40 @@ public class EnemySpawner : MonoBehaviour
     private const int UniqueSuffixCount = 3;
 
     private readonly List<Vector3> packCenters = new List<Vector3>(); // 이미 배치한 무리 중심들
+    private readonly List<Enemy> spawnedEnemies = new List<Enemy>();  // 이 배치기가 꺼낸 살아 있는 적 (지역을 떠날 때 창고로 돌려보냄)
+    private static bool isQuitting; // 게임(또는 에디터 Play)이 끝나는 중인지 — 이때는 정리하지 않음
     private readonly List<EnemySpawnEntry> activeTypes = new List<EnemySpawnEntry>(); // 실제로 뽑을 귀신 종류 (빈 칸 제외)
     private Bounds mapBounds;     // NavMesh 전체를 감싸는 범위
     private Transform player;
     private bool hasPopulated;    // 배치를 마쳤는지 (마지막 한 마리 처치 알림용)
     private float levelHealthMultiplier = 1f; // 몬스터 레벨에 따른 체력 배율
     private float levelDamageMultiplier = 1f; // 몬스터 레벨에 따른 피해 배율
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        isQuitting = false;
+        Application.quitting -= OnApplicationQuitting;
+        Application.quitting += OnApplicationQuitting;
+    }
+
+    private static void OnApplicationQuitting()
+    {
+        isQuitting = true;
+    }
+
+    // 적은 풀(DontDestroyOnLoad의 [ObjectPool]) 아래에 있어 지역 씬을 내려도 함께 사라지지 않으므로,
+    // 배치기가 사라질 때(= 지역을 떠날 때) 남은 적을 직접 창고로 돌려보냄
+    private void OnDestroy()
+    {
+        if (isQuitting) return;
+
+        for (int i = spawnedEnemies.Count - 1; i >= 0; i--)
+        {
+            if (spawnedEnemies[i] != null) spawnedEnemies[i].Despawn();
+        }
+        spawnedEnemies.Clear();
+    }
 
     // 지역 씬이 막 불러와진 순간에는 플레이어가 아직 입구로 옮겨지기 전이므로,
     // RegionManager가 지역 준비(활성 씬 지정·플레이어 배치)를 마칠 때까지 기다렸다가 배치함
@@ -233,12 +261,13 @@ public class EnemySpawner : MonoBehaviour
     private void SpawnMonster(Vector3 position, EnemyData data, MonsterRank rank, string labelText, Color labelColor)
     {
         Quaternion rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-        GameObject monsterObject = Instantiate(enemyPrefab, position, rotation);
+        GameObject monsterObject = ObjectPoolManager.Spawn(enemyPrefab, position, rotation);
+        if (monsterObject == null) return;
 
         if (!monsterObject.TryGetComponent(out Enemy enemy))
         {
             Debug.LogWarning($"{enemyPrefab.name} 프리팹에 Enemy 스크립트가 없어 몬스터로 쓸 수 없습니다.");
-            Destroy(monsterObject);
+            ObjectPoolManager.Release(monsterObject);
             return;
         }
 
@@ -260,12 +289,14 @@ public class EnemySpawner : MonoBehaviour
                 labelText, labelColor, labelFont, labelFontSize, labelHeight * bodyScale.y);
         }
 
+        spawnedEnemies.Add(enemy);
         currentEnemyCount++;
     }
 
     // 이 배치기가 만든 적이 죽었을 때 Enemy가 호출
     public void OnEnemyDied(Enemy enemy)
     {
+        spawnedEnemies.Remove(enemy);
         currentEnemyCount = Mathf.Max(currentEnemyCount - 1, 0);
 
         if (hasPopulated && currentEnemyCount == 0)

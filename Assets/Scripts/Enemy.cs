@@ -4,9 +4,11 @@ using UnityEngine.AI;            // NavMeshAgent 사용
 
 // 적의 체력(HP)과 AI를 관리하는 스크립트
 // - 플레이어가 인식 거리 안에 들어오면 쫓아가고, 공격 사거리 안이면 멈춰서 쿨타임마다 공격합니다.
-// - 피격 시 체력이 깎이고, 체력이 0 이하가 되면 오브젝트가 파괴(사망)됩니다.
+// - 피격 시 체력이 깎이고, 체력이 0 이하가 되면 사망합니다.
 // - 배치기(EnemySpawner)가 생성 직후 귀신 데이터(EnemyData: 잡귀·강시 등)·몬스터 레벨과 등급(챔피언·유니크 등)을 적용합니다.
 //   (아래 Inspector 숫자는 데이터가 적용되기 전의 기본값입니다)
+// - 오브젝트 풀로 재사용합니다: 죽거나 지역을 떠나면 파괴하지 않고 창고로 돌아가고(Release), 다시 꺼낼 때 OnEnable에서 상태를 초기화합니다.
+//   (씬에 직접 놓은 적은 풀에서 나온 것이 아니므로 예전처럼 파괴됨)
 [RequireComponent(typeof(NavMeshAgent))]
 public class Enemy : MonoBehaviour
 {
@@ -99,6 +101,8 @@ public class Enemy : MonoBehaviour
     private Vector3 knockbackVelocity;  // 밀려나는 속도 (방향 × 빠르기)
     private float knockbackEndTime;     // 밀려나기가 끝나는 시각
 
+    private Vector3 baseScale;          // 프리팹 원래 크기 (재사용할 때 배치기가 키운 크기를 되돌림)
+
     // 머리 위 체력바가 읽어가는 체력 비율 (0 ~ 1)
     public float HealthRatio => maxHealth > 0f ? Mathf.Clamp01(currentHealth / maxHealth) : 0f;
 
@@ -106,10 +110,14 @@ public class Enemy : MonoBehaviour
     public EnemyData Data => enemyData;
     public int Level => level;
 
+    // 죽었는지 (풀로 돌아간 적은 null이 되지 않으므로, 타겟이 사라졌는지는 이것으로 확인)
+    public bool IsDead => isDead;
+
     private void Awake()
     {
         // 체력바가 첫 프레임에 빈 칸으로 보이지 않도록 Start보다 먼저 채움
         currentHealth = maxHealth;
+        baseScale = transform.localScale;
 
         agent = GetComponent<NavMeshAgent>();
         if (agent == null)
@@ -143,6 +151,35 @@ public class Enemy : MonoBehaviour
                 ? material.GetColor(EmissionColorId)
                 : Color.black;
         }
+    }
+
+    // 풀에서 꺼낼 때마다 지난번 상태를 지움 (처음 만들 때도 Awake 다음에 실행됨)
+    // 귀신 데이터·등급·몸 색·이름표는 배치기가 꺼낸 직후 다시 적용함
+    private void OnEnable()
+    {
+        isDead = false;
+        currentHealth = maxHealth;
+        nextAttackTime = 0f;
+        knockbackEndTime = 0f;
+        transform.localScale = baseScale;
+        rank = MonsterRank.Normal;
+        lootDropCount = 1;
+        lootRarityMultiplier = 1f;
+        StopFlash();
+    }
+
+    // 창고로 돌아갈 때: 배치기 연결을 끊고, 배치기가 붙인 머리 위 이름표를 떼어 냄 (다음에 꺼낼 때 새 이름표를 붙임)
+    private void OnDisable()
+    {
+        spawner = null;
+        if (TryGetComponent(out ItemNameLabel nameLabel)) Destroy(nameLabel);
+    }
+
+    // 보상 없이 조용히 창고로 돌려보냄 (지역을 떠날 때 배치기가 남은 적을 정리)
+    public void Despawn()
+    {
+        if (!gameObject.activeInHierarchy) return;
+        ObjectPoolManager.Release(gameObject);
     }
 
     // 스포너가 적을 생성한 직후 호출해서 자신을 알려 줌
@@ -347,12 +384,20 @@ public class Enemy : MonoBehaviour
 
         if (remaining <= 0f)
         {
-            isFlashing = false;
-            for (int i = 0; i < flashMaterials.Length; i++)
-            {
-                flashMaterials[i].SetColor(EmissionColorId, originalEmissions[i]);
-                if (!originalEmissionOn[i]) flashMaterials[i].DisableKeyword("_EMISSION");
-            }
+            StopFlash();
+        }
+    }
+
+    // 번쩍임을 바로 끝내고 원래 발광 상태로 되돌림
+    private void StopFlash()
+    {
+        isFlashing = false;
+        if (flashMaterials == null) return;
+
+        for (int i = 0; i < flashMaterials.Length; i++)
+        {
+            flashMaterials[i].SetColor(EmissionColorId, originalEmissions[i]);
+            if (!originalEmissionOn[i]) flashMaterials[i].DisableKeyword("_EMISSION");
         }
     }
 
@@ -424,7 +469,8 @@ public class Enemy : MonoBehaviour
             spawner.OnEnemyDied(this);
         }
 
-        Destroy(gameObject);
+        // 파괴하지 않고 창고로 돌려보냄 (풀에서 나오지 않은 적은 파괴됨)
+        ObjectPoolManager.Release(gameObject);
     }
 
     // Scene 뷰에서 적을 선택하면 인식 거리(노랑)와 공격 사거리(빨강)를 원으로 표시

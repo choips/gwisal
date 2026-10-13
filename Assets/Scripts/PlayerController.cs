@@ -47,7 +47,7 @@ public class PlayerController : MonoBehaviour
     [Tooltip("이 거리 안에 적이 들어오면 멈추고 공격합니다")]
     public float attackRange = 2.0f; // 공격 사거리
 
-    [Tooltip("1초당 공격 횟수 (1이면 1초에 한 번, 2면 0.5초에 한 번)")]
+    [Tooltip("1초당 기본 공격 횟수 (1이면 1초에 한 번, 2면 0.5초에 한 번) — 능력치의 공격 속도 +%가 여기에 곱해짐")]
     public float attackRate = 1f; // 공격 속도
 
     [Tooltip("공격할 때 적을 향해 회전하는 속도")]
@@ -79,12 +79,15 @@ public class PlayerController : MonoBehaviour
     private float nextAttackTime = 0f; // 다음 공격이 가능한 시각 (게임 시작 후 경과 초)
     private GameObject currentClickMarker; // 지금 바닥에 떠 있는 클릭 표시
     private bool isStickMoving;            // 지난 프레임에 왼쪽 스틱으로 이동 중이었는지
+    private float baseMoveSpeed;           // NavMeshAgent에 설정된 기본 이동 속도 (능력치의 이동 속도 +%가 여기에 곱해짐)
+    private CharacterStats subscribedStats; // 이동 속도 갱신 알림을 받는 능력치 계산기
 
     private void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
         stats = GetComponent<PlayerStats>();
         playerSkills = GetComponent<PlayerSkills>();
+        if (agent != null) baseMoveSpeed = agent.speed;
         if (stats == null)
         {
             Debug.LogWarning("Player에 PlayerStats 컴포넌트가 없어 공격할 수 없습니다. Add Component로 추가해 주세요.");
@@ -95,6 +98,29 @@ public class PlayerController : MonoBehaviour
         {
             mainCamera = Camera.main;
         }
+    }
+
+    // 능력치 계산기는 PlayerStats의 Awake에서 만들어지므로 Start에서 연결 (능력치가 바뀔 때만 이동 속도 갱신)
+    private void Start()
+    {
+        if (stats != null && stats.Stats != null)
+        {
+            subscribedStats = stats.Stats;
+            subscribedStats.Changed += ApplyMoveSpeed;
+        }
+        ApplyMoveSpeed();
+    }
+
+    private void OnDestroy()
+    {
+        if (subscribedStats != null) subscribedStats.Changed -= ApplyMoveSpeed;
+    }
+
+    // 이동 속도 = 기본 이동 속도 × (1 + 이동 속도 +%)
+    private void ApplyMoveSpeed()
+    {
+        if (agent == null || stats == null) return;
+        agent.speed = baseMoveSpeed * (1f + stats.GetStat(StatType.MoveSpeed));
     }
 
     // 사망 등으로 조작이 꺼질 때 타겟과 조준을 잊어서, 부활 후 이전 행동을 이어가지 않도록 함
@@ -490,8 +516,9 @@ public class PlayerController : MonoBehaviour
         Debug.Log(isCritical ? $"치명타! {damage}의 데미지" : $"적중! {damage}의 데미지");
         targetEnemy.TakeDamage(damage, isCritical);
 
-        // attackRate가 0 이하이면 0으로 나누게 되므로 최소값을 보장
-        nextAttackTime = Time.time + (1f / Mathf.Max(attackRate, 0.01f));
+        // 공격 간격 = 1 ÷ (초당 공격 횟수 × (1 + 공격 속도 +%)), 0 이하이면 0으로 나누게 되므로 최소값을 보장
+        float attacksPerSecond = attackRate * (1f + stats.GetStat(StatType.AttackSpeed));
+        nextAttackTime = Time.time + (1f / Mathf.Max(attacksPerSecond, 0.01f));
     }
 
     // 적 방향으로 부드럽게 회전

@@ -34,8 +34,10 @@ public abstract class SkillBase : MonoBehaviour
     private float nextUseTime; // 다음에 쓸 수 있는 시각 (게임 시작 후 경과 초)
 
     public SkillData Data => data;
-    public float Cooldown => data != null ? data.cooldown : 0f;
-    public float ManaCost => data != null ? data.manaCost : 0f;
+
+    // 실제 쿨타임 = Skill Data 쿨타임 × (1 − 쿨타임 감소) / 실제 기력 소모 = Skill Data 소모 × (1 − 기력 소모 감소)
+    public float Cooldown => data != null ? data.cooldown * (1f - GetPlayerStat(StatType.CooldownReduction)) : 0f;
+    public float ManaCost => data != null ? data.manaCost * (1f - GetPlayerStat(StatType.ManaCostReduction)) : 0f;
     public float DamageMultiplier => data != null ? data.damageMultiplier : 1f;
 
     // 남은 쿨타임(초, 0이면 사용 가능) — 스킬바 UI가 읽어 감 (개발자 메뉴의 쿨타임 없음이 켜져 있으면 항상 0)
@@ -67,6 +69,12 @@ public abstract class SkillBase : MonoBehaviour
 
     // 조준 취소 (취소 키, 사망 등) — 조준 원 같은 표시를 정리
     public virtual void CancelInput() { }
+
+    // 플레이어 능력치 최종값 (플레이어 능력치가 없으면 0)
+    private float GetPlayerStat(StatType stat)
+    {
+        return stats != null ? stats.GetStat(stat) : 0f;
+    }
 
     // 쿨타임 시작 (스킬을 실제로 쓴 뒤 호출)
     protected void StartCooldown()

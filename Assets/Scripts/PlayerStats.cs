@@ -109,6 +109,12 @@ public class PlayerStats : MonoBehaviour
         SyncFromStats();
     }
 
+    // 능력치 최종값 읽기 (계산기가 없으면 0)
+    public float GetStat(StatType stat)
+    {
+        return Stats != null ? Stats.Get(stat) : 0f;
+    }
+
     // 장비가 주는 능력치 추가 (InventoryManager가 장착할 때 호출, item = 출처)
     public void AddEquipmentBonus(ItemData item, StatType stat, float value)
     {

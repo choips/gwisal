@@ -57,6 +57,17 @@ public static class GameInput
     // 지금 커서가 가리키는 화면 좌표
     public static Vector2 PointerPosition => Point.ReadValue<Vector2>();
 
+    // 이 행동의 지금 입력이 마우스 / 게임패드에서 왔는지 (누른 프레임과 누르고 있는 동안에 확인, 뗀 뒤에는 false)
+    public static bool IsFromMouse(InputAction action)
+    {
+        return action.activeControl != null && action.activeControl.device is Mouse;
+    }
+
+    public static bool IsFromGamepad(InputAction action)
+    {
+        return action.activeControl != null && action.activeControl.device is Gamepad;
+    }
+
     // 스킬 칸 행동 (slotNumber: 1 ~ 6)
     // 지금 연결: 2번 = 마우스 우클릭(부적 투사체), 3번 = Q(부적 폭발), 4~6번 = 2·3·4 키 (아직 쓰는 스킬 없음)
     public static InputAction GetSkill(int slotNumber)

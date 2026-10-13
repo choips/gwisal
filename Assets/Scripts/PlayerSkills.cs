@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.EventSystems;  // UI 위에 커서가 있는지 확인 (EventSystem) 사용
-using UnityEngine.InputSystem;   // InputAction, Mouse 사용
+using UnityEngine.InputSystem;   // InputAction 사용
 
 // 플레이어의 스킬 칸 1~6 관리자 (Player에 붙임)
 // - 칸마다 스킬(SkillBase를 상속한 스킬 스크립트)을 하나씩 넣어 둡니다.
@@ -84,7 +84,7 @@ public class PlayerSkills : MonoBehaviour
             InputAction action = GameInput.GetSkill(i + 1);
 
             // 인벤토리 같은 UI 위에서 마우스 버튼으로 누른 것은 스킬 사용이 아님 (키보드 키는 UI 위에서도 사용 가능)
-            if (action.WasPressedThisFrame() && !(pointerOverUI && IsMouseButton(action)))
+            if (action.WasPressedThisFrame() && !(pointerOverUI && GameInput.IsFromMouse(action)))
             {
                 skill.OnInputPressed(pointerPosition);
             }
@@ -99,11 +99,5 @@ public class PlayerSkills : MonoBehaviour
                 skill.OnInputHeld(pointerPosition);
             }
         }
-    }
-
-    // 이번 입력이 마우스 버튼에서 왔는지
-    private static bool IsMouseButton(InputAction action)
-    {
-        return action.activeControl != null && action.activeControl.device is Mouse;
     }
 }

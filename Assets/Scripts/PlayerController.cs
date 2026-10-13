@@ -9,6 +9,7 @@ using UnityEngine.InputSystem;   // 새 Input System (InputAction) 사용
 //  - 바닥(Ground 레이어)을 클릭하면 그 위치로 이동하고
 //  - 적(Enemy 태그)을 클릭하면 타겟으로 지정해 다가간 뒤 사거리 안에서 공격하고
 //  - 아이템(Item 태그)을 클릭하면 다가가서 줍습니다.
+// 게임패드: 왼쪽 스틱으로 화면 기준 방향 이동, A 버튼으로 가장 가까운 적 공격(적이 없으면 가장 가까운 아이템 줍기)
 // 스킬은 PlayerSkills(스킬 칸 1~6)와 각 스킬 스크립트가 처리하고,
 // 이 스크립트는 스킬이 쓰는 바닥 위치 찾기(TryGetGroundPoint)와 멈추고 바라보기(StopAndFace)를 제공합니다.
 [RequireComponent(typeof(NavMeshAgent))]
@@ -56,6 +57,18 @@ public class PlayerController : MonoBehaviour
     [Tooltip("이 거리 안에 아이템이 들어오면 멈추고 줍습니다")]
     public float pickupRange = 1.5f; // 아이템 획득 사거리
 
+    [Header("게임패드 설정")]
+    [Tooltip("왼쪽 스틱을 이만큼 이상 기울여야 이동합니다 (0 ~ 1)")]
+    [SerializeField, Range(0.05f, 0.9f)] private float stickDeadZone = 0.2f; // 스틱 무시 범위
+
+    [Tooltip("스틱 방향으로 이 거리(m)만큼 앞을 목적지로 잡아 이동합니다 (너무 작으면 끊기고, 너무 크면 벽 앞에서 돌아감)")]
+    [SerializeField] private float stickMoveLookAhead = 1.5f; // 스틱 이동 목적지 거리
+
+    [Tooltip("게임패드 A 버튼으로 공격·줍기할 대상을 찾는 반경(m)")]
+    [SerializeField] private float gamepadInteractRadius = 6f; // A 버튼 대상 찾기 반경
+
+    private static readonly Collider[] nearbyColliders = new Collider[32]; // 주변 대상 찾기용 (매번 새로 만들지 않도록 미리 준비)
+
     private NavMeshAgent agent;   // 캐릭터 길찾기 이동 컴포넌트
     private PlayerStats stats;    // 플레이어 능력치 (공격력 등)
     private PlayerSkills playerSkills; // 스킬 칸 관리자 (사망 시 조준 취소용)
@@ -65,6 +78,7 @@ public class PlayerController : MonoBehaviour
     private bool isAttacking;     // 사거리 안에 들어와 멈춘(공격 중인) 상태인지 여부
     private float nextAttackTime = 0f; // 다음 공격이 가능한 시각 (게임 시작 후 경과 초)
     private GameObject currentClickMarker; // 지금 바닥에 떠 있는 클릭 표시
+    private bool isStickMoving;            // 지난 프레임에 왼쪽 스틱으로 이동 중이었는지
 
     private void Awake()
     {
@@ -90,13 +104,114 @@ public class PlayerController : MonoBehaviour
         targetEnemy = null;
         targetItem = null;
         isAttacking = false;
+        isStickMoving = false;
         if (playerSkills != null) playerSkills.CancelAllSkills();
     }
 
     private void Update()
     {
+        HandleStickMove();
+        HandleGamepadSelect();
         HandleMouseInput();
         UpdateTargeting();
+    }
+
+    // 게임패드 왼쪽 스틱: 화면 기준 방향(위 = 화면 안쪽)으로 이동, 스틱을 놓으면 멈춤
+    // 스틱으로 움직이면 공격·줍기 대상은 해제됨 (디아블로 콘솔판 방식)
+    private void HandleStickMove()
+    {
+        Vector2 stick = GameInput.MoveDirection.ReadValue<Vector2>();
+
+        if (stick.sqrMagnitude < stickDeadZone * stickDeadZone)
+        {
+            // 스틱을 막 놓았을 때 한 번만 멈춤 (마우스 이동 중에는 건드리지 않음)
+            if (isStickMoving)
+            {
+                isStickMoving = false;
+                if (target == null) agent.ResetPath();
+            }
+            return;
+        }
+
+        isStickMoving = true;
+        if (target != null) ClearTarget();
+
+        Vector3 direction = GetScreenRelativeDirection(stick);
+        if (direction.sqrMagnitude < 0.0001f) return;
+
+        // Player의 위치는 NavMeshAgent의 Base Offset만큼 바닥보다 높으므로, 찾는 반경에 몸 높이를 더해 바닥까지 닿게 함
+        Vector3 destination = transform.position + direction * stickMoveLookAhead;
+        float searchRadius = stickMoveLookAhead + agent.height;
+        if (NavMesh.SamplePosition(destination, out NavMeshHit navHit, searchRadius, NavMesh.AllAreas))
+        {
+            agent.isStopped = false;
+            agent.SetDestination(navHit.position);
+        }
+    }
+
+    // 스틱 입력(화면의 위·오른쪽)을 바닥 위의 방향으로 바꿈 (카메라가 바라보는 쪽 = 위)
+    private Vector3 GetScreenRelativeDirection(Vector2 stick)
+    {
+        Vector3 forward = Vector3.forward;
+        Vector3 right = Vector3.right;
+
+        if (mainCamera != null)
+        {
+            Transform cameraTransform = mainCamera.transform;
+            forward = cameraTransform.forward;
+            right = cameraTransform.right;
+            forward.y = 0f;
+            right.y = 0f;
+            forward.Normalize();
+            right.Normalize();
+        }
+
+        Vector3 direction = right * stick.x + forward * stick.y;
+        return direction.normalized;
+    }
+
+    // 게임패드 A 버튼(선택 행동): 가까운 적을 공격, 주변에 적이 없으면 가장 가까운 아이템을 주우러 감
+    private void HandleGamepadSelect()
+    {
+        InputAction select = GameInput.Select;
+        if (!select.WasPressedThisFrame() || !GameInput.IsFromGamepad(select)) return;
+
+        if (TryFindNearest(EnemyTag, gamepadInteractRadius, out Transform nearestEnemy))
+        {
+            SetEnemyTarget(nearestEnemy);
+        }
+        else if (TryFindNearest(ItemTag, gamepadInteractRadius, out Transform nearestItem))
+        {
+            SetItemTarget(nearestItem, nearestItem.position);
+        }
+    }
+
+    // 플레이어 주변 반경 안에서 해당 태그를 가진 가장 가까운 대상 찾기 (없으면 false)
+    // 스킬 자동 조준(게임패드)에서도 사용
+    public bool TryFindNearest(string targetTag, float radius, out Transform nearest)
+    {
+        nearest = null;
+        Vector3 center = transform.position;
+        int count = Physics.OverlapSphereNonAlloc(center, radius, nearbyColliders,
+            Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+
+        float bestDistance = float.MaxValue;
+        for (int i = 0; i < count; i++)
+        {
+            Collider candidate = nearbyColliders[i];
+            if (!candidate.CompareTag(targetTag)) continue;
+
+            Vector3 offset = candidate.transform.position - center;
+            offset.y = 0f;
+            float distance = offset.sqrMagnitude;
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                nearest = candidate.transform;
+            }
+        }
+
+        return nearest != null;
     }
 
     // 스킬을 쓸 때: 타겟과 이동을 멈추고 지정한 바닥 지점을 바라봄 (높이는 무시하고 Y축 회전만)
@@ -136,7 +251,10 @@ public class PlayerController : MonoBehaviour
 
         Vector2 pointerPosition = GameInput.PointerPosition;
 
+        // 게임패드 A 버튼은 HandleGamepadSelect가 처리 (커서 위치를 쓰지 않음)
         InputAction select = GameInput.Select;
+        if (GameInput.IsFromGamepad(select)) return;
+
         if (select.WasPressedThisFrame())
         {
             // 새로 클릭한 순간: 적/아이템/바닥 중 무엇인지 판단해서 처리

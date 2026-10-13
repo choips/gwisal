@@ -112,18 +112,30 @@ public class PlayerStats : MonoBehaviour
     // 장비가 주는 능력치 추가 (InventoryManager가 장착할 때 호출, item = 출처)
     public void AddEquipmentBonus(ItemData item, StatType stat, float value)
     {
-        if (Stats == null || item == null) return;
-
-        Stats.AddModifier(new StatModifier(stat, StatModifierType.Flat, value, item));
-        SyncFromStats();
+        AddStatBonus(item, stat, StatModifierType.Flat, value);
     }
 
     // 장비가 주던 능력치를 모두 지움 (InventoryManager가 벗을 때 호출)
     public void RemoveEquipmentBonus(ItemData item)
     {
-        if (Stats == null || item == null) return;
+        RemoveStatBonus(item);
+    }
 
-        if (Stats.RemoveModifiersFromSource(item))
+    // 능력치 수정치 추가 (장비·버프·개발자 메뉴 테스트 등, source = 나중에 지울 때 쓸 출처)
+    public void AddStatBonus(object source, StatType stat, StatModifierType type, float value)
+    {
+        if (Stats == null || source == null) return;
+
+        Stats.AddModifier(new StatModifier(stat, type, value, source));
+        SyncFromStats();
+    }
+
+    // 출처가 준 수정치를 모두 지움
+    public void RemoveStatBonus(object source)
+    {
+        if (Stats == null || source == null) return;
+
+        if (Stats.RemoveModifiersFromSource(source))
         {
             SyncFromStats();
         }
@@ -362,9 +374,13 @@ public class PlayerStats : MonoBehaviour
     }
 
     // 적의 공격을 받아 체력 감소 (체력바는 Update의 UpdateUI에서 자동 갱신)
-    public void TakeDamage(float damage)
+    // damage: 적의 원래 피해 → 방어력·피해 감소%로 줄인 뒤 적용 (DamageCalculator 공식 ②)
+    // attackerLevel: 때린 적의 레벨 (방어력 효과가 적 레벨에 따라 달라짐, EnemyData 전까지는 1)
+    public void TakeDamage(float damage, int attackerLevel = 1)
     {
         if (IsDead || IsInvincible || DevCheats.GodMode) return; // 개발자 메뉴의 무적이면 피해 없음
+
+        damage = DamageCalculator.ReducePhysicalDamage(Stats, damage, attackerLevel);
 
         currentHP = Mathf.Max(currentHP - damage, 0f);
         Debug.Log($"플레이어 피격! 남은 체력: {currentHP} / {maxHP}");

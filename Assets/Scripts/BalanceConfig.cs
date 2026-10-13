@@ -27,6 +27,16 @@ public class BalanceConfig : ScriptableObject
     [Min(0f)] public float manaPerLevel = 2f;      // 레벨당 최대 기력 증가
     [Min(0f)] public float baseManaRegen = 5f;     // 초당 기력 회복
 
+    [Header("방어력 공식: 물리 피해 감소 = 방어력 ÷ (방어력 + A × 적 레벨 + B)")]
+    [Tooltip("A: 적 레벨 1마다 더해지는 값 (클수록 높은 레벨 적에게 방어력 효과가 줄어듦)")]
+    [Min(0f)] public float armorPerEnemyLevel = 15f;
+
+    [Tooltip("B: 고정으로 더해지는 값")]
+    [Min(1f)] public float armorBase = 50f;
+
+    [Tooltip("물리 피해 감소 상한 (0.85 = 85%)")]
+    [Range(0f, 1f)] public float armorReductionCap = 0.85f;
+
     [Header("상한 (비율: 0.75 = 75%)")]
     [Range(0f, 1f)] public float critChanceCap = 0.75f;        // 치명타 확률
     [Min(0f)] public float attackSpeedCap = 1f;                // 공격 속도 (+100%)

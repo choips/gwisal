@@ -4,13 +4,13 @@ using UnityEngine;
 // 개발자 메뉴 (F1로 열고 닫기) — 에디터와 개발 빌드(Development Build)에만 포함되고, 정식 출시 빌드에서는 통째로 빠집니다.
 // 씬에 붙이지 않아도 플레이를 시작하면 스스로 만들어집니다 (Hierarchy의 DontDestroyOnLoad → [DevMenu]).
 // 화면 왼쪽 위 창에서 무적·기력 무한·쿨타임 없음을 켜고 끄고(켠 값은 DevCheats에 저장), 레벨을 바로 올리고,
-// 적에게 준 피해(DPS 측정, DamageMeter)를 봅니다.
+// 적에게 준 피해(DPS 측정, DamageMeter)와 능력치를 보고, 테스트용 능력치 수정치를 켜고 끕니다.
 // Unity 기본 즉석 UI(IMGUI, OnGUI)로 그려서 Canvas·프리팹 설정이 필요 없습니다. 마우스로 조작합니다.
 public class DevMenu : MonoBehaviour
 {
     private const float ReferenceScreenHeight = 1080f; // 이 화면 높이에서 창이 아래 크기 그대로 보임 (화면이 크면 함께 커짐)
     private const float MeterRefreshInterval = 0.25f;  // DPS 글자를 새로 만드는 간격(초) (매 프레임 문자열을 만들지 않기 위함)
-    private static readonly Rect WindowRect = new Rect(10f, 10f, 320f, 340f); // 기준 화면에서 창의 위치·크기
+    private static readonly Rect WindowRect = new Rect(10f, 10f, 340f, 420f); // 기준 화면에서 창의 위치·크기
 
     private bool isOpen;     // 메뉴가 열려 있는지
     private float guiScale = 1f; // 화면 크기에 맞춘 창 확대 배율
@@ -26,6 +26,13 @@ public class DevMenu : MonoBehaviour
     private int shownStatsVersion = -1;              // 표시 중인 새 능력치의 계산 번호 (바뀔 때만 글자를 새로 만듦)
     private string statsDefenseLabel = "체력 - / 기력 -"; // 새 능력치: 체력·기력
     private string statsAttackLabel = "무기 피해 -";      // 새 능력치: 무기 피해·치명타
+    private string statsArmorLabel = "방어력 -";          // 새 능력치: 방어력·피해 감소
+
+    // 테스트용 능력치 수정치 (켜면 플레이어에게 붙고 끄면 떨어짐, 출처 구분용 객체)
+    private static readonly object TestArmorSource = new object();           // 방어력 +100
+    private static readonly object TestDamageReductionSource = new object(); // 피해 감소 +20%
+    private bool testArmor;           // 방어력 +100 켜짐
+    private bool testDamageReduction; // 피해 감소 +20% 켜짐
 
     // 첫 씬이 열린 직후 메뉴 오브젝트를 한 번 만듦 (씬이 바뀌어도 유지)
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -100,11 +107,47 @@ public class DevMenu : MonoBehaviour
         }
 
         GUILayout.Space(8f);
-        GUILayout.Label("새 능력치 계산 (비교용)");
+        GUILayout.Label("능력치 (계산값)");
         GUILayout.Label(statsDefenseLabel);
         GUILayout.Label(statsAttackLabel);
+        GUILayout.Label(statsArmorLabel);
+
+        GUILayout.Space(8f);
+        GUILayout.Label("테스트용 수정치");
+        bool armorToggle = GUILayout.Toggle(testArmor, " 방어력 +100");
+        if (armorToggle != testArmor)
+        {
+            testArmor = armorToggle;
+            SetTestBonus(testArmor, TestArmorSource, StatType.Armor, StatModifierType.Flat, 100f);
+        }
+
+        bool reductionToggle = GUILayout.Toggle(testDamageReduction, " 피해 감소 +20%");
+        if (reductionToggle != testDamageReduction)
+        {
+            testDamageReduction = reductionToggle;
+            SetTestBonus(testDamageReduction, TestDamageReductionSource, StatType.DamageReduction, StatModifierType.Flat, 0.2f);
+        }
 
         GUILayout.EndArea();
+    }
+
+    // 테스트용 수정치를 플레이어에게 붙이거나 뗌
+    private void SetTestBonus(bool isOn, object source, StatType stat, StatModifierType type, float value)
+    {
+        if (playerStats == null)
+        {
+            playerStats = FindFirstObjectByType<PlayerStats>();
+            if (playerStats == null) return;
+        }
+
+        if (isOn)
+        {
+            playerStats.AddStatBonus(source, stat, type, value);
+        }
+        else
+        {
+            playerStats.RemoveStatBonus(source);
+        }
     }
 
     // 플레이어 레벨을 count만큼 바로 올림 (플레이어가 없으면 다시 찾아봄)
@@ -141,6 +184,7 @@ public class DevMenu : MonoBehaviour
 
         statsDefenseLabel = $"체력 {stats.Get(StatType.MaxHealth):0} / 기력 {stats.Get(StatType.MaxMana):0} (초당 회복 {stats.Get(StatType.ManaRegen):0.#})";
         statsAttackLabel = $"무기 피해 {stats.Get(StatType.WeaponDamageMin):0}~{stats.Get(StatType.WeaponDamageMax):0} / 치명타 {stats.Get(StatType.CritChance) * 100f:0}% · +{stats.Get(StatType.CritDamage) * 100f:0}%";
+        statsArmorLabel = $"방어력 {stats.Get(StatType.Armor):0} (물리 -{DamageCalculator.GetArmorReduction(stats, 1) * 100f:0.#}%, 적 레벨 1) / 피해 감소 {stats.Get(StatType.DamageReduction) * 100f:0}%";
     }
 
     // DPS 측정 글자를 일정 간격으로만 새로 만듦

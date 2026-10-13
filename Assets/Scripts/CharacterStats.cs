@@ -15,6 +15,9 @@ public class CharacterStats
     private readonly List<StatModifier> modifiers = new List<StatModifier>(); // 붙어 있는 수정치 목록
     private bool isDirty = true; // 다시 계산해야 하는지
 
+    // 상한·공식 상수를 가진 밸런스 숫자 모음 (DamageCalculator가 읽음)
+    public BalanceConfig Config => config;
+
     // 최종값이 다시 계산될 때마다 1씩 늘어나는 번호 (UI가 "바뀌었을 때만" 글자를 새로 만들 때 비교용)
     public int Version { get; private set; }
 

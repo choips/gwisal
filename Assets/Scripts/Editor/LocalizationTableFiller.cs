@@ -30,6 +30,46 @@ public static class LocalizationTableFiller
         { "notice.dead_cannot_use",   "사망한 상태에서는 아이템을 쓸 수 없습니다." },
         { "notice.area_threats",      "이 지역에 챔피언 무리 {0}개와 유니크 몬스터 {1}마리가 도사리고 있습니다" },
         { "notice.area_cleared",      "이 지역의 모든 요괴를 처치했습니다!" },
+
+        // 화면 위 정보 (HUD)
+        { "hud.level",                "Lv. {0}" },
+
+        // 아이템 종류·능력치·등급 (ItemData)
+        { "item.type.weapon",         "무기" },
+        { "item.type.armor",          "방어구" },
+        { "item.type.mana_potion",    "물약" },
+        { "item.stat.weapon",         "공격력" },
+        { "item.stat.armor",          "최대 체력" },
+        { "item.stat.mana_potion",    "기력 회복" },
+        { "item.stat_line",           "{0} +{1}" },
+        { "item.rarity.normal",       "노멀" },
+        { "item.rarity.magic",        "매직" },
+        { "item.rarity.rare",         "레어" },
+        { "item.rarity.unique",       "유니크" },
+        { "item.letter.weapon",       "검" },
+        { "item.letter.armor",        "갑" },
+        { "item.letter.mana_potion",  "약" },
+
+        // 인벤토리 (InventoryManager)
+        { "inventory.slot_equipped",  "{0}: {1} ({2})" },
+        { "inventory.slot_empty",     "{0}: 없음" },
+        { "inventory.bag_count",      "가방 {0} / {1}칸 (클릭: 장착/사용)" },
+        { "inventory.bag_empty",      "가방 0 / {0}칸 (비어 있음)" },
+
+        // 아이템 툴팁 (ItemTooltip)
+        { "tooltip.hint_use",         "클릭 또는 1 키로 사용" },
+        { "tooltip.hint_equip",       "클릭하여 장착" },
+        { "tooltip.hint_unequip",     "클릭하여 해제" },
+        { "tooltip.potion_full",      "기력이 가득 차 있어 마실 필요가 없습니다" },
+        { "tooltip.potion_gain",      "▲ 기력 +{0}" },
+        { "tooltip.potion_change",    "기력 {0} → {1}" },
+        { "tooltip.equipped",         "장착 중:" },
+        { "tooltip.nothing_equipped", "장착 중인 {0} 없음" },
+        { "tooltip.if_unequipped",    "해제하면" },
+        { "tooltip.no_change",        "변화 없음" },
+        { "tooltip.stat_up",          "▲ {0} +{1}" },
+        { "tooltip.stat_down",        "▼ {0} {1}" },
+        { "tooltip.stat_change",      "{0} {1} → {2}" },
     };
 
     [MenuItem("귀살/화면 글자 표 채우기")]

@@ -428,8 +428,8 @@ public class InventoryManager : MonoBehaviour
     private void RefreshUI()
     {
         RefreshEquipmentText();
-        RefreshSlotButton(weaponSlotButton, equippedWeapon, "무기");
-        RefreshSlotButton(armorSlotButton, equippedArmor, "방어구");
+        RefreshSlotButton(weaponSlotButton, equippedWeapon, ItemData.GetTypeName(ItemType.Weapon));
+        RefreshSlotButton(armorSlotButton, equippedArmor, ItemData.GetTypeName(ItemType.Armor));
 
         if (bagGrid == null) return;
 
@@ -544,9 +544,7 @@ public class InventoryManager : MonoBehaviour
         TMP_Text label = slotButton.GetComponentInChildren<TMP_Text>();
         if (label != null)
         {
-            label.text = equipped != null
-                ? $"{slotName}: {equipped.DisplayName} ({equipped.StatDescription})"
-                : $"{slotName}: 없음";
+            label.text = GetEquipmentLine(slotName, equipped);
             label.color = equipped != null ? equipped.NameColor : emptySlotColor;
         }
 
@@ -620,25 +618,27 @@ public class InventoryManager : MonoBehaviour
 
         if (weaponSlotButton == null)
         {
-            string weaponLine = equippedWeapon != null
-                ? $"{equippedWeapon.DisplayName} ({equippedWeapon.StatDescription})"
-                : "없음";
-            text += $"무기: {weaponLine}\n";
+            text += GetEquipmentLine(ItemData.GetTypeName(ItemType.Weapon), equippedWeapon) + "\n";
         }
 
         if (armorSlotButton == null)
         {
-            string armorLine = equippedArmor != null
-                ? $"{equippedArmor.DisplayName} ({equippedArmor.StatDescription})"
-                : "없음";
-            text += $"방어구: {armorLine}\n";
+            text += GetEquipmentLine(ItemData.GetTypeName(ItemType.Armor), equippedArmor) + "\n";
         }
 
         int usedSlots = UsedSlotCount;
         text += usedSlots > 0
-            ? $"가방 {usedSlots} / {bagCapacity}칸 (클릭: 장착/사용)"
-            : $"가방 0 / {bagCapacity}칸 (비어 있음)";
+            ? Loc.Format("inventory.bag_count", usedSlots, bagCapacity)
+            : Loc.Format("inventory.bag_empty", bagCapacity);
 
         equipmentText.text = text;
+    }
+
+    // 장비 한 줄 (예: "무기: [Rare] 낡은 단검 (공격력 +10)", 비어 있으면 "무기: 없음")
+    private static string GetEquipmentLine(string slotName, ItemData equipped)
+    {
+        return equipped != null
+            ? Loc.Format("inventory.slot_equipped", slotName, equipped.DisplayName, equipped.StatDescription)
+            : Loc.Format("inventory.slot_empty", slotName);
     }
 }

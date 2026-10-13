@@ -133,9 +133,9 @@ public class ItemSlotUI : MonoBehaviour
     {
         switch (data.itemType)
         {
-            case ItemType.Weapon: return "검";
-            case ItemType.Armor: return "갑";
-            case ItemType.ManaPotion: return "약";
+            case ItemType.Weapon: return Loc.Get("item.letter.weapon");
+            case ItemType.Armor: return Loc.Get("item.letter.armor");
+            case ItemType.ManaPotion: return Loc.Get("item.letter.mana_potion");
             default: return "?";
         }
     }

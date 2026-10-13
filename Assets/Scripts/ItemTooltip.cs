@@ -145,13 +145,13 @@ public class ItemTooltip : MonoBehaviour
         if (item.IsConsumable)
         {
             body = BuildPotionPreview(item);
-            hint = "클릭 또는 1 키로 사용";
+            hint = Loc.Get("tooltip.hint_use");
             typeLine = item.TypeName; // 물약은 등급이 없음
         }
         else
         {
             body = isEquipped ? BuildUnequipPreview(item) : BuildComparison(item);
-            hint = isEquipped ? "클릭하여 해제" : "클릭하여 장착";
+            hint = Loc.Get(isEquipped ? "tooltip.hint_unequip" : "tooltip.hint_equip");
             typeLine = $"<color=#{nameHex}>{item.RarityName}</color> {item.TypeName}";
         }
 
@@ -170,12 +170,12 @@ public class ItemTooltip : MonoBehaviour
 
         if (stats.currentMP >= stats.maxMP)
         {
-            return $"<color=#{ColorUtility.ToHtmlStringRGB(sameColor)}>기력이 가득 차 있어 마실 필요가 없습니다</color>";
+            return $"<color=#{ColorUtility.ToHtmlStringRGB(sameColor)}>{Loc.Get("tooltip.potion_full")}</color>";
         }
 
         float after = Mathf.Min(stats.currentMP + item.statValue, stats.maxMP);
-        return $"<color=#{ColorUtility.ToHtmlStringRGB(betterColor)}>▲ 기력 +{FormatNumber(after - stats.currentMP)}</color>\n"
-             + $"기력 {FormatNumber(stats.currentMP)} → {FormatNumber(after)}";
+        return $"<color=#{ColorUtility.ToHtmlStringRGB(betterColor)}>{Loc.Format("tooltip.potion_gain", FormatNumber(after - stats.currentMP))}</color>\n"
+             + Loc.Format("tooltip.potion_change", FormatNumber(stats.currentMP), FormatNumber(after));
     }
 
     // 가방 아이템: 같은 종류의 장착 중인 장비와 비교한 결과
@@ -187,8 +187,8 @@ public class ItemTooltip : MonoBehaviour
 
         string hintHex = ColorUtility.ToHtmlStringRGB(hintColor);
         string equippedLine = equipped != null
-            ? $"<color=#{hintHex}>장착 중:</color> <color=#{ColorUtility.ToHtmlStringRGB(equipped.NameColor)}>{equipped.itemName}</color> ({equipped.StatDescription})"
-            : $"<color=#{hintHex}>장착 중인 {item.TypeName} 없음</color>";
+            ? $"<color=#{hintHex}>{Loc.Get("tooltip.equipped")}</color> <color=#{ColorUtility.ToHtmlStringRGB(equipped.NameColor)}>{equipped.itemName}</color> ({equipped.StatDescription})"
+            : $"<color=#{hintHex}>{Loc.Format("tooltip.nothing_equipped", item.TypeName)}</color>";
 
         return $"{equippedLine}\n{BuildDifference(item, difference)}";
     }
@@ -197,7 +197,7 @@ public class ItemTooltip : MonoBehaviour
     private string BuildUnequipPreview(ItemData item)
     {
         string hintHex = ColorUtility.ToHtmlStringRGB(hintColor);
-        return $"<color=#{hintHex}>해제하면</color>\n{BuildDifference(item, -item.statValue)}";
+        return $"<color=#{hintHex}>{Loc.Get("tooltip.if_unequipped")}</color>\n{BuildDifference(item, -item.statValue)}";
     }
 
     // 능력치 변화량 한 줄(▲ 초록 / ▼ 빨강 / 변화 없음)과 "현재 → 변경 후" 한 줄
@@ -206,15 +206,15 @@ public class ItemTooltip : MonoBehaviour
         string differenceLine;
         if (difference > 0f)
         {
-            differenceLine = $"<color=#{ColorUtility.ToHtmlStringRGB(betterColor)}>▲ {item.StatName} +{FormatNumber(difference)}</color>";
+            differenceLine = $"<color=#{ColorUtility.ToHtmlStringRGB(betterColor)}>{Loc.Format("tooltip.stat_up", item.StatName, FormatNumber(difference))}</color>";
         }
         else if (difference < 0f)
         {
-            differenceLine = $"<color=#{ColorUtility.ToHtmlStringRGB(worseColor)}>▼ {item.StatName} {FormatNumber(difference)}</color>";
+            differenceLine = $"<color=#{ColorUtility.ToHtmlStringRGB(worseColor)}>{Loc.Format("tooltip.stat_down", item.StatName, FormatNumber(difference))}</color>";
         }
         else
         {
-            differenceLine = $"<color=#{ColorUtility.ToHtmlStringRGB(sameColor)}>변화 없음</color>";
+            differenceLine = $"<color=#{ColorUtility.ToHtmlStringRGB(sameColor)}>{Loc.Get("tooltip.no_change")}</color>";
         }
 
         // 지금 능력치와 바뀐 뒤 능력치 (예: "공격력 15 → 20")
@@ -222,7 +222,7 @@ public class ItemTooltip : MonoBehaviour
         if (stats != null)
         {
             float current = item.itemType == ItemType.Weapon ? stats.attackPower : stats.maxHP;
-            differenceLine += $"\n{item.StatName} {FormatNumber(current)} → {FormatNumber(current + difference)}";
+            differenceLine += "\n" + Loc.Format("tooltip.stat_change", item.StatName, FormatNumber(current), FormatNumber(current + difference));
         }
 
         return differenceLine;

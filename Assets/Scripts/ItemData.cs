@@ -51,19 +51,8 @@ public class ItemData
     // 화면 표시용 이름 (예: "[Rare] 낡은 단검", 등급이 없는 소모품은 "기력 물약")
     public string DisplayName => IsConsumable ? itemName : $"[{rarity}] {itemName}";
 
-    // 종류 이름 (예: "무기")
-    public string TypeName
-    {
-        get
-        {
-            switch (itemType)
-            {
-                case ItemType.Armor:      return "방어구";
-                case ItemType.ManaPotion: return "물약";
-                default:                  return "무기";
-            }
-        }
-    }
+    // 종류 이름 (예: "무기") — 화면 글자 표 "UI"에서 가져옴
+    public string TypeName => GetTypeName(itemType);
 
     // 이 아이템이 올려 주는 능력치 이름 (예: "공격력")
     public string StatName
@@ -72,30 +61,41 @@ public class ItemData
         {
             switch (itemType)
             {
-                case ItemType.Armor:      return "최대 체력";
-                case ItemType.ManaPotion: return "기력 회복";
-                default:                  return "공격력";
+                case ItemType.Armor:      return Loc.Get("item.stat.armor");
+                case ItemType.ManaPotion: return Loc.Get("item.stat.mana_potion");
+                default:                  return Loc.Get("item.stat.weapon");
             }
         }
     }
 
-    // 등급 한글 이름 (예: "레어")
+    // 등급 이름 (예: "레어")
     public string RarityName
     {
         get
         {
             switch (rarity)
             {
-                case ItemRarity.Magic:  return "매직";
-                case ItemRarity.Rare:   return "레어";
-                case ItemRarity.Unique: return "유니크";
-                default:                return "노멀";
+                case ItemRarity.Magic:  return Loc.Get("item.rarity.magic");
+                case ItemRarity.Rare:   return Loc.Get("item.rarity.rare");
+                case ItemRarity.Unique: return Loc.Get("item.rarity.unique");
+                default:                return Loc.Get("item.rarity.normal");
             }
         }
     }
 
     // 능력치 설명 (예: "공격력 +10")
-    public string StatDescription => $"{StatName} +{statValue}";
+    public string StatDescription => Loc.Format("item.stat_line", StatName, statValue);
+
+    // 종류 이름 (아이템 없이 종류만으로 — 예: 비어 있는 장비 칸 "무기: 없음")
+    public static string GetTypeName(ItemType type)
+    {
+        switch (type)
+        {
+            case ItemType.Armor:      return Loc.Get("item.type.armor");
+            case ItemType.ManaPotion: return Loc.Get("item.type.mana_potion");
+            default:                  return Loc.Get("item.type.weapon");
+        }
+    }
 
     // 어두운 UI 배경에서 잘 보이는 등급별 글자 색
     public Color RarityColor

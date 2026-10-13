@@ -67,6 +67,134 @@ MonoBehaviour:
     m_Key: notice.area_cleared
     m_Metadata:
       m_Items: []
+  - m_Id: 2294893854720
+    m_Key: hud.level
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214848
+    m_Key: item.type.weapon
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214849
+    m_Key: item.type.armor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214850
+    m_Key: item.type.mana_potion
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214851
+    m_Key: item.stat.weapon
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214852
+    m_Key: item.stat.armor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214853
+    m_Key: item.stat.mana_potion
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214854
+    m_Key: item.stat_line
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214855
+    m_Key: item.rarity.normal
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214856
+    m_Key: item.rarity.magic
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214857
+    m_Key: item.rarity.rare
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214858
+    m_Key: item.rarity.unique
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214859
+    m_Key: item.letter.weapon
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214860
+    m_Key: item.letter.armor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214861
+    m_Key: item.letter.mana_potion
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214862
+    m_Key: inventory.slot_equipped
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214863
+    m_Key: inventory.slot_empty
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214864
+    m_Key: inventory.bag_count
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214865
+    m_Key: inventory.bag_empty
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214866
+    m_Key: tooltip.hint_use
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214867
+    m_Key: tooltip.hint_equip
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214868
+    m_Key: tooltip.hint_unequip
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214869
+    m_Key: tooltip.potion_full
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214870
+    m_Key: tooltip.potion_gain
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214871
+    m_Key: tooltip.potion_change
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214872
+    m_Key: tooltip.equipped
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214873
+    m_Key: tooltip.nothing_equipped
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214874
+    m_Key: tooltip.if_unequipped
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214875
+    m_Key: tooltip.no_change
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214876
+    m_Key: tooltip.stat_up
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214877
+    m_Key: tooltip.stat_down
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2294923214878
+    m_Key: tooltip.stat_change
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

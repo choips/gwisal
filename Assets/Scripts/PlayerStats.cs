@@ -82,6 +82,7 @@ public class PlayerStats : MonoBehaviour
     public CharacterStats Stats { get; private set; }
 
     private float manaRegenPerSecond; // 초당 기력 회복 (능력치 계산기에서 받아 둔 값)
+    private int shownLevel = -1;      // 레벨 텍스트에 표시 중인 레벨 (바뀔 때만 글자를 새로 만듦)
 
     private Vector3 spawnPosition;    // 부활할 위치 (게임 시작 위치)
     private Quaternion spawnRotation; // 부활할 때 바라볼 방향
@@ -453,9 +454,11 @@ public class PlayerStats : MonoBehaviour
             xpBarFill.fillAmount = SmoothFill(xpBarFill.fillAmount, GetXPRatio());
         }
 
-        if (levelText != null)
+        // 레벨 글자는 레벨이 바뀔 때만 새로 만듦 (매 프레임 문자열을 만들지 않기 위함)
+        if (levelText != null && level != shownLevel)
         {
-            levelText.text = $"Lv. {level}";
+            shownLevel = level;
+            levelText.text = Loc.Format("hud.level", level);
         }
     }
 

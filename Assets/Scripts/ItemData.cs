@@ -36,14 +36,12 @@ public class ItemAffix
 }
 
 // 아이템 한 개의 정보 (기본 아이템 ID, 종류, 등급, 숨겨진 아이템 레벨, 능력치 증가량, 옵션 목록)
-// 바닥 아이템(Item), 인벤토리, 장비 슬롯, 세이브 파일에서 모두 이 형식을 사용합니다.
+// 바닥 아이템(Item), 인벤토리, 장비 슬롯에서 이 형식을 사용합니다 (세이브 파일에는 SavedItem으로 바꿔 저장).
 // 이름·아이콘은 baseId로 찾은 기본 아이템(ItemBase)에서 가져옵니다.
 // MonoBehaviour가 아닌 순수 C# 클래스이며, Inspector 표시와 JSON 저장을 위해 [System.Serializable]을 붙입니다.
 [System.Serializable]
 public class ItemData
 {
-    [Tooltip("(옛 방식) 한국어 이름 — 기본 아이템 ID가 없는 옛 세이브·옛 드랍 표 아이템을 찾을 때만 사용")]
-    public string itemName = "알 수 없는 아이템";
     public ItemType itemType = ItemType.Weapon;
     public ItemRarity rarity = ItemRarity.Normal;
 
@@ -69,7 +67,6 @@ public class ItemData
     {
         cachedBase = baseItem;
         baseId = baseItem.itemId;
-        itemName = baseItem.displayName;
         itemType = baseItem.itemType;
         this.rarity = rarity;
         this.itemLevel = itemLevel;
@@ -79,7 +76,6 @@ public class ItemData
     // 같은 내용의 새 아이템을 만듦 (바닥 아이템이 파괴되어도 인벤토리의 아이템은 따로 유지)
     public ItemData(ItemData source)
     {
-        itemName = source.itemName;
         itemType = source.itemType;
         rarity = source.rarity;
         statValue = source.statValue;
@@ -97,37 +93,28 @@ public class ItemData
         }
     }
 
-    // JSON에서 불러온 빈 칸(이름도 ID도 없음)인지 확인
-    public bool IsEmpty => string.IsNullOrEmpty(baseId) && string.IsNullOrEmpty(itemName);
+    // 기본 아이템 ID가 없는 빈 칸인지 확인
+    public bool IsEmpty => string.IsNullOrEmpty(baseId);
 
-    // 기본 아이템 (ID로 찾고, ID가 없는 옛 아이템은 이름으로 찾아 ID를 채움 — 못 찾으면 null)
+    // 기본 아이템 (ID로 찾음 — 못 찾으면 null)
     public ItemBase Base
     {
         get
         {
-            if (cachedBase != null) return cachedBase;
-
-            ItemDatabase database = ItemDatabase.Instance;
-            if (database == null) return null;
-
-            if (!string.IsNullOrEmpty(baseId))
+            if (cachedBase == null && !string.IsNullOrEmpty(baseId))
             {
-                cachedBase = database.Find(baseId);
-            }
-            else
-            {
-                cachedBase = database.FindByOldName(itemName);
-                if (cachedBase != null) baseId = cachedBase.itemId;
+                ItemDatabase database = ItemDatabase.Instance;
+                if (database != null) cachedBase = database.Find(baseId);
             }
             return cachedBase;
         }
     }
 
-    // 같은 기본 아이템인지 구분하는 값 (물약 묶음용: 기본 아이템 ID, 못 찾으면 옛 이름)
-    public string BaseKey => Base != null ? Base.itemId : itemName;
+    // 같은 기본 아이템인지 구분하는 값 (물약 묶음용)
+    public string BaseKey => baseId;
 
-    // 화면에 보일 이름 (예: "낡은 단검" — 기본 아이템을 못 찾으면 옛 이름)
-    public string Name => Base != null ? Base.LocalizedName : itemName;
+    // 화면에 보일 이름 (예: "낡은 단검" — 기본 아이템을 못 찾으면 ID 그대로)
+    public string Name => Base != null ? Base.LocalizedName : baseId;
 
     // 기본 아이템의 아이콘 (없으면 null)
     public Sprite Icon => Base != null ? Base.icon : null;

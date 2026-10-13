@@ -76,7 +76,7 @@ public class SavedItem
         ItemBase baseItem = item.Base;
         if (baseItem == null)
         {
-            Debug.LogWarning($"기본 아이템을 찾지 못해 저장하지 않습니다: \"{item.itemName}\" (ID: \"{item.baseId}\")");
+            Debug.LogWarning($"기본 아이템을 찾지 못해 저장하지 않습니다: ID \"{item.baseId}\" (ItemDatabase 목록 확인)");
             return null;
         }
 

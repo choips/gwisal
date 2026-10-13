@@ -6,22 +6,11 @@ using UnityEngine;
 [System.Serializable]
 public class LootEntry
 {
-    [Tooltip("(옛 방식) 떨어질 아이템 정보 — Base Item이 비어 있을 때만 사용 (등급은 드랍할 때 랜덤으로 정해지므로 여기 등급은 무시됨)")]
-    public ItemData item = new ItemData();
-
     [Tooltip("나올 확률 가중치 (클수록 자주 나옴, 0이면 안 나옴)")]
     public float weight = 10f; // 가중치
 
-    [Tooltip("떨어질 기본 아이템 (Assets/Data/Items의 파일, 능력치는 이 파일의 Base Stat Value)")]
+    [Tooltip("떨어질 기본 아이템 (Assets/Data/Items의 파일, 능력치는 이 파일의 Base Stat Value × 등급 배율)")]
     public ItemBase baseItem;
-
-    public LootEntry() { }
-
-    public LootEntry(string itemName, ItemType itemType, float statValue, float weight)
-    {
-        item = new ItemData { itemName = itemName, itemType = itemType, statValue = statValue };
-        this.weight = weight;
-    }
 }
 
 // 디아블로 스타일 아이템 드랍 스크립트
@@ -33,35 +22,16 @@ public class LootDropper : MonoBehaviour
     [Tooltip("바닥에 떨어질 아이템 모양 프리팹 (Item 스크립트, Rigidbody, Collider가 붙어 있어야 합니다)")]
     public GameObject itemPrefab;
 
-    [Tooltip("떨어질 수 있는 아이템 목록 (비워 두면 Item Prefab에 설정된 아이템이 그대로 떨어짐)\n"
+    [Tooltip("떨어질 수 있는 기본 아이템 목록 (Base Item이 비어 있거나 가중치가 0인 줄은 무시)\n"
            + "가중치 예: 30 / 20 / 10이면 각각 50% / 33% / 17% 확률")]
-    [SerializeField] private List<LootEntry> dropTable = new List<LootEntry>
-    {
-        // 무기 (공격력)
-        new LootEntry("낡은 단검", ItemType.Weapon, 5f, 30f),
-        new LootEntry("복숭아나무 검", ItemType.Weapon, 8f, 20f),
-        new LootEntry("도사의 지팡이", ItemType.Weapon, 11f, 10f),
-        new LootEntry("벼락 맞은 대추나무 검", ItemType.Weapon, 15f, 5f),
-
-        // 방어구 (최대 체력)
-        new LootEntry("무명 도포", ItemType.Armor, 15f, 30f),
-        new LootEntry("가죽 갑옷", ItemType.Armor, 20f, 20f),
-        new LootEntry("비단 도포", ItemType.Armor, 30f, 10f),
-        new LootEntry("사슬 갑옷", ItemType.Armor, 40f, 5f),
-    };
+    [SerializeField] private List<LootEntry> dropTable = new List<LootEntry>();
 
     [Header("기력 물약(Mana Potion)")]
     [Tooltip("장비와 별도로 기력 물약이 하나 더 떨어질 확률 (0.3 = 30%)")]
     [Range(0f, 1f)] [SerializeField] private float potionDropChance = 0.3f;
 
-    [Tooltip("물약 기본 아이템 (Assets/Data/Items/Item_potion_mana, 회복량은 이 파일의 Base Stat Value)")]
+    [Tooltip("물약 기본 아이템 (Assets/Data/Items/Item_potion_mana, 회복량은 이 파일의 Base Stat Value, 비워 두면 물약이 안 떨어짐)")]
     [SerializeField] private ItemBase potionItem;
-
-    [Tooltip("(옛 방식) 물약 이름 — Potion Item이 비어 있을 때만 사용")]
-    [SerializeField] private string potionName = "기력 물약";
-
-    [Tooltip("(옛 방식) 물약 한 개로 회복하는 기력 — Potion Item이 비어 있을 때만 사용")]
-    [SerializeField] private float potionRestoreAmount = 50f;
 
     [Tooltip("바닥에 떨어진 물약 구슬의 색")]
     [SerializeField] private Color potionColor = new Color(0.2f, 0.45f, 1f); // 파랑
@@ -132,36 +102,16 @@ public class LootDropper : MonoBehaviour
     // 드랍 테이블에서 고른 장비를 무작위 등급으로 떨어뜨림 (등급에 따라 능력치 강화)
     private void DropEquipment(Vector3 dropPosition, float rarityBonus, int itemLevel)
     {
-        ItemRarity rarity = RollRarity(rarityBonus);
-        float statMultiplier = GetStatMultiplier(rarity);
-
-        ItemData data;
         LootEntry entry = PickEntry();
-        if (entry != null && entry.baseItem != null)
+        if (entry == null)
         {
-            data = new ItemData(entry.baseItem, rarity, itemLevel, Mathf.Round(entry.baseItem.baseStatValue * statMultiplier));
+            Debug.LogWarning($"{gameObject.name}의 LootDropper 드랍 표에 Base Item이 들어간 줄이 없어 장비를 떨어뜨리지 않습니다.");
+            return;
         }
-        else
-        {
-            if (entry != null)
-            {
-                // (옛 방식) 드랍 테이블 원본이 바뀌지 않도록 복사본을 사용
-                data = new ItemData(entry.item);
-            }
-            else if (itemPrefab.TryGetComponent(out Item prefabItem))
-            {
-                // 드랍 테이블이 비어 있으면 프리팹에 설정된 아이템을 그대로 사용
-                data = new ItemData(prefabItem.data);
-            }
-            else
-            {
-                data = new ItemData();
-            }
 
-            data.rarity = rarity;
-            data.itemLevel = itemLevel;
-            data.statValue = Mathf.Round(data.statValue * statMultiplier);
-        }
+        ItemRarity rarity = RollRarity(rarityBonus);
+        float statValue = Mathf.Round(entry.baseItem.baseStatValue * GetStatMultiplier(rarity));
+        ItemData data = new ItemData(entry.baseItem, rarity, itemLevel, statValue);
 
         SpawnItem(dropPosition, data, GetRarityColor(rarity));
     }
@@ -169,17 +119,13 @@ public class LootDropper : MonoBehaviour
     // 기력 물약을 떨어뜨림 (물약은 등급이 없음)
     private void DropPotion(Vector3 dropPosition, int itemLevel)
     {
-        ItemData data = potionItem != null
-            ? new ItemData(potionItem, ItemRarity.Normal, itemLevel, potionItem.baseStatValue)
-            : new ItemData
-            {
-                itemName = potionName,
-                itemType = ItemType.ManaPotion,
-                rarity = ItemRarity.Normal,
-                itemLevel = itemLevel,
-                statValue = potionRestoreAmount
-            };
+        if (potionItem == null)
+        {
+            Debug.LogWarning($"{gameObject.name}의 LootDropper에 Potion Item이 비어 있어 물약을 떨어뜨리지 않습니다.");
+            return;
+        }
 
+        ItemData data = new ItemData(potionItem, ItemRarity.Normal, itemLevel, potionItem.baseStatValue);
         GameObject potion = SpawnItem(dropPosition, data, potionColor);
         potion.transform.localScale *= potionScale;
     }
@@ -260,11 +206,10 @@ public class LootDropper : MonoBehaviour
         return lastValid;
     }
 
-    // 기본 아이템(또는 옛 방식 이름)이 있고 가중치가 0보다 큰 줄만 드랍 후보로 인정
+    // 기본 아이템이 있고 가중치가 0보다 큰 줄만 드랍 후보로 인정
     private static bool IsValidEntry(LootEntry entry)
     {
-        if (entry == null || entry.weight <= 0f) return false;
-        return entry.baseItem != null || (entry.item != null && !entry.item.IsEmpty);
+        return entry != null && entry.baseItem != null && entry.weight > 0f;
     }
 
     // 확률에 따라 아이템 등급 결정

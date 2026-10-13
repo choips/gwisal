@@ -1,128 +1,385 @@
-using System.Collections;
+using System.Collections.Generic;
+using TMPro;                     // TMP_FontAsset 사용 (머리 위 이름표 글꼴)
 using UnityEngine;
-using UnityEngine.AI;            // NavMesh.SamplePosition 사용
+using UnityEngine.AI;            // NavMesh 사용
 
-// 몬스터 스포너
-// 스포너 위치를 중심으로 spawnRadius 안의 NavMesh 위 랜덤 위치에
-// spawnInterval마다 적을 생성하며, 동시에 maxEnemies마리까지만 유지합니다.
-// 플레이어와 minDistanceFromPlayer보다 가까운 위치에는 생성하지 않습니다 (눈앞에 갑자기 나타나는 것 방지).
+// 몬스터 무리 배치기 (디아블로 방식)
+// 게임이 시작되면 맵(NavMesh) 전체에 몬스터 무리를 무작위 개수로 한 번 배치합니다. (다시 채우지 않음)
+// - 일반 무리: 같은 종류의 일반 몬스터 여러 마리
+// - 챔피언 무리: 챔피언 2~4마리 (일반의 2배 능력, 파란빛, 이름표 "챔피언 ○○")
+// - 유니크 무리: 이름 있는 유니크 1마리 (3배, 금빛) + 하수인 3~4마리 (1.5배)
+// 무리마다 몬스터 종류(잡귀·강시·아귀·도깨비)를 가중치 확률로 하나 골라 그 종류로만 채웁니다.
 public class EnemySpawner : MonoBehaviour
 {
-    [Header("스폰 설정")]
+    [Header("몬스터")]
     [Tooltip("생성할 적 프리팹 (Enemy 스크립트와 NavMeshAgent가 붙어 있어야 합니다)")]
     public GameObject enemyPrefab;
 
-    [Tooltip("스포너를 중심으로 적이 생성될 수 있는 반경")]
-    public float spawnRadius = 10f; // 스폰 반경
+    [Tooltip("몬스터 종류 목록 (Enemy 프리팹 능력치에 배율을 곱해 종류마다 다르게 만듦)")]
+    [SerializeField] private List<MonsterType> monsterTypes = new List<MonsterType>
+    {
+        //               이름     몸 색                              크기(너비, 키, 두께)            체력  공격  속도  쿨타임 경험치 가중치
+        new MonsterType("잡귀",   new Color(0.45f, 0.55f, 0.45f), new Vector3(1f, 1f, 1f),       1f,   1f,   1f,   1f,   1f,   40f),
+        new MonsterType("강시",   new Color(0.55f, 0.6f, 0.8f),   new Vector3(0.8f, 1.4f, 0.8f), 1.8f, 1.2f, 0.6f, 1.3f, 1.4f, 25f),
+        new MonsterType("아귀",   new Color(0.75f, 0.75f, 0.3f),  new Vector3(0.7f, 0.7f, 0.7f), 0.6f, 0.8f, 1.6f, 0.6f, 0.9f, 25f),
+        new MonsterType("도깨비", new Color(0.8f, 0.2f, 0.15f),   new Vector3(1.4f, 1.4f, 1.4f), 2.5f, 1.8f, 0.9f, 1.2f, 2f,   10f),
+    };
 
-    [Tooltip("적을 생성하는 주기(초)")]
-    public float spawnInterval = 3f; // 스폰 간격
+    [Header("일반 무리")]
+    [Tooltip("맵에 배치할 일반 무리 수 (최소 ~ 최대 사이에서 무작위)")]
+    [SerializeField] private IntRange normalPackCount = new IntRange(6, 9);
 
-    [Tooltip("이 스포너가 동시에 유지할 최대 적 수")]
-    public int maxEnemies = 5; // 최대 몬스터 수
+    [Tooltip("일반 무리 하나의 몬스터 수")]
+    [SerializeField] private IntRange normalPackSize = new IntRange(3, 5);
 
-    [Tooltip("플레이어와 이 거리(m)보다 가까운 곳에는 적을 생성하지 않음")]
-    public float minDistanceFromPlayer = 6f; // 플레이어와의 최소 거리
+    [Header("챔피언 무리")]
+    [SerializeField] private IntRange championPackCount = new IntRange(1, 3);
 
-    [Header("NavMesh 위치 탐색")]
-    [Tooltip("랜덤 위치에서 이 거리 안의 NavMesh 지점을 찾음")]
-    [SerializeField] private float navMeshSampleDistance = 2f;
+    [Tooltip("챔피언 무리 하나의 챔피언 수")]
+    [SerializeField] private IntRange championPackSize = new IntRange(2, 4);
 
-    [Tooltip("NavMesh 위 위치를 찾기 위해 랜덤 위치를 다시 뽑는 최대 횟수")]
-    [SerializeField] private int maxSpawnAttempts = 10;
+    [Tooltip("일반 몬스터 대비 능력 배율 (체력·공격력·경험치)")]
+    [SerializeField] private float championPower = 2f;
+
+    [Tooltip("처치 시 떨어뜨리는 장비 개수")]
+    [SerializeField] private int championLootDrops = 2;
+
+    [Tooltip("좋은 등급(매직·레어·유니크)이 나올 확률 배율")]
+    [SerializeField] private float championRarityBonus = 2f;
+
+    [Header("유니크 무리")]
+    [SerializeField] private IntRange uniquePackCount = new IntRange(1, 2);
+
+    [Tooltip("유니크 하나를 따르는 하수인 수")]
+    [SerializeField] private IntRange minionCount = new IntRange(3, 4);
+
+    [Tooltip("유니크의 능력 배율 (체력·공격력·경험치)")]
+    [SerializeField] private float uniquePower = 3f;
+
+    [Tooltip("하수인의 능력 배율 (체력·공격력·경험치)")]
+    [SerializeField] private float minionPower = 1.5f;
+
+    [SerializeField] private int uniqueLootDrops = 3;
+    [SerializeField] private float uniqueRarityBonus = 3f;
+    [SerializeField] private int minionLootDrops = 1;
+    [SerializeField] private float minionRarityBonus = 1.5f;
+
+    [Header("배치")]
+    [Tooltip("플레이어 시작 위치와 이 거리(m)보다 가까운 곳에는 무리를 두지 않음")]
+    public float minDistanceFromPlayer = 18f;
+
+    [Tooltip("무리와 무리 사이의 최소 거리(m)")]
+    [SerializeField] private float packSpacing = 14f;
+
+    [Tooltip("무리 중심에서 몬스터들이 흩어지는 반경(m)")]
+    [SerializeField] private float packSpread = 2.5f;
+
+    [Tooltip("맵 가장자리에서 이만큼(m) 안쪽에만 배치")]
+    [SerializeField] private float mapEdgeMargin = 3f;
+
+    [Tooltip("무리 하나의 자리를 찾을 때 무작위 위치를 뽑아 보는 최대 횟수")]
+    [SerializeField] private int maxPlacementAttempts = 40;
+
+    [Header("머리 위 이름표 (챔피언·유니크·하수인만)")]
+    [Tooltip("비워 두면 Enemy 프리팹의 LootDropper에 지정된 글꼴(NotoSansKR)을 사용")]
+    [SerializeField] private TMP_FontAsset labelFont;
+    [SerializeField] private float labelFontSize = 3.5f;
+
+    [Tooltip("몸 중심에서 이름표까지의 높이(m), 몸 크기에 맞춰 자동으로 늘어남")]
+    [SerializeField] private float labelHeight = 1.7f;
+
+    [SerializeField] private Color championColor = new Color(0.4f, 0.6f, 1f);   // 파랑
+    [SerializeField] private Color uniqueColor = new Color(1f, 0.8f, 0.2f);     // 금색
+    [SerializeField] private Color minionColor = new Color(0.85f, 0.85f, 0.85f); // 밝은 회색
 
     [Header("상태 (Play 중 확인용)")]
-    [Tooltip("이 스포너가 생성해서 현재 살아 있는 적의 수")]
+    [Tooltip("이 배치기가 만든 몬스터 중 살아 있는 수")]
     [SerializeField] private int currentEnemyCount;
 
     public int CurrentEnemyCount => currentEnemyCount;
 
-    private Transform player; // 거리 확인용 플레이어 (처음 필요할 때 씬에서 찾음)
+    // 유니크 이름을 만들 때 쓰는 앞말·뒷말 (예: "천년 묵은 강시 왕")
+    private static readonly string[] UniquePrefixes = { "피에 굶주린", "저주받은", "흉포한", "썩어 가는", "천년 묵은", "원한 서린" };
+    private static readonly string[] UniqueSuffixes = { "왕", "우두머리", "대장" };
+
+    private readonly List<Vector3> packCenters = new List<Vector3>(); // 이미 배치한 무리 중심들
+    private Bounds mapBounds;     // NavMesh 전체를 감싸는 범위
+    private Transform player;
+    private bool hasPopulated;    // 배치를 마쳤는지 (마지막 한 마리 처치 알림용)
 
     private void Start()
     {
         if (enemyPrefab == null)
         {
-            Debug.LogWarning($"{gameObject.name}: Enemy Prefab이 연결되지 않아 스폰하지 않습니다.");
+            Debug.LogWarning($"{gameObject.name}: Enemy Prefab이 연결되지 않아 몬스터를 배치하지 않습니다.");
             return;
         }
 
-        StartCoroutine(SpawnRoutine());
-    }
-
-    // spawnInterval마다 적 수를 확인하고, 부족하면 한 마리씩 생성
-    private IEnumerator SpawnRoutine()
-    {
-        while (true)
+        if (labelFont == null && enemyPrefab.TryGetComponent(out LootDropper lootDropper))
         {
-            if (currentEnemyCount < maxEnemies)
-            {
-                TrySpawnEnemy();
-            }
-
-            // 반복할 때마다 새로 만들어서, Play 중에 Inspector에서 간격을 바꿔도 바로 반영
-            yield return new WaitForSeconds(spawnInterval);
+            labelFont = lootDropper.LabelFont;
         }
+
+        PopulateMap();
     }
 
-    // NavMesh 위의 랜덤 위치를 찾아 적 1마리 생성
-    private void TrySpawnEnemy()
+    // 맵 전체에 무리 배치 (강한 무리가 좋은 자리를 먼저 차지하도록 유니크 → 챔피언 → 일반 순서)
+    private void PopulateMap()
     {
-        if (!TryGetRandomNavMeshPosition(out Vector3 spawnPosition, out bool foundOnlyNearPlayer))
+        if (!TryCalculateMapBounds())
         {
-            // 플레이어가 스폰 범위 한가운데에 있어 이번에 자리를 못 찾은 것은 정상이므로 조용히 다음 주기에 다시 시도
-            if (!foundOnlyNearPlayer)
-            {
-                Debug.LogWarning($"{gameObject.name}: 스폰 반경 안에서 NavMesh 위치를 찾지 못했습니다. 스포너가 바닥 근처에 있는지 확인해 주세요.");
-            }
+            Debug.LogWarning($"{gameObject.name}: 구워진 NavMesh가 없어 몬스터를 배치할 수 없습니다. Plane의 NavMesh Surface에서 Bake를 눌러 주세요.");
             return;
         }
 
-        // 바라보는 방향도 랜덤으로 (Y축 회전만)
-        Quaternion spawnRotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-        GameObject enemyObject = Instantiate(enemyPrefab, spawnPosition, spawnRotation);
+        PlayerStats stats = FindFirstObjectByType<PlayerStats>();
+        if (stats != null) player = stats.transform;
 
-        // 적에게 "너를 만든 스포너는 나"라고 알려 줘서, 죽을 때 이 스포너에게 연락하게 함
-        if (enemyObject.TryGetComponent(out Enemy enemy))
+        int uniquePacks = PlacePacks(uniquePackCount.Roll(), SpawnUniquePack);
+        int championPacks = PlacePacks(championPackCount.Roll(), SpawnChampionPack);
+        int normalPacks = PlacePacks(normalPackCount.Roll(), SpawnNormalPack);
+
+        hasPopulated = true;
+        Debug.Log($"몬스터 배치 완료: 일반 무리 {normalPacks}개, 챔피언 무리 {championPacks}개, 유니크 무리 {uniquePacks}개 (총 {currentEnemyCount}마리)");
+        NotificationUI.Show($"이 지역에 챔피언 무리 {championPacks}개와 유니크 몬스터 {uniquePacks}마리가 도사리고 있습니다");
+    }
+
+    // count개의 무리 자리를 찾아 spawnPack으로 채움 (실제로 배치한 무리 수를 돌려줌)
+    private int PlacePacks(int count, System.Action<Vector3> spawnPack)
+    {
+        int placed = 0;
+        for (int i = 0; i < count; i++)
         {
-            enemy.SetSpawner(this);
+            if (!TryFindPackCenter(out Vector3 center))
+            {
+                Debug.LogWarning($"{gameObject.name}: 무리를 놓을 빈자리가 부족합니다. 맵을 키우거나 Pack Spacing을 줄여 주세요.");
+                break;
+            }
+
+            packCenters.Add(center);
+            spawnPack(center);
+            placed++;
         }
-        else
+        return placed;
+    }
+
+    private void SpawnNormalPack(Vector3 center)
+    {
+        MonsterType type = PickMonsterType();
+        int size = normalPackSize.Roll();
+        for (int i = 0; i < size; i++)
         {
-            Debug.LogWarning($"{enemyPrefab.name} 프리팹에 Enemy 스크립트가 없어 적 수를 추적할 수 없습니다.");
+            SpawnMonster(GetMemberPosition(center), type, MonsterRank.Normal, null, Color.white);
+        }
+    }
+
+    private void SpawnChampionPack(Vector3 center)
+    {
+        MonsterType type = PickMonsterType();
+        int size = championPackSize.Roll();
+        for (int i = 0; i < size; i++)
+        {
+            SpawnMonster(GetMemberPosition(center), type, MonsterRank.Champion, $"챔피언 {type.monsterName}", championColor);
+        }
+    }
+
+    private void SpawnUniquePack(Vector3 center)
+    {
+        MonsterType type = PickMonsterType();
+        string uniqueName = MakeUniqueName(type);
+
+        SpawnMonster(center, type, MonsterRank.Unique, uniqueName, uniqueColor);
+
+        int minions = minionCount.Roll();
+        for (int i = 0; i < minions; i++)
+        {
+            SpawnMonster(GetMemberPosition(center), type, MonsterRank.Minion, $"{type.monsterName} 하수인", minionColor);
+        }
+    }
+
+    // 몬스터 한 마리 생성 → 종류 적용 → 등급 적용 → 모양·이름표
+    private void SpawnMonster(Vector3 position, MonsterType type, MonsterRank rank, string labelText, Color labelColor)
+    {
+        Quaternion rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+        GameObject monsterObject = Instantiate(enemyPrefab, position, rotation);
+
+        if (!monsterObject.TryGetComponent(out Enemy enemy))
+        {
+            Debug.LogWarning($"{enemyPrefab.name} 프리팹에 Enemy 스크립트가 없어 몬스터로 쓸 수 없습니다.");
+            Destroy(monsterObject);
+            return;
+        }
+
+        string displayName = string.IsNullOrEmpty(labelText) ? type.monsterName : labelText;
+        monsterObject.name = displayName;
+
+        enemy.SetSpawner(this);
+        enemy.ApplyMonsterType(type);
+        enemy.ApplyRank(rank, GetPower(rank), GetLootDrops(rank), GetRarityBonus(rank));
+        enemy.SetBodyColor(GetBodyColor(type.color, rank));
+
+        float rankScale = GetRankScale(rank);
+        Vector3 bodyScale = Vector3.Scale(monsterObject.transform.localScale, type.scale) * rankScale;
+        monsterObject.transform.localScale = bodyScale;
+
+        if (!string.IsNullOrEmpty(labelText) && labelFont != null)
+        {
+            monsterObject.AddComponent<ItemNameLabel>().Setup(
+                labelText, labelColor, labelFont, labelFontSize, labelHeight * bodyScale.y);
         }
 
         currentEnemyCount++;
     }
 
-    // 스폰 반경 안의 랜덤 위치 중 NavMesh 위에 있고 플레이어와 충분히 떨어진 지점을 찾음
-    // foundOnlyNearPlayer: NavMesh 위 지점은 찾았지만 전부 플레이어와 너무 가까워서 실패했으면 true
-    private bool TryGetRandomNavMeshPosition(out Vector3 result, out bool foundOnlyNearPlayer)
+    // 이 배치기가 만든 적이 죽었을 때 Enemy가 호출
+    public void OnEnemyDied(Enemy enemy)
     {
-        foundOnlyNearPlayer = false;
-        Transform playerTransform = GetPlayer();
+        currentEnemyCount = Mathf.Max(currentEnemyCount - 1, 0);
 
-        for (int i = 0; i < maxSpawnAttempts; i++)
+        if (hasPopulated && currentEnemyCount == 0)
         {
-            // 구 안의 랜덤 위치에서 높이 성분은 버리고 스포너와 같은 높이의 평면 위 점으로 사용
-            Vector3 randomOffset = Random.insideUnitSphere * spawnRadius;
-            randomOffset.y = 0f;
-            Vector3 candidate = transform.position + randomOffset;
+            NotificationUI.Show("이 지역의 모든 요괴를 처치했습니다!", NotificationUI.NoticeType.Success);
+        }
+    }
 
-            if (!NavMesh.SamplePosition(candidate, out NavMeshHit hit, navMeshSampleDistance, NavMesh.AllAreas)) continue;
+    // 구워진 NavMesh의 모든 꼭짓점을 감싸는 범위 = 몬스터를 둘 수 있는 맵 범위
+    private bool TryCalculateMapBounds()
+    {
+        NavMeshTriangulation triangulation = NavMesh.CalculateTriangulation();
+        if (triangulation.vertices == null || triangulation.vertices.Length == 0) return false;
 
-            if (playerTransform != null && GetFlatDistance(hit.position, playerTransform.position) < minDistanceFromPlayer)
-            {
-                foundOnlyNearPlayer = true;
-                continue;
-            }
+        mapBounds = new Bounds(triangulation.vertices[0], Vector3.zero);
+        foreach (Vector3 vertex in triangulation.vertices)
+        {
+            mapBounds.Encapsulate(vertex);
+        }
+        return true;
+    }
 
-            result = hit.position;
+    // 맵 안에서 플레이어·다른 무리와 충분히 떨어진 NavMesh 위 지점을 찾음
+    private bool TryFindPackCenter(out Vector3 center)
+    {
+        float minX = mapBounds.min.x + mapEdgeMargin;
+        float maxX = mapBounds.max.x - mapEdgeMargin;
+        float minZ = mapBounds.min.z + mapEdgeMargin;
+        float maxZ = mapBounds.max.z - mapEdgeMargin;
+
+        for (int i = 0; i < maxPlacementAttempts; i++)
+        {
+            Vector3 candidate = new Vector3(Random.Range(minX, maxX), mapBounds.center.y, Random.Range(minZ, maxZ));
+            if (!NavMesh.SamplePosition(candidate, out NavMeshHit hit, 2f, NavMesh.AllAreas)) continue;
+
+            if (player != null && GetFlatDistance(hit.position, player.position) < minDistanceFromPlayer) continue;
+            if (IsTooCloseToOtherPacks(hit.position)) continue;
+
+            center = hit.position;
             return true;
         }
 
-        result = Vector3.zero;
+        center = Vector3.zero;
         return false;
+    }
+
+    private bool IsTooCloseToOtherPacks(Vector3 position)
+    {
+        foreach (Vector3 other in packCenters)
+        {
+            if (GetFlatDistance(position, other) < packSpacing) return true;
+        }
+        return false;
+    }
+
+    // 무리 중심 주변의 NavMesh 위 무작위 위치 (못 찾으면 중심)
+    private Vector3 GetMemberPosition(Vector3 center)
+    {
+        Vector2 offset = Random.insideUnitCircle * packSpread;
+        Vector3 candidate = center + new Vector3(offset.x, 0f, offset.y);
+        return NavMesh.SamplePosition(candidate, out NavMeshHit hit, 1f, NavMesh.AllAreas) ? hit.position : center;
+    }
+
+    // 가중치 확률로 몬스터 종류 하나 고르기 (목록이 비었으면 기본 잡귀)
+    private MonsterType PickMonsterType()
+    {
+        float totalWeight = 0f;
+        foreach (MonsterType type in monsterTypes)
+        {
+            if (type != null && type.spawnWeight > 0f) totalWeight += type.spawnWeight;
+        }
+        if (totalWeight <= 0f) return new MonsterType();
+
+        float roll = Random.value * totalWeight;
+        MonsterType lastValid = null; // 계산 오차로 끝까지 못 고른 경우를 대비한 마지막 후보
+        foreach (MonsterType type in monsterTypes)
+        {
+            if (type == null || type.spawnWeight <= 0f) continue;
+
+            lastValid = type;
+            roll -= type.spawnWeight;
+            if (roll < 0f) return type;
+        }
+        return lastValid;
+    }
+
+    private static string MakeUniqueName(MonsterType type)
+    {
+        string prefix = UniquePrefixes[Random.Range(0, UniquePrefixes.Length)];
+        string suffix = UniqueSuffixes[Random.Range(0, UniqueSuffixes.Length)];
+        return $"{prefix} {type.monsterName} {suffix}";
+    }
+
+    private float GetPower(MonsterRank rank)
+    {
+        switch (rank)
+        {
+            case MonsterRank.Champion: return championPower;
+            case MonsterRank.Unique: return uniquePower;
+            case MonsterRank.Minion: return minionPower;
+            default: return 1f;
+        }
+    }
+
+    private int GetLootDrops(MonsterRank rank)
+    {
+        switch (rank)
+        {
+            case MonsterRank.Champion: return championLootDrops;
+            case MonsterRank.Unique: return uniqueLootDrops;
+            case MonsterRank.Minion: return minionLootDrops;
+            default: return 1;
+        }
+    }
+
+    private float GetRarityBonus(MonsterRank rank)
+    {
+        switch (rank)
+        {
+            case MonsterRank.Champion: return championRarityBonus;
+            case MonsterRank.Unique: return uniqueRarityBonus;
+            case MonsterRank.Minion: return minionRarityBonus;
+            default: return 1f;
+        }
+    }
+
+    // 챔피언은 파란빛, 유니크는 금빛이 돌게 몸 색을 섞음
+    private Color GetBodyColor(Color typeColor, MonsterRank rank)
+    {
+        switch (rank)
+        {
+            case MonsterRank.Champion: return Color.Lerp(typeColor, championColor, 0.5f);
+            case MonsterRank.Unique: return Color.Lerp(typeColor, uniqueColor, 0.5f);
+            default: return typeColor;
+        }
+    }
+
+    // 강한 등급일수록 조금 더 크게
+    private static float GetRankScale(MonsterRank rank)
+    {
+        switch (rank)
+        {
+            case MonsterRank.Champion: return 1.15f;
+            case MonsterRank.Unique: return 1.35f;
+            default: return 1f;
+        }
     }
 
     // 높이 차이는 무시한 바닥 기준 거리
@@ -133,44 +390,22 @@ public class EnemySpawner : MonoBehaviour
         return Vector3.Distance(a, b);
     }
 
-    private Transform GetPlayer()
-    {
-        if (player == null)
-        {
-            PlayerStats stats = FindFirstObjectByType<PlayerStats>();
-            if (stats != null) player = stats.transform;
-        }
-        return player;
-    }
-
-    // 이 스포너가 만든 적이 죽었을 때 Enemy가 호출
-    public void OnEnemyDied(Enemy enemy)
-    {
-        currentEnemyCount = Mathf.Max(currentEnemyCount - 1, 0);
-    }
-
-    // Scene 뷰에 스폰 범위를 원으로 표시 (선택하지 않아도 항상 보임)
+    // Play 중 Scene 뷰에 무리 위치(주황 원)와 플레이어 주변 "배치 금지" 범위(노란 원)를 표시
     private void OnDrawGizmos()
     {
-        Gizmos.color = new Color(1f, 0.3f, 0.3f); // 붉은색
-        DrawCircle(transform.position, spawnRadius, 64);
+        if (!Application.isPlaying) return;
 
-        // 스포너 중심 위치 표시
-        Gizmos.DrawSphere(transform.position, 0.3f);
+        Gizmos.color = new Color(1f, 0.5f, 0f);
+        foreach (Vector3 center in packCenters)
+        {
+            DrawCircle(center, packSpread + 0.5f, 24);
+        }
 
-        // Play 중에는 플레이어 주변의 "생성 금지" 범위를 노란 원으로 표시
-        if (Application.isPlaying && player != null)
+        if (player != null)
         {
             Gizmos.color = Color.yellow;
             DrawCircle(player.position, minDistanceFromPlayer, 48);
         }
-    }
-
-    // 선택했을 때는 반투명한 구로 범위를 한 번 더 강조
-    private void OnDrawGizmosSelected()
-    {
-        Gizmos.color = new Color(1f, 0.3f, 0.3f, 0.15f);
-        Gizmos.DrawSphere(transform.position, spawnRadius);
     }
 
     // 바닥과 평행한(XZ 평면) 원을 선분 여러 개로 그림

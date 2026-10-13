@@ -98,8 +98,12 @@ public class LootDropper : MonoBehaviour
     [SerializeField] private float rareStatMultiplier = 2f;
     [SerializeField] private float uniqueStatMultiplier = 3f;
 
-    // dropPosition 위치에 장비 하나를 떨어뜨리고, 확률에 따라 기력 물약도 하나 더 떨어뜨림
-    public void DropItem(Vector3 dropPosition)
+    // 몬스터 배치기가 이름표 글꼴을 빌려 쓰기 위한 통로
+    public TMP_FontAsset LabelFont => labelFont;
+
+    // dropPosition 위치에 장비를 equipmentCount개 떨어뜨리고, 장비마다 확률에 따라 기력 물약도 하나씩 더 떨어뜨림
+    // rarityBonus: 좋은 등급(매직·레어·유니크) 확률 배율 (챔피언 2, 유니크 3 등)
+    public void DropItem(Vector3 dropPosition, int equipmentCount = 1, float rarityBonus = 1f)
     {
         if (itemPrefab == null)
         {
@@ -107,16 +111,19 @@ public class LootDropper : MonoBehaviour
             return;
         }
 
-        DropEquipment(dropPosition);
-
-        if (Random.value < potionDropChance)
+        for (int i = 0; i < equipmentCount; i++)
         {
-            DropPotion(dropPosition);
+            DropEquipment(dropPosition, rarityBonus);
+
+            if (Random.value < potionDropChance)
+            {
+                DropPotion(dropPosition);
+            }
         }
     }
 
     // 드랍 테이블에서 고른 장비를 무작위 등급으로 떨어뜨림 (등급에 따라 능력치 강화)
-    private void DropEquipment(Vector3 dropPosition)
+    private void DropEquipment(Vector3 dropPosition, float rarityBonus)
     {
         ItemData data;
         LootEntry entry = PickEntry();
@@ -135,7 +142,7 @@ public class LootDropper : MonoBehaviour
             data = new ItemData();
         }
 
-        ItemRarity rarity = RollRarity();
+        ItemRarity rarity = RollRarity(rarityBonus);
         data.rarity = rarity;
         data.statValue = Mathf.Round(data.statValue * GetStatMultiplier(rarity));
 
@@ -239,15 +246,29 @@ public class LootDropper : MonoBehaviour
     }
 
     // 확률에 따라 아이템 등급 결정
-    // 노멀 70%, 매직 20%, 레어 9%, 유니크 1%
-    private ItemRarity RollRarity()
+    // 기본(rarityBonus 1): 노멀 70%, 매직 20%, 레어 9%, 유니크 1%
+    // rarityBonus만큼 매직·레어·유니크 확률이 늘어남 (예: 3이면 매직 60%, 레어 27%, 유니크 3%, 노멀 10%)
+    private ItemRarity RollRarity(float rarityBonus = 1f)
     {
+        float uniqueChance = 0.01f * rarityBonus;
+        float rareChance = 0.09f * rarityBonus;
+        float magicChance = 0.20f * rarityBonus;
+
+        // 세 확률의 합이 100%를 넘지 않도록 비율을 유지한 채 줄임
+        float total = uniqueChance + rareChance + magicChance;
+        if (total > 1f)
+        {
+            uniqueChance /= total;
+            rareChance /= total;
+            magicChance /= total;
+        }
+
         float roll = Random.value; // 0 ~ 1 사이의 랜덤 값
 
-        if (roll < 0.01f) return ItemRarity.Unique; // 0.00 ~ 0.01 : 1%
-        if (roll < 0.10f) return ItemRarity.Rare;   // 0.01 ~ 0.10 : 9%
-        if (roll < 0.30f) return ItemRarity.Magic;  // 0.10 ~ 0.30 : 20%
-        return ItemRarity.Normal;                   // 0.30 ~ 1.00 : 70%
+        if (roll < uniqueChance) return ItemRarity.Unique;
+        if (roll < uniqueChance + rareChance) return ItemRarity.Rare;
+        if (roll < uniqueChance + rareChance + magicChance) return ItemRarity.Magic;
+        return ItemRarity.Normal;
     }
 
     // 아이템의 재질(Material)에 색 적용 (장비: 등급 색, 물약: 물약 색)

@@ -5,6 +5,7 @@ using UnityEngine.AI;            // NavMeshAgent 사용
 // 적의 체력(HP)과 AI를 관리하는 스크립트
 // - 플레이어가 인식 거리 안에 들어오면 쫓아가고, 공격 사거리 안이면 멈춰서 쿨타임마다 공격합니다.
 // - 피격 시 체력이 깎이고, 체력이 0 이하가 되면 오브젝트가 파괴(사망)됩니다.
+// - 배치기(EnemySpawner)가 생성 직후 몬스터 종류(잡귀·강시 등)와 등급(챔피언·유니크 등)을 적용합니다.
 [RequireComponent(typeof(NavMeshAgent))]
 public class Enemy : MonoBehaviour
 {
@@ -62,7 +63,18 @@ public class Enemy : MonoBehaviour
     [Tooltip("치명타일 때 밀려나는 거리 배율")]
     [SerializeField] private float criticalKnockbackMultiplier = 2f;
 
+    [Header("등급과 보상 (배치기가 설정, Play 중 확인용)")]
+    [Tooltip("일반 / 챔피언 / 유니크 / 하수인")]
+    [SerializeField] private MonsterRank rank = MonsterRank.Normal;
+
+    [Tooltip("죽을 때 떨어뜨리는 장비 개수")]
+    [SerializeField] private int lootDropCount = 1;
+
+    [Tooltip("좋은 등급(매직·레어·유니크) 아이템이 나올 확률 배율")]
+    [SerializeField] private float lootRarityMultiplier = 1f;
+
     private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor"); // 발광 색 속성
+    private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");         // URP 기본 색 속성
 
     private NavMeshAgent agent;        // 적의 길찾기 이동 컴포넌트
     private PlayerStats player;        // 추적/공격할 플레이어
@@ -81,6 +93,8 @@ public class Enemy : MonoBehaviour
 
     // 머리 위 체력바가 읽어가는 체력 비율 (0 ~ 1)
     public float HealthRatio => maxHealth > 0f ? Mathf.Clamp01(currentHealth / maxHealth) : 0f;
+
+    public MonsterRank Rank => rank;
 
     private void Awake()
     {
@@ -125,6 +139,44 @@ public class Enemy : MonoBehaviour
     public void SetSpawner(EnemySpawner owner)
     {
         spawner = owner;
+    }
+
+    // 몬스터 종류 적용: 생성 직후 배치기가 호출해서 종류별 배율만큼 능력치를 바꿈
+    public void ApplyMonsterType(MonsterType type)
+    {
+        maxHealth *= type.healthMultiplier;
+        currentHealth = maxHealth;
+        attackDamage *= type.damageMultiplier;
+        attackCooldown *= type.attackCooldownMultiplier;
+        experienceReward = Mathf.Round(experienceReward * type.experienceMultiplier);
+
+        if (agent != null) agent.speed *= type.speedMultiplier;
+    }
+
+    // 등급 적용: 체력·공격력·경험치를 power배로 늘리고, 죽을 때 떨어뜨릴 장비 수와 좋은 등급 확률 배율을 정함
+    public void ApplyRank(MonsterRank monsterRank, float power, int lootDrops, float lootRarityBonus)
+    {
+        rank = monsterRank;
+        maxHealth *= power;
+        currentHealth = maxHealth;
+        attackDamage *= power;
+        experienceReward = Mathf.Round(experienceReward * power);
+
+        lootDropCount = Mathf.Max(lootDrops, 0);
+        lootRarityMultiplier = Mathf.Max(lootRarityBonus, 0f);
+    }
+
+    // 몸 색 바꾸기 (이 적 전용 재질 복사본만 바뀌므로 다른 적에게 영향 없음)
+    public void SetBodyColor(Color color)
+    {
+        if (flashMaterials == null) return;
+
+        foreach (Material material in flashMaterials)
+        {
+            // URP Lit 셰이더의 기본 색은 _BaseColor, 옛 셰이더는 _Color
+            if (material.HasProperty(BaseColorId)) material.SetColor(BaseColorId, color);
+            else material.color = color;
+        }
     }
 
     private void Start()
@@ -340,10 +392,10 @@ public class Enemy : MonoBehaviour
             Debug.LogWarning("씬에서 PlayerStats를 찾지 못해 경험치를 지급하지 못했습니다.");
         }
 
-        // LootDropper가 붙어 있는 적만 아이템을 드랍
+        // LootDropper가 붙어 있는 적만 아이템을 드랍 (챔피언·유니크는 더 많이, 더 좋은 등급으로)
         if (TryGetComponent(out LootDropper lootDropper))
         {
-            lootDropper.DropItem(transform.position);
+            lootDropper.DropItem(transform.position, lootDropCount, lootRarityMultiplier);
         }
 
         // 자신을 생성한 스포너에게 사망을 알려 적 수를 줄이게 함

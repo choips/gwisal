@@ -95,8 +95,9 @@ public class EnemySpawner : MonoBehaviour
     public int CurrentEnemyCount => currentEnemyCount;
 
     // 유니크 이름을 만들 때 쓰는 앞말·뒷말 (예: "천년 묵은 강시 왕")
-    private static readonly string[] UniquePrefixes = { "피에 굶주린", "저주받은", "흉포한", "썩어 가는", "천년 묵은", "원한 서린" };
-    private static readonly string[] UniqueSuffixes = { "왕", "우두머리", "대장" };
+    // 화면 글자 표의 enemy.unique_prefix.0~5, enemy.unique_suffix.0~2 (표에 줄을 늘리면 이 숫자도 함께 늘림)
+    private const int UniquePrefixCount = 6;
+    private const int UniqueSuffixCount = 3;
 
     private readonly List<Vector3> packCenters = new List<Vector3>(); // 이미 배치한 무리 중심들
     private readonly List<EnemySpawnEntry> activeTypes = new List<EnemySpawnEntry>(); // 실제로 뽑을 귀신 종류 (빈 칸 제외)
@@ -200,10 +201,11 @@ public class EnemySpawner : MonoBehaviour
     private void SpawnChampionPack(Vector3 center)
     {
         EnemyData data = PickEnemyType();
+        string championName = Loc.Format("enemy.champion_name", data.LocalizedName);
         int size = championPackSize.Roll();
         for (int i = 0; i < size; i++)
         {
-            SpawnMonster(GetMemberPosition(center), data, MonsterRank.Champion, $"챔피언 {data.displayName}", championColor);
+            SpawnMonster(GetMemberPosition(center), data, MonsterRank.Champion, championName, championColor);
         }
     }
 
@@ -214,10 +216,11 @@ public class EnemySpawner : MonoBehaviour
 
         SpawnMonster(center, data, MonsterRank.Unique, uniqueName, uniqueColor);
 
+        string minionName = Loc.Format("enemy.minion_name", data.LocalizedName);
         int minions = minionCount.Roll();
         for (int i = 0; i < minions; i++)
         {
-            SpawnMonster(GetMemberPosition(center), data, MonsterRank.Minion, $"{data.displayName} 하수인", minionColor);
+            SpawnMonster(GetMemberPosition(center), data, MonsterRank.Minion, minionName, minionColor);
         }
     }
 
@@ -234,7 +237,7 @@ public class EnemySpawner : MonoBehaviour
             return;
         }
 
-        string displayName = string.IsNullOrEmpty(labelText) ? data.displayName : labelText;
+        string displayName = string.IsNullOrEmpty(labelText) ? data.LocalizedName : labelText;
         monsterObject.name = displayName;
 
         enemy.SetSpawner(this);
@@ -341,9 +344,9 @@ public class EnemySpawner : MonoBehaviour
 
     private static string MakeUniqueName(EnemyData data)
     {
-        string prefix = UniquePrefixes[Random.Range(0, UniquePrefixes.Length)];
-        string suffix = UniqueSuffixes[Random.Range(0, UniqueSuffixes.Length)];
-        return $"{prefix} {data.displayName} {suffix}";
+        string prefix = Loc.Get("enemy.unique_prefix." + Random.Range(0, UniquePrefixCount));
+        string suffix = Loc.Get("enemy.unique_suffix." + Random.Range(0, UniqueSuffixCount));
+        return Loc.Format("enemy.unique_name", prefix, data.LocalizedName, suffix);
     }
 
     private float GetPower(MonsterRank rank)

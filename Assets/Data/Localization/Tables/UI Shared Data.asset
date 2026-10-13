@@ -195,6 +195,94 @@ MonoBehaviour:
     m_Key: tooltip.stat_change
     m_Metadata:
       m_Items: []
+  - m_Id: 3056583655424
+    m_Key: hud.potion_slot
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3056608821248
+    m_Key: hud.skill_slot.amulet_projectile
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3056608821249
+    m_Key: hud.skill_slot.amulet_explosion
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3056608821250
+    m_Key: key.right_click
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3056608821251
+    m_Key: death.title
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3056608821252
+    m_Key: death.revive
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3056608821253
+    m_Key: enemy.japgwi
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3056608821254
+    m_Key: enemy.gangsi
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3056608821255
+    m_Key: enemy.agwi
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3056608821256
+    m_Key: enemy.dokkaebi
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3056608821257
+    m_Key: enemy.champion_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3056608821258
+    m_Key: enemy.minion_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3056608821259
+    m_Key: enemy.unique_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3056608821260
+    m_Key: enemy.unique_prefix.0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3056608821261
+    m_Key: enemy.unique_prefix.1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3056608821262
+    m_Key: enemy.unique_prefix.2
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3056608821263
+    m_Key: enemy.unique_prefix.3
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3056608821264
+    m_Key: enemy.unique_prefix.4
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3056608821265
+    m_Key: enemy.unique_prefix.5
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3056608821266
+    m_Key: enemy.unique_suffix.0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3056608821267
+    m_Key: enemy.unique_suffix.1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3056608821268
+    m_Key: enemy.unique_suffix.2
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

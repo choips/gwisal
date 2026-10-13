@@ -70,6 +70,34 @@ public static class LocalizationTableFiller
         { "tooltip.stat_up",          "▲ {0} +{1}" },
         { "tooltip.stat_down",        "▼ {0} {1}" },
         { "tooltip.stat_change",      "{0} {1} → {2}" },
+
+        // 씬에 직접 적힌 글자 (메뉴 [귀살 → 씬 글자를 표에 연결]로 연결)
+        { "hud.potion_slot",                   "기력 물약" },
+        { "hud.skill_slot.amulet_projectile",  "부적" },
+        { "hud.skill_slot.amulet_explosion",   "폭발" },
+        { "key.right_click",                   "우클릭" },
+        { "death.title",                       "YOU DIED" },
+        { "death.revive",                      "부활하기" },
+
+        // 귀신 이름 (EnemyData의 ID 기준: enemy.ID)
+        { "enemy.japgwi",             "잡귀" },
+        { "enemy.gangsi",             "강시" },
+        { "enemy.agwi",               "아귀" },
+        { "enemy.dokkaebi",           "도깨비" },
+
+        // 챔피언·하수인·유니크 이름표 (EnemySpawner)
+        { "enemy.champion_name",      "챔피언 {0}" },
+        { "enemy.minion_name",        "{0} 하수인" },
+        { "enemy.unique_name",        "{0} {1} {2}" },
+        { "enemy.unique_prefix.0",    "피에 굶주린" },
+        { "enemy.unique_prefix.1",    "저주받은" },
+        { "enemy.unique_prefix.2",    "흉포한" },
+        { "enemy.unique_prefix.3",    "썩어 가는" },
+        { "enemy.unique_prefix.4",    "천년 묵은" },
+        { "enemy.unique_prefix.5",    "원한 서린" },
+        { "enemy.unique_suffix.0",    "왕" },
+        { "enemy.unique_suffix.1",    "우두머리" },
+        { "enemy.unique_suffix.2",    "대장" },
     };
 
     [MenuItem("귀살/화면 글자 표 채우기")]

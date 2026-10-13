@@ -10,7 +10,7 @@ public class EnemyData : ScriptableObject
     [Tooltip("코드·세이브에서 이 귀신을 구분하는 영문 ID (한 번 정하면 바꾸지 않기, 예: japgwi)")]
     public string enemyId = "japgwi";
 
-    [Tooltip("머리 위 이름표와 Console에 보이는 이름")]
+    [Tooltip("(참고용) 한국어 이름. 실제 화면 이름은 화면 글자 표 \"UI\"의 enemy.{ID} 키 (예: enemy.japgwi)")]
     public string displayName = "잡귀";
 
     [Header("모양")]
@@ -42,4 +42,7 @@ public class EnemyData : ScriptableObject
 
     [Tooltip("이 거리 안에 플레이어가 들어오면 멈춰서 공격함")]
     [Min(0f)] public float attackRange = 1.5f;
+
+    // 화면에 보일 이름 (화면 글자 표 "UI"의 "enemy.ID" 키, 표를 찾으므로 생성할 때처럼 필요할 때만 부름)
+    public string LocalizedName => Loc.Get("enemy." + enemyId);
 }

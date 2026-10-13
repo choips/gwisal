@@ -35,7 +35,7 @@ public class AmuletProjectileSkill : SkillBase
         direction.y = 0f;
         if (direction.sqrMagnitude < 0.0001f) direction = transform.forward;
 
-        GameObject amulet = Instantiate(data.prefab, spawnPosition, Quaternion.LookRotation(direction));
+        GameObject amulet = ObjectPoolManager.Spawn(data.prefab, spawnPosition, Quaternion.LookRotation(direction));
 
         // 피해량(공격력 × 배율)과 치명타 판정을 위해 시전자와 배율을 알려 줌
         if (amulet.TryGetComponent(out AmuletProjectile projectile))

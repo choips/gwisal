@@ -17,6 +17,9 @@ public class RegionManager : MonoBehaviour
     // 지역을 불러오는 중인지 (불러오는 동안 다른 스크립트는 플레이어·NavMesh를 쓰지 않고 기다림)
     public static bool IsBusy => Instance != null && Instance.IsLoading;
 
+    // 에디터에서 지역 씬을 열고 Play 했을 때 시작 지역 대신 불러올 씬 이름을 담는 칸 (Editor/RegionPlayModeStarter가 씀)
+    public const string EditorStartRegionKey = "Gwisal.EditorStartRegion";
+
     [Header("시작 지역")]
     [Tooltip("게임을 시작하면 불러올 지역 씬 이름 (File > Build Profiles의 Scene List에 들어 있어야 합니다)")]
     [SerializeField] private string startRegionScene = "Region_01";
@@ -92,7 +95,19 @@ public class RegionManager : MonoBehaviour
     // (모든 오브젝트의 Awake가 끝난 뒤인 Start에서 꺼야 스킬 취소 등이 안전하게 동작함)
     private void Start()
     {
-        StartCoroutine(LoadRegionRoutine(startRegionScene, startEntryId));
+        string regionScene = startRegionScene;
+
+#if UNITY_EDITOR
+        // 지역 씬을 열어 둔 채 Play 했으면 그 지역부터 시작 (게임 빌드에서는 항상 Start Region Scene)
+        string editorRegion = UnityEditor.SessionState.GetString(EditorStartRegionKey, "");
+        if (!string.IsNullOrEmpty(editorRegion))
+        {
+            regionScene = editorRegion;
+            UnityEditor.SessionState.EraseString(EditorStartRegionKey);
+        }
+#endif
+
+        StartCoroutine(LoadRegionRoutine(regionScene, startEntryId));
     }
 
     // 다른 지역으로 이동 (지역 출구 등에서 호출)

@@ -171,18 +171,6 @@ public class Enemy : MonoBehaviour
         if (agent != null) agent.speed = data.moveSpeed;
     }
 
-    // (옛 방식, 지금은 쓰지 않음 — S1-7 3단계에서 삭제) 몬스터 종류 적용: 종류별 배율만큼 능력치를 바꿈
-    public void ApplyMonsterType(MonsterType type)
-    {
-        maxHealth *= type.healthMultiplier;
-        currentHealth = maxHealth;
-        attackDamage *= type.damageMultiplier;
-        attackCooldown *= type.attackCooldownMultiplier;
-        experienceReward = Mathf.Round(experienceReward * type.experienceMultiplier);
-
-        if (agent != null) agent.speed *= type.speedMultiplier;
-    }
-
     // 등급 적용: 체력·공격력·경험치를 power배로 늘리고, 죽을 때 떨어뜨릴 장비 수와 좋은 등급 확률 배율을 정함
     public void ApplyRank(MonsterRank monsterRank, float power, int lootDrops, float lootRarityBonus)
     {

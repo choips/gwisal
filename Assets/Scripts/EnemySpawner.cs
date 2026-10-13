@@ -15,21 +15,11 @@ public class EnemySpawner : MonoBehaviour
     [Tooltip("생성할 적 프리팹 (Enemy 스크립트와 NavMeshAgent가 붙어 있어야 합니다)")]
     public GameObject enemyPrefab;
 
-    [Tooltip("출현할 귀신 종류 (데이터 파일 + 출현 가중치). 비어 있으면 아래 옛 Monster Types 목록을 사용")]
+    [Tooltip("출현할 귀신 종류 (데이터 파일 Assets/Data/Enemies + 출현 가중치)")]
     [SerializeField] private List<EnemySpawnEntry> enemyTypes = new List<EnemySpawnEntry>();
 
     [Tooltip("이 배치기가 만드는 몬스터의 레벨 (레벨마다 체력 ×1.12·피해 ×1.09, 플레이어 방어력 계산에도 쓰임)")]
     [Min(1)] [SerializeField] private int monsterLevel = 1;
-
-    [Tooltip("(옛 방식 — S1-7 3단계에서 삭제 예정) 몬스터 종류 배율 목록. 위 Enemy Types가 비어 있을 때만 사용")]
-    [SerializeField] private List<MonsterType> monsterTypes = new List<MonsterType>
-    {
-        //               이름     몸 색                              크기(너비, 키, 두께)            체력  공격  속도  쿨타임 경험치 가중치
-        new MonsterType("잡귀",   new Color(0.45f, 0.55f, 0.45f), new Vector3(1f, 1f, 1f),       1f,   1f,   1f,   1f,   1f,   40f),
-        new MonsterType("강시",   new Color(0.55f, 0.6f, 0.8f),   new Vector3(0.8f, 1.4f, 0.8f), 1.8f, 1.2f, 0.6f, 1.3f, 1.4f, 25f),
-        new MonsterType("아귀",   new Color(0.75f, 0.75f, 0.3f),  new Vector3(0.7f, 0.7f, 0.7f), 0.6f, 0.8f, 1.6f, 0.6f, 0.9f, 25f),
-        new MonsterType("도깨비", new Color(0.8f, 0.2f, 0.15f),   new Vector3(1.4f, 1.4f, 1.4f), 2.5f, 1.8f, 0.9f, 1.2f, 2f,   10f),
-    };
 
     [Header("일반 무리")]
     [Tooltip("맵에 배치할 일반 무리 수 (최소 ~ 최대 사이에서 무작위)")]
@@ -110,7 +100,6 @@ public class EnemySpawner : MonoBehaviour
 
     private readonly List<Vector3> packCenters = new List<Vector3>(); // 이미 배치한 무리 중심들
     private readonly List<EnemySpawnEntry> activeTypes = new List<EnemySpawnEntry>(); // 실제로 뽑을 귀신 종류 (빈 칸 제외)
-    private readonly List<EnemyData> legacyData = new List<EnemyData>(); // 옛 목록에서 임시로 만든 데이터 (끝날 때 정리)
     private Bounds mapBounds;     // NavMesh 전체를 감싸는 범위
     private Transform player;
     private bool hasPopulated;    // 배치를 마쳤는지 (마지막 한 마리 처치 알림용)
@@ -151,54 +140,13 @@ public class EnemySpawner : MonoBehaviour
         PopulateMap();
     }
 
-    // 코드로 만든 임시 데이터는 자동으로 지워지지 않으므로 함께 정리
-    private void OnDestroy()
-    {
-        foreach (EnemyData data in legacyData)
-        {
-            if (data != null) Destroy(data);
-        }
-        legacyData.Clear();
-    }
-
-    // 뽑을 귀신 종류 목록 만들기: 새 Enemy Types를 쓰고, 비어 있으면 옛 Monster Types를 데이터로 바꿔서 씀
+    // 뽑을 귀신 종류 목록 만들기 (데이터 파일이 비었거나 가중치가 0인 칸은 뺌)
     private void BuildActiveTypes()
     {
         activeTypes.Clear();
         foreach (EnemySpawnEntry entry in enemyTypes)
         {
             if (entry != null && entry.data != null && entry.spawnWeight > 0f) activeTypes.Add(entry);
-        }
-        if (activeTypes.Count > 0) return;
-
-        // 옛 방식: Enemy 프리팹 기본값 × 종류별 배율 → 임시 데이터 (S1-7 3단계에서 삭제 예정)
-        if (!enemyPrefab.TryGetComponent(out Enemy prefabEnemy)) return;
-        float prefabSpeed = enemyPrefab.TryGetComponent(out NavMeshAgent prefabAgent) ? prefabAgent.speed : 3.5f;
-
-        foreach (MonsterType type in monsterTypes)
-        {
-            if (type == null || type.spawnWeight <= 0f) continue;
-
-            EnemyData data = ScriptableObject.CreateInstance<EnemyData>();
-            data.name = type.monsterName;
-            data.displayName = type.monsterName;
-            data.bodyColor = type.color;
-            data.bodyScale = type.scale;
-            data.maxHealth = prefabEnemy.maxHealth * type.healthMultiplier;
-            data.attackDamage = prefabEnemy.attackDamage * type.damageMultiplier;
-            data.attackCooldown = prefabEnemy.attackCooldown * type.attackCooldownMultiplier;
-            data.moveSpeed = prefabSpeed * type.speedMultiplier;
-            data.experienceReward = Mathf.Round(prefabEnemy.experienceReward * type.experienceMultiplier);
-            data.aggroRange = prefabEnemy.aggroRange;
-            data.attackRange = prefabEnemy.attackRange;
-
-            legacyData.Add(data);
-            activeTypes.Add(new EnemySpawnEntry(data, type.spawnWeight));
-        }
-
-        if (activeTypes.Count > 0)
-        {
-            Debug.Log($"{gameObject.name}: Enemy Types가 비어 있어 옛 Monster Types 목록({activeTypes.Count}종)을 사용합니다.");
         }
     }
 
@@ -504,12 +452,4 @@ public class EnemySpawnEntry
 
     [Tooltip("출현 가중치 (클수록 자주 나옴, 0이면 안 나옴)")]
     [Min(0f)] public float spawnWeight = 10f;
-
-    public EnemySpawnEntry() { }
-
-    public EnemySpawnEntry(EnemyData enemyData, float weight)
-    {
-        data = enemyData;
-        spawnWeight = weight;
-    }
 }

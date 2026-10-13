@@ -272,6 +272,8 @@ public class Enemy : MonoBehaviour
     {
         if (isDead) return;
 
+        DamageMeter.Record(damage); // 개발자 메뉴의 DPS 측정용 기록
+
         currentHealth -= damage;
         Debug.Log($"{gameObject.name} 남은 체력: {Mathf.Max(currentHealth, 0f)} / {maxHealth}");
 

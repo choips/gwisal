@@ -4,6 +4,8 @@ using UnityEngine;
 // 생성된 방향(앞쪽)으로 날아가다가 적(Enemy 태그)에 닿으면 데미지를 주고 사라집니다.
 // 데미지는 발사한 순간 플레이어 공격력 × 배율로 정해집니다 (레벨업·무기 장착 시 함께 강해짐).
 // 아무것도 맞히지 못하면 일정 시간 뒤 자동으로 파괴됩니다.
+// 판정 상자(Box Collider)는 바닥 아래 ~ 머리 위(약 -0.1 ~ 1.9m)까지 세로로 길게 잡아, 키 작은 적도 높이 차이로 빗나가지 않게 합니다.
+// (프리팹 크기 Y가 0.05라서 Size Y 40 = 실제 2m, Center Y 6 = 실제 0.3m 위 / 발사 높이가 바뀌면 함께 조정)
 public class AmuletProjectile : MonoBehaviour
 {
     private const string EnemyTag = "Enemy"; // 데미지를 줄 대상의 태그

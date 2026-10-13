@@ -2,7 +2,8 @@ using TMPro;                     // TMP_Text 사용
 using UnityEngine;
 
 // 플로팅 데미지 텍스트
-// 생성되면 살짝 커졌다 작아지며(팝) 위로 떠오르고, 점점 투명해지다가 스스로 파괴됩니다.
+// 생성되면 살짝 커졌다 작아지며(팝) 위로 떠오르고, 점점 투명해지다가 오브젝트 풀로 돌아갑니다.
+// ObjectPoolManager.Spawn으로 꺼내 쓰며, 재사용될 때마다 OnEnable에서 크기·색·시간을 처음 상태로 되돌립니다.
 // 3D TextMeshPro와 World Space Canvas의 TextMeshPro - Text (UI) 모두 지원합니다.
 public class DamageText : MonoBehaviour
 {
@@ -33,17 +34,36 @@ public class DamageText : MonoBehaviour
 
     private TMP_Text text;          // 숫자를 표시할 텍스트 컴포넌트
     private Camera mainCamera;      // 텍스트가 항상 바라볼 카메라
-    private Vector3 originalScale;  // 프리팹에 설정된 원래 크기
-    private float elapsed;          // 생성 후 지난 시간
+    private Vector3 prefabScale;    // 프리팹에 설정된 원래 크기 (재사용할 때 되돌릴 값)
+    private Color prefabColor;      // 프리팹에 설정된 원래 글자 색 (재사용할 때 되돌릴 값)
+    private Vector3 originalScale;  // 이번 숫자의 기준 크기 (치명타면 더 큼)
+    private float elapsed;          // 나타난 뒤 지난 시간
 
     private void Awake()
     {
         text = GetComponentInChildren<TMP_Text>();
         mainCamera = Camera.main;
-        originalScale = transform.localScale;
+        prefabScale = transform.localScale;
+        if (text != null) prefabColor = text.color;
+    }
 
-        // lifeTime초 뒤 스스로 파괴
-        Destroy(gameObject, lifeTime);
+    // 꺼낼 때마다 처음 상태로 되돌리고, lifeTime초 뒤 풀로 돌아가도록 예약
+    private void OnEnable()
+    {
+        // 풀 오브젝트는 씬이 바뀌어도 남으므로, 카메라가 바뀌었으면 다시 찾음
+        if (mainCamera == null) mainCamera = Camera.main;
+
+        elapsed = 0f;
+        originalScale = prefabScale;
+        transform.localScale = prefabScale * popScale;
+
+        if (text != null)
+        {
+            text.color = prefabColor;
+            text.alpha = 1f;
+        }
+
+        ObjectPoolManager.Release(gameObject, lifeTime);
     }
 
     // 전달받은 데미지를 텍스트로 표시 (치명타면 크고 빨갛게, 뒤에 느낌표)

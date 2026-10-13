@@ -296,7 +296,7 @@ public class PlayerStats : MonoBehaviour
         if (damageTextPrefab == null) return;
 
         Vector3 spawnPosition = transform.position + Vector3.up * damageTextHeight;
-        GameObject textObject = Instantiate(damageTextPrefab, spawnPosition, Quaternion.identity);
+        GameObject textObject = ObjectPoolManager.Spawn(damageTextPrefab, spawnPosition, Quaternion.identity);
 
         if (textObject.TryGetComponent(out DamageText damageText))
         {

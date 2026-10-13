@@ -94,9 +94,9 @@ public class AmuletExplosionSkill : SkillBase
         // 기력이 부족하면 "기력이 부족합니다!" 알림 후 취소
         if (!TryPayMana()) return;
 
-        GameObject explosion = Instantiate(data.prefab, aim.Point, Quaternion.identity);
+        GameObject explosion = ObjectPoolManager.Spawn(data.prefab, aim.Point, Quaternion.identity);
 
-        // 폭발의 Start(피해 처리)보다 먼저 실행되므로 피해량과 치명타 판정에 시전자 정보를 쓸 수 있음
+        // 폭발의 첫 Update(피해 처리)보다 먼저 실행되므로 피해량과 치명타 판정에 시전자 정보를 쓸 수 있음
         if (explosion.TryGetComponent(out AoESkill aoe))
         {
             aoe.SetOwner(stats, DamageMultiplier);

@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;   // InputAction 사용
 // - 칸마다 스킬(SkillBase를 상속한 스킬 스크립트)을 하나씩 넣어 둡니다.
 // - 매 프레임 스킬 칸 행동(GameInput.GetSkill)의 입력을 읽어 그 칸의 스킬에 전달합니다.
 // - 겨눌 위치도 함께 넘깁니다: 마우스는 커서 아래 바닥, 게임패드는 가장 가까운 적(자동 조준).
-// - 취소 행동(ESC)을 누르면 모든 스킬의 조준을 취소합니다.
+// - 취소 행동(ESC)을 누르면 조준 중인 스킬의 조준을 취소합니다 (ESC는 UIWindowStack이 읽고, 조준 취소가 창 닫기보다 먼저).
 // - 사망 등으로 PlayerController가 꺼져 있으면 스킬 입력을 받지 않습니다.
 // 키 연결: 스킬 1번 칸 = 패드 X(□), 2번 = 우클릭 / 패드 Y(△), 3번 = Q / 패드 B(○), 4~6번 = 2·3·4 키 / 패드 LB·RB·RT
 // (Assets/InputSystem_Actions에서 변경)
@@ -25,11 +25,23 @@ public class PlayerSkills : MonoBehaviour
 
     private PlayerController controller;
     private readonly bool[] pressedWithGamepad = new bool[GameInput.SkillSlotCount]; // 칸마다 이번 누름이 게임패드였는지 (뗄 때도 같은 방식으로 겨누기 위해 기억)
+    private Func<bool> tryCancelAimingFunction; // UIWindowStack에 등록할 조준 취소 함수 (등록·해제에 같은 객체를 쓰기 위해 저장)
 
     private void Awake()
     {
         controller = GetComponent<PlayerController>();
+        tryCancelAimingFunction = TryCancelAiming;
         EnsureSlotCount();
+    }
+
+    private void OnEnable()
+    {
+        UIWindowStack.AddAimCanceler(tryCancelAimingFunction);
+    }
+
+    private void OnDisable()
+    {
+        UIWindowStack.RemoveAimCanceler(tryCancelAimingFunction);
     }
 
     // Inspector에서 칸 수를 잘못 바꿔도 항상 6칸으로 맞춤
@@ -72,15 +84,25 @@ public class PlayerSkills : MonoBehaviour
         }
     }
 
+    // ESC: 조준 중인 스킬이 있으면 조준을 취소하고 true (없으면 false → UIWindowStack이 창을 닫음)
+    private bool TryCancelAiming()
+    {
+        bool wasAiming = false;
+        foreach (SkillBase skill in slots)
+        {
+            if (skill != null && skill.IsAiming)
+            {
+                skill.CancelInput();
+                wasAiming = true;
+            }
+        }
+        return wasAiming;
+    }
+
     private void Update()
     {
         // 사망 중에는 PlayerController가 꺼지므로 스킬도 쓰지 않음
         if (controller == null || !controller.isActiveAndEnabled) return;
-
-        if (GameInput.Cancel.WasPressedThisFrame())
-        {
-            CancelAllSkills();
-        }
 
         Vector2 pointerPosition = GameInput.PointerPosition;
         bool pointerOverUI = ItemLabelManager.IsPointerOverBlockingUI() // 바닥 아이템 이름표 위에서는 스킬을 쓸 수 있음

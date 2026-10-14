@@ -6,7 +6,8 @@ using UnityEngine;
 // 화면 왼쪽 위 창에서 무적·기력 무한·쿨타임 없음·전투 로그(GameLog)를 켜고 끄고(켠 값은 DevCheats·GameLog에 저장), 레벨을 바로 올리고, 등급별 아이템을 떨어뜨려 색을 보고,
 // 적에게 준 피해(DPS 측정, DamageMeter)와 능력치를 보고, 테스트용 능력치 수정치를 켜고 끕니다.
 // Unity 기본 즉석 UI(IMGUI, OnGUI)로 그려서 Canvas·프리팹 설정이 필요 없습니다. 마우스로 조작합니다.
-public class DevMenu : MonoBehaviour
+// 열린 창 목록(UIWindowStack)에 등록되어 ESC로도 닫힙니다.
+public class DevMenu : MonoBehaviour, IUIWindow
 {
     private const float ReferenceScreenHeight = 1080f; // 이 화면 높이에서 창이 아래 크기 그대로 보임 (화면이 크면 함께 커짐)
     private const float MeterRefreshInterval = 0.25f;  // DPS 글자를 새로 만드는 간격(초) (매 프레임 문자열을 만들지 않기 위함)
@@ -83,13 +84,7 @@ public class DevMenu : MonoBehaviour
     {
         if (GameInput.DevMenu.WasPressedThisFrame())
         {
-            isOpen = !isOpen;
-
-            // 매 프레임 찾지 않도록 메뉴를 열 때만 플레이어를 찾음
-            if (isOpen && playerStats == null)
-            {
-                playerStats = FindFirstObjectByType<PlayerStats>();
-            }
+            SetOpen(!isOpen);
         }
 
         // 메뉴 창 영역을 알려 둠 → 메뉴를 클릭할 때 뒤쪽 바닥으로 이동하거나 스킬이 나가지 않음
@@ -112,6 +107,34 @@ public class DevMenu : MonoBehaviour
     private void OnDisable()
     {
         DevCheats.MenuScreenRect = Rect.zero;
+        UIWindowStack.WindowClosed(this);
+    }
+
+    // ESC로 닫을 때 (UIWindowStack이 호출)
+    public void Close()
+    {
+        SetOpen(false);
+    }
+
+    // 메뉴 열기/닫기 + 열린 창 목록에 넣고 빼기
+    private void SetOpen(bool open)
+    {
+        isOpen = open;
+
+        if (isOpen)
+        {
+            UIWindowStack.WindowOpened(this);
+
+            // 매 프레임 찾지 않도록 메뉴를 열 때만 플레이어를 찾음
+            if (playerStats == null)
+            {
+                playerStats = FindFirstObjectByType<PlayerStats>();
+            }
+        }
+        else
+        {
+            UIWindowStack.WindowClosed(this);
+        }
     }
 
     // 화면에 메뉴 창을 그림 (Unity가 화면을 그릴 때마다 호출)

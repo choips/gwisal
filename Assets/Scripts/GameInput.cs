@@ -34,7 +34,7 @@ public static class GameInput
     // 이동 방향 (게임패드 왼쪽 스틱, -1 ~ 1)
     public static InputAction MoveDirection { get { EnsureInitialized(); return moveDirection; } }
 
-    // 취소 (ESC: 부적 폭발 조준 취소)
+    // 취소 (ESC: 조준 취소 → 마지막에 연 창 닫기 — UIWindowStack만 읽음)
     public static InputAction Cancel { get { EnsureInitialized(); return cancel; } }
 
     // 기력 물약 마시기 (1 키)

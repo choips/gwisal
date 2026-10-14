@@ -70,6 +70,9 @@ public abstract class SkillBase : MonoBehaviour
     // 조준 취소 (취소 키, 사망 등) — 조준 원 같은 표시를 정리
     public virtual void CancelInput() { }
 
+    // 지금 조준 중인지 (ESC가 창 닫기보다 조준 취소를 먼저 하기 위해 확인)
+    public virtual bool IsAiming => false;
+
     // 플레이어 능력치 최종값 (플레이어 능력치가 없으면 0)
     private float GetPlayerStat(StatType stat)
     {

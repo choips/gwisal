@@ -5,7 +5,7 @@ using UnityEngine.UI;            // Button, GridLayoutGroup 사용
 
 // 인벤토리 + 장비 관리자 (싱글톤)
 // - 어디서든 InventoryManager.Instance로 접근해서 아이템을 추가할 수 있습니다.
-// - 인벤토리 행동(기본 I 키)으로 인벤토리 UI 패널을 열고 닫습니다.
+// - 인벤토리 행동(기본 I 키)으로 인벤토리 UI 패널을 열고 닫습니다. ESC로도 닫힙니다 (패널에 UIWindow를 붙여 UIWindowStack에 등록).
 // - 가방은 디아블로식 격자(기본 6×5 = 30칸)로 보여 주고, 칸을 클릭하면 그 아이템을 장착합니다.
 // - 가방이 가득 차면 더 이상 아이템을 주울 수 없습니다.
 // - 무기·방어구 장비 칸 버튼을 클릭하면 장착 중인 장비를 해제해 가방으로 돌려보냅니다.
@@ -98,6 +98,12 @@ public class InventoryManager : MonoBehaviour
         }
 
         Instance = this;
+
+        // 패널이 켜지고 꺼질 때 열린 창 목록에 들어가고 빠지게 함 → ESC로 닫힘 (씬에서 직접 붙이지 않아도 됨)
+        if (inventoryPanel != null && !inventoryPanel.TryGetComponent(out UIWindow _))
+        {
+            inventoryPanel.AddComponent<UIWindow>();
+        }
     }
 
     private void OnDestroy()

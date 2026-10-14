@@ -56,6 +56,8 @@ public class AmuletExplosionSkill : SkillBase
         StopAiming();
     }
 
+    public override bool IsAiming => isAiming;
+
     // 조준 중: 겨눈 바닥에 폭발 범위 원을 표시 (마우스가 바닥 밖을 가리키면 숨김)
     private void UpdateIndicator(SkillAim aim)
     {

@@ -17,6 +17,7 @@ public class LootEntry
 // 디아블로 스타일 아이템 드랍 스크립트
 // 드랍 테이블에서 아이템 종류를 무작위로 고르고(가중치 확률), 등급도 무작위로 정한 뒤
 // 죽은 자리 주변의 빈자리(다른 아이템과 떨어진 NavMesh 위)를 골라 포물선으로 떨어뜨리고 등급에 따라 색을 바꿉니다.
+// 등급 색은 Assets/Resources/ItemRarityColors(등급 색 표)에서 가져옵니다.
 public class LootDropper : MonoBehaviour
 {
     // 빈자리 찾기: 한 번에 뽑아 보는 후보 수, 자리가 없을 때 반경을 넓히는 최대 횟수 (넓힐 때마다 최소 간격만큼)
@@ -41,9 +42,6 @@ public class LootDropper : MonoBehaviour
 
     [Tooltip("물약 기본 아이템 (Assets/Data/Items/Item_potion_mana, 회복량은 이 파일의 Base Stat Value, 비워 두면 물약이 안 떨어짐)")]
     [SerializeField] private ItemBase potionItem;
-
-    [Tooltip("바닥에 떨어진 물약 구슬의 색")]
-    [SerializeField] private Color potionColor = new Color(0.2f, 0.45f, 1f); // 파랑
 
     [Tooltip("장비 구슬 대비 물약 구슬 크기 (0.7 = 70%, 장비와 구별하기 쉽게)")]
     [SerializeField] private float potionScale = 0.7f;
@@ -70,12 +68,6 @@ public class LootDropper : MonoBehaviour
 
     [Tooltip("아이템 중심에서 이름표까지의 높이(m)")]
     [SerializeField] private float labelHeight = 0.5f;
-
-    [Header("등급별 색상")]
-    [SerializeField] private Color normalColor = Color.white;
-    [SerializeField] private Color magicColor = Color.blue;
-    [SerializeField] private Color rareColor = Color.yellow;
-    [SerializeField] private Color uniqueColor = new Color(1f, 0.5f, 0f); // 주황색
 
     [Header("등급별 능력치 배율")]
     [Tooltip("아이템 프리팹에 설정된 능력치에 곱해지는 값 (등급이 높을수록 강해짐)")]
@@ -126,11 +118,35 @@ public class LootDropper : MonoBehaviour
             return;
         }
 
-        ItemRarity rarity = RollRarity(rarityBonus);
+        DropEquipment(dropPosition, entry, RollRarity(rarityBonus), itemLevel);
+    }
+
+    // 정해진 기본 아이템을 정해진 등급으로 떨어뜨림
+    private void DropEquipment(Vector3 dropPosition, LootEntry entry, ItemRarity rarity, int itemLevel)
+    {
         float statValue = Mathf.Round(entry.baseItem.baseStatValue * GetStatMultiplier(rarity));
         ItemData data = new ItemData(entry.baseItem, rarity, itemLevel, statValue);
 
-        SpawnItem(dropPosition, data, GetRarityColor(rarity));
+        SpawnItem(dropPosition, data);
+    }
+
+    // 등급 색 확인용 (개발자 메뉴): 노멀·매직·레어·유니크 장비를 하나씩, 물약을 하나 떨어뜨림
+    public void DropColorPreview(Vector3 dropPosition)
+    {
+        if (itemPrefab == null) return;
+
+        scatterRadius = DefaultScatterRadius;
+        minSpacing = DefaultMinSpacing;
+
+        LootEntry entry = PickEntry();
+        if (entry != null)
+        {
+            DropEquipment(dropPosition, entry, ItemRarity.Normal, 1);
+            DropEquipment(dropPosition, entry, ItemRarity.Magic, 1);
+            DropEquipment(dropPosition, entry, ItemRarity.Rare, 1);
+            DropEquipment(dropPosition, entry, ItemRarity.Unique, 1);
+        }
+        DropPotion(dropPosition, 1);
     }
 
     // 기력 물약을 떨어뜨림 (물약은 등급이 없음)
@@ -143,12 +159,12 @@ public class LootDropper : MonoBehaviour
         }
 
         ItemData data = new ItemData(potionItem, ItemRarity.Normal, itemLevel, potionItem.baseStatValue);
-        SpawnItem(dropPosition, data, potionColor, potionScale);
+        SpawnItem(dropPosition, data, potionScale);
     }
 
     // 아이템 모양 프리팹을 만들어 내용·색·이름표를 정하고 빈자리로 떨어뜨림
     // scale: 프리팹 크기에 곱할 배율 (물약은 장비보다 작게)
-    private void SpawnItem(Vector3 dropPosition, ItemData data, Color objectColor, float scale = 1f)
+    private void SpawnItem(Vector3 dropPosition, ItemData data, float scale = 1f)
     {
         // 착지할 자리를 먼저 골라야, 같은 순간에 떨어지는 아이템끼리 같은 자리를 고르지 않음
         Vector3 groundPoint = FindLandingSpot(dropPosition);
@@ -159,7 +175,7 @@ public class LootDropper : MonoBehaviour
         item.transform.localScale *= scale;
         string itemName = data.Name;
         item.name = data.IsConsumable ? itemName : $"{itemName} ({data.rarity})";
-        ApplyColor(item, objectColor);
+        Item.ApplyObjectColor(item, data.NameColor);
 
         if (item.TryGetComponent(out Item itemComponent))
         {
@@ -311,16 +327,6 @@ public class LootDropper : MonoBehaviour
         return ItemRarity.Normal;
     }
 
-    // 아이템의 재질(Material)에 색 적용 (장비: 등급 색, 물약: 물약 색)
-    private void ApplyColor(GameObject item, Color color)
-    {
-        Renderer itemRenderer = item.GetComponentInChildren<Renderer>();
-        if (itemRenderer == null) return;
-
-        // .material은 이 아이템 전용 재질 복사본을 만들므로 다른 아이템 색에 영향을 주지 않음
-        itemRenderer.material.color = color;
-    }
-
     private float GetStatMultiplier(ItemRarity rarity)
     {
         switch (rarity)
@@ -329,17 +335,6 @@ public class LootDropper : MonoBehaviour
             case ItemRarity.Rare:   return rareStatMultiplier;
             case ItemRarity.Unique: return uniqueStatMultiplier;
             default:                return 1f;
-        }
-    }
-
-    private Color GetRarityColor(ItemRarity rarity)
-    {
-        switch (rarity)
-        {
-            case ItemRarity.Magic:  return magicColor;
-            case ItemRarity.Rare:   return rareColor;
-            case ItemRarity.Unique: return uniqueColor;
-            default:                return normalColor;
         }
     }
 }

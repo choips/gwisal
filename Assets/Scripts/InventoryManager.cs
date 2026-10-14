@@ -107,6 +107,10 @@ public class InventoryManager : MonoBehaviour
         {
             Instance = null;
         }
+
+#if UNITY_EDITOR
+        ItemRarityColors.ColorsChanged -= RefreshUI;
+#endif
     }
 
     private void Start()
@@ -118,6 +122,11 @@ public class InventoryManager : MonoBehaviour
 
         if (weaponSlotButton != null) weaponSlotButton.onClick.AddListener(UnequipWeapon);
         if (armorSlotButton != null) armorSlotButton.onClick.AddListener(UnequipArmor);
+
+#if UNITY_EDITOR
+        // 플레이 중 Inspector에서 등급 색을 바꾸면 칸 테두리·장비 글자를 새 색으로 다시 그림
+        ItemRarityColors.ColorsChanged += RefreshUI;
+#endif
 
         RefreshUI();
     }

@@ -9,6 +9,7 @@ using UnityEngine;
 public class ItemNameLabel : MonoBehaviour
 {
     private Transform labelTransform; // 이름표 오브젝트
+    private TextMeshPro label;        // 이름표 글자
     private Camera mainCamera;        // 이름표가 바라볼 카메라
     private float heightOffset;       // 아이템 중심에서 이름표까지의 높이
 
@@ -23,7 +24,7 @@ public class ItemNameLabel : MonoBehaviour
 
         // UI가 아닌 3D 공간용 TextMeshPro (캔버스 없이 월드에 바로 그려짐, 콜라이더가 없어 클릭을 막지 않음)
         // TextMeshPro를 붙이면 Transform이 RectTransform으로 바뀌므로, 위치 참조는 반드시 붙인 뒤에 가져옴
-        TextMeshPro label = labelObject.AddComponent<TextMeshPro>();
+        label = labelObject.AddComponent<TextMeshPro>();
         labelTransform = label.transform;
         label.font = font;
         label.text = text;
@@ -38,6 +39,12 @@ public class ItemNameLabel : MonoBehaviour
         label.outlineColor = Color.black;
 
         UpdateLabelTransform();
+    }
+
+    // 이름표 글자 색만 바꿈 (등급 색 표가 바뀌었을 때)
+    public void SetColor(Color color)
+    {
+        if (label != null) label.color = color;
     }
 
     private void LateUpdate()

@@ -3,7 +3,7 @@ using UnityEngine;
 
 // 개발자 메뉴 (F1로 열고 닫기) — 에디터와 개발 빌드(Development Build)에만 포함되고, 정식 출시 빌드에서는 통째로 빠집니다.
 // 씬에 붙이지 않아도 플레이를 시작하면 스스로 만들어집니다 (Hierarchy의 DontDestroyOnLoad → [DevMenu]).
-// 화면 왼쪽 위 창에서 무적·기력 무한·쿨타임 없음·전투 로그(GameLog)를 켜고 끄고(켠 값은 DevCheats·GameLog에 저장), 레벨을 바로 올리고,
+// 화면 왼쪽 위 창에서 무적·기력 무한·쿨타임 없음·전투 로그(GameLog)를 켜고 끄고(켠 값은 DevCheats·GameLog에 저장), 레벨을 바로 올리고, 등급별 아이템을 떨어뜨려 색을 보고,
 // 적에게 준 피해(DPS 측정, DamageMeter)와 능력치를 보고, 테스트용 능력치 수정치를 켜고 끕니다.
 // Unity 기본 즉석 UI(IMGUI, OnGUI)로 그려서 Canvas·프리팹 설정이 필요 없습니다. 마우스로 조작합니다.
 public class DevMenu : MonoBehaviour
@@ -139,6 +139,7 @@ public class DevMenu : MonoBehaviour
         if (GUILayout.Button("레벨 +1")) LevelUp(1);
         if (GUILayout.Button("레벨 +5")) LevelUp(5);
         GUILayout.EndHorizontal();
+        if (GUILayout.Button("등급 색 보기 (등급별 아이템 떨어뜨리기)")) DropRarityColorPreview();
 
         GUILayout.Space(8f);
         GUILayout.Label(meterDamageLabel);
@@ -206,6 +207,26 @@ public class DevMenu : MonoBehaviour
         }
 
         playerStats.DevLevelUp(count);
+    }
+
+    // 플레이어 발밑에 노멀·매직·레어·유니크 장비와 물약을 하나씩 떨어뜨림 (등급 색 표 ItemRarityColors를 고를 때)
+    private void DropRarityColorPreview()
+    {
+        if (playerStats == null)
+        {
+            playerStats = FindFirstObjectByType<PlayerStats>();
+            if (playerStats == null) return;
+        }
+
+        // 드랍 표·이름표 글꼴은 귀신의 LootDropper에 들어 있으므로 빌려 씀 (풀에 들어가 꺼진 귀신의 것도 됨)
+        LootDropper dropper = FindFirstObjectByType<LootDropper>(FindObjectsInactive.Include);
+        if (dropper == null)
+        {
+            Debug.LogWarning("씬에 LootDropper가 붙은 귀신이 없어 아이템을 떨어뜨리지 못했습니다.");
+            return;
+        }
+
+        dropper.DropColorPreview(playerStats.transform.position);
     }
 
     // 레벨이 바뀌었을 때만 표시 글자를 새로 만듦 (매 프레임 문자열을 만들지 않기 위함)

@@ -10,13 +10,13 @@ public enum ItemType
     ManaPotion  // 기력 물약: 사용하면 기력(MP) 회복 (한 번 쓰면 사라짐)
 }
 
-// 아이템 등급
+// 아이템 등급 (색은 ItemRarityColors 표에서 가져옴)
 public enum ItemRarity
 {
-    Normal, // 노멀 (흰색)
-    Magic,  // 매직 (파란색)
-    Rare,   // 레어 (노란색)
-    Unique  // 유니크 (주황색)
+    Normal, // 노멀 (한지)
+    Magic,  // 매직 (쪽빛)
+    Rare,   // 레어 (황토)
+    Unique  // 유니크 (주사 붉은색)
 }
 
 // 아이템에 붙은 무작위 옵션 하나 (예: 공격 속도 +15%) — 옵션 ID와 굴린 수치
@@ -171,21 +171,9 @@ public class ItemData
         }
     }
 
-    // 어두운 UI 배경에서 잘 보이는 등급별 글자 색
-    public Color RarityColor
-    {
-        get
-        {
-            switch (rarity)
-            {
-                case ItemRarity.Magic:  return new Color(0.4f, 0.6f, 1f);   // 밝은 파랑
-                case ItemRarity.Rare:   return new Color(1f, 0.9f, 0.2f);   // 노랑
-                case ItemRarity.Unique: return new Color(1f, 0.55f, 0.1f);  // 주황
-                default:                return Color.white;
-            }
-        }
-    }
+    // 등급 색 (ItemRarityColors 표에서 가져옴)
+    public Color RarityColor => ItemRarityColors.Instance.Get(rarity);
 
-    // 이름을 표시할 때 쓰는 색 (장비는 등급 색, 기력 물약은 하늘색)
-    public Color NameColor => IsConsumable ? new Color(0.35f, 0.85f, 1f) : RarityColor;
+    // 이름·바닥 구슬·인벤토리 칸에 쓰는 색 (장비는 등급 색, 물약은 물약 색)
+    public Color NameColor => IsConsumable ? ItemRarityColors.Instance.PotionColor : RarityColor;
 }

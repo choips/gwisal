@@ -9,6 +9,36 @@ public class Item : MonoBehaviour
 
     private bool isPickedUp; // 이미 주운 아이템인지 여부 (중복 획득 방지)
 
+    // 아이템 모양의 재질(Material)에 색 적용 (장비: 등급 색, 물약: 물약 색)
+    public static void ApplyObjectColor(GameObject item, Color color)
+    {
+        Renderer itemRenderer = item.GetComponentInChildren<Renderer>();
+        if (itemRenderer == null) return;
+
+        // .material은 이 아이템 전용 재질 복사본을 만들므로 다른 아이템 색에 영향을 주지 않음
+        itemRenderer.material.color = color;
+    }
+
+#if UNITY_EDITOR
+    private void OnEnable()
+    {
+        ItemRarityColors.ColorsChanged += RefreshColor;
+    }
+
+    private void OnDisable()
+    {
+        ItemRarityColors.ColorsChanged -= RefreshColor;
+    }
+
+    // 등급 색 표가 바뀌면 바닥 구슬과 이름표를 새 색으로 다시 칠함 (에디터에서 색을 고를 때)
+    private void RefreshColor()
+    {
+        Color color = data.NameColor;
+        ApplyObjectColor(gameObject, color);
+        if (TryGetComponent(out ItemNameLabel label)) label.SetColor(color);
+    }
+#endif
+
     // 아이템 획득 처리 (가방이 가득 차 있으면 바닥에 그대로 남김)
     public void PickUp()
     {

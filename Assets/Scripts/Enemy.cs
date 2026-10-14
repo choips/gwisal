@@ -552,7 +552,7 @@ public class Enemy : MonoBehaviour
         // LootDropper가 붙어 있는 적만 아이템을 드랍 (챔피언·유니크는 더 많이, 더 좋은 등급으로, 아이템 레벨 = 몬스터 레벨)
         if (TryGetComponent(out LootDropper lootDropper))
         {
-            lootDropper.DropItem(transform.position, lootDropCount, lootRarityMultiplier, level);
+            lootDropper.DropItem(transform.position, lootDropCount, lootRarityMultiplier, level, config);
         }
 
         // 자신을 배치한 쪽에 사망을 알려 남은 수를 줄이게 함

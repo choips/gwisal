@@ -60,6 +60,13 @@ public class BalanceConfig : ScriptableObject
     [Min(0f)] public float uniqueRarityBonus = 3f;
     [Min(0f)] public float minionRarityBonus = 1.5f;
 
+    [Header("아이템 드랍 위치")]
+    [Tooltip("귀신이 죽은 자리에서 아이템이 흩어지는 반경(m) — 빈자리가 모자라면 조금씩 넓힘 (엑셀 LootScatterRadius)")]
+    [Min(0f)] public float lootScatterRadius = 2f;
+
+    [Tooltip("바닥 아이템끼리 떨어져야 하는 최소 간격(m) (엑셀 LootMinSpacing)")]
+    [Min(0.1f)] public float lootMinSpacing = 0.8f;
+
     [Header("귀신 AI")]
     [Tooltip("추격 포기 거리(m): 싸움이 붙은 귀신은 플레이어가 이보다 멀어질 때까지 계속 쫓아오고, 넘으면 제자리로 돌아감 (엑셀 EnemyLeashRange)")]
     [Min(0f)] public float enemyLeashRange = 25f;

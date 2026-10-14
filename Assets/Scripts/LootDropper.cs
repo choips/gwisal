@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TMPro;                     // TMP_FontAsset 사용 (바닥 이름표 글꼴)
 using UnityEngine;
+using UnityEngine.AI;            // NavMesh (아이템을 놓을 바닥 찾기)
 
 // 드랍 테이블의 한 줄: 어떤 아이템이 얼마나 자주 떨어지는지
 [System.Serializable]
@@ -15,11 +16,19 @@ public class LootEntry
 
 // 디아블로 스타일 아이템 드랍 스크립트
 // 드랍 테이블에서 아이템 종류를 무작위로 고르고(가중치 확률), 등급도 무작위로 정한 뒤
-// 지정한 위치에 생성해서 위로 튀어 오르게 하고 등급에 따라 색을 바꿉니다.
+// 죽은 자리 주변의 빈자리(다른 아이템과 떨어진 NavMesh 위)를 골라 포물선으로 떨어뜨리고 등급에 따라 색을 바꿉니다.
 public class LootDropper : MonoBehaviour
 {
+    // 빈자리 찾기: 한 번에 뽑아 보는 후보 수, 자리가 없을 때 반경을 넓히는 최대 횟수 (넓힐 때마다 최소 간격만큼)
+    private const int CandidatesPerTry = 16;
+    private const int MaxRadiusExpansions = 4;
+
+    // BalanceConfig가 없을 때 쓰는 기본값 (엑셀 LootScatterRadius·LootMinSpacing)
+    private const float DefaultScatterRadius = 2f;
+    private const float DefaultMinSpacing = 0.8f;
+
     [Header("드랍 아이템")]
-    [Tooltip("바닥에 떨어질 아이템 모양 프리팹 (Item 스크립트, Rigidbody, Collider가 붙어 있어야 합니다)")]
+    [Tooltip("바닥에 떨어질 아이템 모양 프리팹 (Item 스크립트와 클릭용 Collider가 붙어 있어야 합니다. Rigidbody는 있어도 자동으로 고정됨)")]
     public GameObject itemPrefab;
 
     [Tooltip("떨어질 수 있는 기본 아이템 목록 (Base Item이 비어 있거나 가중치가 0인 줄은 무시)\n"
@@ -39,17 +48,17 @@ public class LootDropper : MonoBehaviour
     [Tooltip("장비 구슬 대비 물약 구슬 크기 (0.7 = 70%, 장비와 구별하기 쉽게)")]
     [SerializeField] private float potionScale = 0.7f;
 
-    [Header("튀어 오르는 힘")]
-    [Tooltip("위쪽으로 가하는 힘")]
-    [SerializeField] private float upwardForce = 5f;
+    [Header("떨어지는 모양 (흩어지는 반경·간격은 BalanceConfig)")]
+    [Tooltip("죽은 자리에서 착지할 자리까지 날아가는 시간(초)")]
+    [Min(0f)] [SerializeField] private float flightTime = 0.4f;
 
-    [Tooltip("옆으로 퍼지는 힘 (랜덤 방향)")]
-    [SerializeField] private float sideForce = 2f;
+    [Tooltip("포물선 꼭대기 높이(m) — 출발 높이와 착지 높이를 잇는 선보다 이만큼 위로 솟음")]
+    [Min(0f)] [SerializeField] private float arcHeight = 1.2f;
 
-    [Tooltip("아이템이 빙글빙글 도는 힘")]
-    [SerializeField] private float spinForce = 3f;
+    [Tooltip("공중에서 도는 바퀴 수 (0이면 돌지 않음)")]
+    [Min(0)] [SerializeField] private int flipCount = 1;
 
-    [Tooltip("바닥에 파묻혀 생성되지 않도록 dropPosition보다 위로 띄울 높이")]
+    [Tooltip("날아오르기 시작하는 높이 (죽은 자리 발밑보다 이만큼 위에서 출발)")]
     [SerializeField] private float spawnHeightOffset = 0.5f;
 
     [Header("바닥 이름표")]
@@ -74,19 +83,27 @@ public class LootDropper : MonoBehaviour
     [SerializeField] private float rareStatMultiplier = 2f;
     [SerializeField] private float uniqueStatMultiplier = 3f;
 
+    private float scatterRadius = DefaultScatterRadius; // 이번 드랍의 흩어지는 반경
+    private float minSpacing = DefaultMinSpacing;       // 이번 드랍의 아이템 간 최소 간격
+
     // 몬스터 배치기가 이름표 글꼴을 빌려 쓰기 위한 통로
     public TMP_FontAsset LabelFont => labelFont;
 
     // dropPosition 위치에 장비를 equipmentCount개 떨어뜨리고, 장비마다 확률에 따라 기력 물약도 하나씩 더 떨어뜨림
     // rarityBonus: 좋은 등급(매직·레어·유니크) 확률 배율 (챔피언 2, 유니크 3 등)
     // itemLevel: 숨겨진 아이템 레벨 (떨어뜨린 귀신의 몬스터 레벨)
-    public void DropItem(Vector3 dropPosition, int equipmentCount = 1, float rarityBonus = 1f, int itemLevel = 1)
+    // config: 흩어지는 반경·최소 간격 (null이면 기본값 2m·0.8m)
+    public void DropItem(Vector3 dropPosition, int equipmentCount = 1, float rarityBonus = 1f, int itemLevel = 1,
+                         BalanceConfig config = null)
     {
         if (itemPrefab == null)
         {
             Debug.LogWarning($"{gameObject.name}의 LootDropper에 Item Prefab이 등록되지 않았습니다.");
             return;
         }
+
+        scatterRadius = config != null ? config.lootScatterRadius : DefaultScatterRadius;
+        minSpacing = config != null ? config.lootMinSpacing : DefaultMinSpacing;
 
         for (int i = 0; i < equipmentCount; i++)
         {
@@ -126,15 +143,20 @@ public class LootDropper : MonoBehaviour
         }
 
         ItemData data = new ItemData(potionItem, ItemRarity.Normal, itemLevel, potionItem.baseStatValue);
-        GameObject potion = SpawnItem(dropPosition, data, potionColor);
-        potion.transform.localScale *= potionScale;
+        SpawnItem(dropPosition, data, potionColor, potionScale);
     }
 
-    // 아이템 모양 프리팹을 만들어 내용·색·이름표를 정하고 튀어 오르게 함
-    private GameObject SpawnItem(Vector3 dropPosition, ItemData data, Color objectColor)
+    // 아이템 모양 프리팹을 만들어 내용·색·이름표를 정하고 빈자리로 떨어뜨림
+    // scale: 프리팹 크기에 곱할 배율 (물약은 장비보다 작게)
+    private void SpawnItem(Vector3 dropPosition, ItemData data, Color objectColor, float scale = 1f)
     {
+        // 착지할 자리를 먼저 골라야, 같은 순간에 떨어지는 아이템끼리 같은 자리를 고르지 않음
+        Vector3 groundPoint = FindLandingSpot(dropPosition);
+
         Vector3 spawnPosition = dropPosition + Vector3.up * spawnHeightOffset;
-        GameObject item = Instantiate(itemPrefab, spawnPosition, Random.rotation);
+        Quaternion spawnRotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f); // 똑바로 선 채 방향만 무작위
+        GameObject item = Instantiate(itemPrefab, spawnPosition, spawnRotation);
+        item.transform.localScale *= scale;
         string itemName = data.Name;
         item.name = data.IsConsumable ? itemName : $"{itemName} ({data.rarity})";
         ApplyColor(item, objectColor);
@@ -152,34 +174,85 @@ public class LootDropper : MonoBehaviour
             }
         }
 
-        // 프리팹에 DroppedItem이 없어도 착지 후 고정되도록 자동으로 붙여 줌
-        if (!item.TryGetComponent(out DroppedItem _))
+        // 프리팹에 DroppedItem이 없어도 포물선 착지·빈자리 목록에 오르도록 자동으로 붙여 줌
+        if (!item.TryGetComponent(out DroppedItem droppedItem))
         {
-            item.AddComponent<DroppedItem>();
+            droppedItem = item.AddComponent<DroppedItem>();
         }
-
-        Launch(item);
-        return item;
+        droppedItem.Launch(groundPoint, flightTime, arcHeight, flipCount);
     }
 
-    // Rigidbody에 힘을 가해 아이템을 위로 통 튀어 오르게 함
-    private void Launch(GameObject item)
+    // 죽은 자리 주변(scatterRadius 안)에서 다른 바닥 아이템과 minSpacing 이상 떨어진 NavMesh 위 빈자리를 고름
+    // 빈자리 후보 중 죽은 자리에 가장 가까운 곳을 골라 아이템이 한데 모이게 함 (디아블로 2 방식)
+    // 자리가 없으면 반경을 minSpacing씩 넓히고, 끝까지 없으면 다른 아이템과 가장 먼 후보를 씀
+    private Vector3 FindLandingSpot(Vector3 dropPosition)
     {
-        if (!item.TryGetComponent(out Rigidbody rb))
+        // 죽은 자리를 NavMesh 위로 맞춤 (NavMesh가 근처에 없으면 그 자리에 그대로 떨어뜨림)
+        if (!NavMesh.SamplePosition(dropPosition, out NavMeshHit centerHit, Mathf.Max(scatterRadius, 1f), NavMesh.AllAreas))
         {
-            Debug.LogWarning($"{item.name}에 Rigidbody가 없어 튀어 오르지 않습니다. 아이템 프리팹에 Rigidbody를 추가해 주세요.");
-            return;
+            return dropPosition;
+        }
+        Vector3 center = centerHit.position;
+
+        float minSpacingSqr = minSpacing * minSpacing;
+        Vector3 fallbackSpot = center;                       // 빈자리가 끝내 없을 때 쓸 후보
+        float fallbackClearanceSqr = GetClearanceSqr(center); // 그 후보에서 가장 가까운 아이템까지 거리²
+        float radius = scatterRadius;
+
+        for (int expansion = 0; expansion <= MaxRadiusExpansions; expansion++)
+        {
+            bool found = false;
+            Vector3 nearestSpot = center;            // 빈자리 중 죽은 자리에 가장 가까운 곳
+            float nearestDistanceSqr = float.MaxValue;
+
+            for (int i = 0; i < CandidatesPerTry; i++)
+            {
+                Vector2 offset = Random.insideUnitCircle * radius;
+                Vector3 candidate = center + new Vector3(offset.x, 0f, offset.y);
+
+                // NavMesh 위가 아니면 제외
+                if (!NavMesh.SamplePosition(candidate, out NavMeshHit hit, minSpacing * 0.5f, NavMesh.AllAreas)) continue;
+
+                // 벽·낭떠러지 너머(죽은 자리에서 NavMesh를 따라 곧게 갈 수 없는 곳)는 제외
+                if (NavMesh.Raycast(center, hit.position, out _, NavMesh.AllAreas)) continue;
+
+                float clearanceSqr = GetClearanceSqr(hit.position);
+                if (clearanceSqr >= minSpacingSqr)
+                {
+                    found = true;
+                    float distanceSqr = (hit.position - center).sqrMagnitude;
+                    if (distanceSqr < nearestDistanceSqr)
+                    {
+                        nearestDistanceSqr = distanceSqr;
+                        nearestSpot = hit.position;
+                    }
+                }
+                else if (clearanceSqr > fallbackClearanceSqr)
+                {
+                    fallbackClearanceSqr = clearanceSqr;
+                    fallbackSpot = hit.position;
+                }
+            }
+
+            if (found) return nearestSpot;
+            radius += minSpacing;
         }
 
-        // 랜덤한 방향 중 수평 성분만 사용 (위아래 성분은 upwardForce가 담당)
-        Vector3 sideDirection = Random.insideUnitSphere;
-        sideDirection.y = 0f;
+        return fallbackSpot;
+    }
 
-        Vector3 force = Vector3.up * upwardForce + sideDirection * sideForce;
-        rb.AddForce(force, ForceMode.Impulse);
-
-        // 공중에서 회전하며 떨어지도록 랜덤 회전력 추가
-        rb.AddTorque(Random.insideUnitSphere * spinForce, ForceMode.Impulse);
+    // position에서 가장 가까운 바닥 아이템(날아가는 중 포함)까지의 수평 거리² (아이템이 없으면 아주 큰 수)
+    private static float GetClearanceSqr(Vector3 position)
+    {
+        float minDistanceSqr = float.MaxValue;
+        IReadOnlyList<DroppedItem> items = DroppedItem.Active;
+        for (int i = 0; i < items.Count; i++)
+        {
+            Vector3 offset = items[i].LandingPosition - position;
+            offset.y = 0f;
+            minDistanceSqr = Mathf.Min(minDistanceSqr, offset.sqrMagnitude);
+        }
+        return minDistanceSqr;
     }
 
     // 드랍 테이블에서 가중치 확률로 아이템 하나 고르기 (고를 수 있는 것이 없으면 null)

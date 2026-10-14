@@ -21,7 +21,6 @@ public static class GameInput
     private static InputAction inventory;
     private static InputAction quickSave;
     private static InputAction quickLoad;
-    private static InputAction zoom;
     private static InputAction devMenu;
     private static readonly InputAction[] skills = new InputAction[SkillSlotCount];
     private static InputAction emptyAction; // 잘못된 스킬 칸 번호를 요청했을 때 돌려줄, 키 연결이 없는 빈 행동
@@ -47,9 +46,6 @@ public static class GameInput
     // 빠른 저장 / 불러오기 (S / L 키)
     public static InputAction QuickSave { get { EnsureInitialized(); return quickSave; } }
     public static InputAction QuickLoad { get { EnsureInitialized(); return quickLoad; } }
-
-    // 카메라 확대/축소 (마우스 휠, 위로 굴리면 양수)
-    public static InputAction Zoom { get { EnsureInitialized(); return zoom; } }
 
     // 개발자 메뉴 (F1)
     public static InputAction DevMenu { get { EnsureInitialized(); return devMenu; } }
@@ -90,7 +86,7 @@ public static class GameInput
     {
         isInitialized = false;
         point = select = moveDirection = cancel = usePotion = null;
-        inventory = quickSave = quickLoad = zoom = devMenu = null;
+        inventory = quickSave = quickLoad = devMenu = null;
         emptyAction = null;
         for (int i = 0; i < SkillSlotCount; i++)
         {
@@ -132,7 +128,6 @@ public static class GameInput
         inventory = FindAction(map, "Inventory");
         quickSave = FindAction(map, "QuickSave");
         quickLoad = FindAction(map, "QuickLoad");
-        zoom = FindAction(map, "Zoom");
         devMenu = FindAction(map, "DevMenu");
 
         for (int i = 0; i < SkillSlotCount; i++)

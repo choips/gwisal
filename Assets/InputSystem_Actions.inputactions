@@ -133,15 +133,6 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "Zoom",
-                    "type": "PassThrough",
-                    "id": "e8bb995c-5a67-4988-b9f9-4d2a3d807c99",
-                    "expectedControlType": "Axis",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false
-                },
-                {
                     "name": "DevMenu",
                     "type": "Button",
                     "id": "5c710a55-4004-4825-a31b-e6fc4cc3653d",
@@ -391,17 +382,6 @@
                     "processors": "",
                     "groups": "Keyboard&Mouse",
                     "action": "QuickLoad",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "b0f34c0d-710a-49a4-8068-00c47abeacd9",
-                    "path": "<Mouse>/scroll/y",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "Keyboard&Mouse",
-                    "action": "Zoom",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

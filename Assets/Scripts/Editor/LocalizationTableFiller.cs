@@ -86,7 +86,7 @@ public static class LocalizationTableFiller
         { "enemy.agwi",               "아귀" },
         { "enemy.dokkaebi",           "도깨비" },
 
-        // 챔피언·하수인·유니크 이름표 (EnemySpawner)
+        // 챔피언·하수인·유니크 이름표 (MonsterFactory)
         { "enemy.champion_name",      "챔피언 {0}" },
         { "enemy.minion_name",        "{0} 하수인" },
         { "enemy.unique_name",        "{0} {1} {2}" },

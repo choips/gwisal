@@ -3,9 +3,12 @@ using UnityEngine;
 using UnityEngine.AI;            // NavMeshAgent 사용
 
 // 적의 체력(HP)과 AI를 관리하는 스크립트
-// - 플레이어가 인식 거리 안에 들어오면 쫓아가고, 공격 사거리 안이면 멈춰서 쿨타임마다 공격합니다.
+// - 처음에는 잠든 채 제자리에 있다가, 플레이어가 인식 거리 안에 들어오거나 맞으면 깨어나 쫓아갑니다.
+//   깨어나면 배치한 쪽(무리)에 알려 같은 무리 전체가 함께 깨어납니다.
+// - 깨어난 뒤에는 플레이어가 추격 포기 거리(BalanceConfig, 25m)보다 멀어질 때까지 쫓아오고,
+//   넘으면 제자리로 돌아가며 체력을 회복하고 다시 잠듭니다. 공격 사거리 안이면 멈춰서 쿨타임마다 공격합니다.
 // - 피격 시 체력이 깎이고, 체력이 0 이하가 되면 사망합니다.
-// - 배치기(EnemySpawner)가 생성 직후 귀신 데이터(EnemyData: 잡귀·강시 등)·몬스터 레벨과 등급(챔피언·유니크 등)을 적용합니다.
+// - 고정 배치 무리·무작위 배치기가 MonsterFactory로 꺼낸 직후 귀신 데이터(EnemyData: 잡귀·강시 등)·몬스터 레벨과 등급(챔피언·유니크 등)을 적용합니다.
 //   (아래 Inspector 숫자는 데이터가 적용되기 전의 기본값입니다)
 // - 오브젝트 풀로 재사용합니다: 죽거나 지역을 떠나면 파괴하지 않고 창고로 돌아가고(Release), 다시 꺼낼 때 OnEnable에서 상태를 초기화합니다.
 //   (씬에 직접 놓은 적은 풀에서 나온 것이 아니므로 예전처럼 파괴됨)
@@ -31,7 +34,7 @@ public class Enemy : MonoBehaviour
     [SerializeField] private float damageTextHeight = 1.5f;
 
     [Header("AI 설정")]
-    [Tooltip("이 거리 안에 플레이어가 들어오면 쫓아갑니다")]
+    [Tooltip("잠든 적은 이 거리 안에 플레이어가 들어오면 깨어나 쫓아갑니다 (깨어난 뒤에는 BalanceConfig의 추격 포기 거리까지 쫓아옴)")]
     public float aggroRange = 10f; // 플레이어 인식 거리
 
     [Tooltip("이 거리 안에 플레이어가 들어오면 멈춰서 공격합니다")]
@@ -83,13 +86,25 @@ public class Enemy : MonoBehaviour
     [Tooltip("좋은 등급(매직·레어·유니크) 아이템이 나올 확률 배율")]
     [SerializeField] private float lootRarityMultiplier = 1f;
 
+    [Header("AI 상태 (Play 중 확인용)")]
+    [Tooltip("잠듦: 제자리 대기 / 쫓아감: 싸우는 중 / 돌아감: 추격을 포기하고 제자리로")]
+    [SerializeField] private AIState aiState = AIState.Asleep;
+
+    // AI 상태 (잠듦 → 쫓아감 → (플레이어가 멀어지면) 돌아감 → 잠듦)
+    private enum AIState { Asleep, Chasing, Returning }
+
     private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor"); // 발광 색 속성
     private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");         // URP 기본 색 속성
 
+    private const float HomeArriveDistance = 0.5f; // 제자리에 이만큼(m) 가까워지면 도착으로 봄
+
     private NavMeshAgent agent;        // 적의 길찾기 이동 컴포넌트
     private PlayerStats player;        // 추적/공격할 플레이어
+    private BalanceConfig config;      // 추격 포기 거리·길찾기 간격 (플레이어가 가진 밸런스 숫자 모음)
     private IEnemyOwner owner;         // 이 적을 배치한 쪽 (배치기 또는 고정 배치 무리, 씬에 직접 놓은 적은 null)
     private float nextAttackTime = 0f; // 다음 공격이 가능한 시각
+    private float nextRepathTime;      // 다음에 길찾기 목적지를 다시 계산할 시각
+    private Vector3 homePosition;      // 처음 선 자리 (추격을 포기하면 돌아옴)
     private bool isDead;               // 이미 사망 처리되었는지 여부 (중복 파괴 방지)
 
     private Material[] flashMaterials;  // 번쩍임에 쓸 이 적 전용 재질들
@@ -112,6 +127,9 @@ public class Enemy : MonoBehaviour
 
     // 죽었는지 (풀로 돌아간 적은 null이 되지 않으므로, 타겟이 사라졌는지는 이것으로 확인)
     public bool IsDead => isDead;
+
+    // 깨어나 싸우는 중인지
+    public bool IsAwake => aiState == AIState.Chasing;
 
     private void Awake()
     {
@@ -160,7 +178,10 @@ public class Enemy : MonoBehaviour
         isDead = false;
         currentHealth = maxHealth;
         nextAttackTime = 0f;
+        nextRepathTime = 0f;
         knockbackEndTime = 0f;
+        aiState = AIState.Asleep;
+        homePosition = transform.position; // 풀은 위치를 먼저 정한 뒤 켜므로 지금 위치 = 배치된 자리
         transform.localScale = baseScale;
         rank = MonsterRank.Normal;
         lootDropCount = 1;
@@ -241,7 +262,11 @@ public class Enemy : MonoBehaviour
         if (player == null)
         {
             Debug.LogWarning($"{gameObject.name}: 씬에서 PlayerStats를 찾지 못해 AI가 동작하지 않습니다.");
+            return;
         }
+
+        // PlayerStats는 Awake에서 능력치 계산기를 만들므로 여기서는 항상 준비되어 있음
+        if (player.Stats != null) config = player.Stats.Config;
     }
 
     private void Update()
@@ -257,8 +282,7 @@ public class Enemy : MonoBehaviour
             return;
         }
 
-        // 플레이어가 없거나 이미 죽었다면 제자리에 멈춤
-        if (player == null || player.IsDead)
+        if (player == null || config == null)
         {
             StopMoving();
             return;
@@ -269,28 +293,92 @@ public class Enemy : MonoBehaviour
         toPlayer.y = 0f;
         float distance = toPlayer.magnitude;
 
+        switch (aiState)
+        {
+            case AIState.Asleep:
+                if (!player.IsDead && distance <= aggroRange) Alert();
+                break;
+
+            case AIState.Returning:
+                if (!player.IsDead && distance <= aggroRange) Alert();
+                else if (HasArrivedHome())
+                {
+                    aiState = AIState.Asleep;
+                    currentHealth = maxHealth;
+                    StopMoving();
+                }
+                else
+                {
+                    // 돌아가는 동안 체력이 차오름
+                    currentHealth = Mathf.Min(maxHealth, currentHealth + maxHealth * config.enemyReturnHealPerSecond * Time.deltaTime);
+                }
+                break;
+        }
+
+        if (aiState == AIState.Chasing) UpdateChase(toPlayer, distance);
+    }
+
+    // 싸우는 중: 공격 사거리 안이면 멈춰서 공격, 밖이면 쫓아감, 추격 포기 거리를 넘거나 플레이어가 쓰러지면 돌아감
+    private void UpdateChase(Vector3 toPlayer, float distance)
+    {
+        if (player.IsDead || distance > config.enemyLeashRange)
+        {
+            BeginReturn();
+            return;
+        }
+
         if (distance <= attackRange)
         {
-            // b. 공격 사거리 안: 멈추고 플레이어를 바라보며 쿨타임마다 공격
             StopMoving();
             LookAt(toPlayer);
+            nextRepathTime = 0f; // 플레이어가 사거리를 벗어나면 바로 다시 쫓아가도록
 
             if (Time.time >= nextAttackTime)
             {
                 AttackPlayer();
             }
+            return;
         }
-        else if (distance <= aggroRange)
+
+        // 길찾기는 비싸므로 매 프레임이 아니라 정해진 간격마다 (귀신마다 간격이 달라 같은 프레임에 몰리지 않음)
+        if (Time.time >= nextRepathTime)
         {
-            // a. 인식 거리 안, 공격 사거리 밖: 플레이어를 향해 이동
             agent.isStopped = false;
             agent.SetDestination(player.transform.position);
+            nextRepathTime = Time.time + Random.Range(config.enemyRepathIntervalMin, config.enemyRepathIntervalMax);
         }
-        else
-        {
-            // 인식 거리 밖: 제자리에 대기
-            StopMoving();
-        }
+    }
+
+    // 깨어나 싸움을 시작하고, 배치한 쪽(무리)에 알려 같은 무리를 모두 깨움
+    private void Alert()
+    {
+        if (isDead || aiState == AIState.Chasing) return;
+
+        WakeUp();
+        if (owner != null) owner.OnEnemyAlerted(this);
+    }
+
+    // 깨어나 싸움 시작 (무리가 같은 무리 구성원을 깨울 때도 호출 — 다시 무리에 알리지는 않음)
+    public void WakeUp()
+    {
+        if (isDead || aiState == AIState.Chasing) return;
+
+        aiState = AIState.Chasing;
+        nextRepathTime = 0f; // 깨어나자마자 길찾기
+    }
+
+    // 추격을 포기하고 처음 선 자리로 돌아가기 시작 (돌아가는 동안 Update에서 체력 회복)
+    private void BeginReturn()
+    {
+        aiState = AIState.Returning;
+        agent.isStopped = false;
+        agent.SetDestination(homePosition);
+    }
+
+    private bool HasArrivedHome()
+    {
+        if (agent.pathPending) return false;
+        return agent.remainingDistance <= agent.stoppingDistance + HomeArriveDistance;
     }
 
     // 플레이어에게 데미지를 주고 다음 공격 시각을 설정
@@ -337,6 +425,9 @@ public class Enemy : MonoBehaviour
 
         StartFlash();
         StartKnockback(hitFrom, isCritical);
+
+        // 맞으면 거리와 상관없이 깨어나고 같은 무리도 깨움 (한 방에 죽어도 무리는 깨어남)
+        Alert();
 
         if (currentHealth <= 0f)
         {
@@ -419,6 +510,7 @@ public class Enemy : MonoBehaviour
         float distance = knockbackDistance * (isCritical ? criticalKnockbackMultiplier : 1f);
         knockbackVelocity = direction.normalized * (distance / knockbackDuration);
         knockbackEndTime = Time.time + knockbackDuration;
+        nextRepathTime = 0f; // 밀려나기가 끝나면 바로 다시 쫓아가도록
 
         StopMoving();
     }
@@ -473,7 +565,7 @@ public class Enemy : MonoBehaviour
         ObjectPoolManager.Release(gameObject);
     }
 
-    // Scene 뷰에서 적을 선택하면 인식 거리(노랑)와 공격 사거리(빨강)를 원으로 표시
+    // Scene 뷰에서 적을 선택하면 인식 거리(노랑)와 공격 사거리(빨강)를 원으로 표시, Play 중에는 추격 포기 거리(회색)와 제자리(초록)도
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
@@ -481,5 +573,16 @@ public class Enemy : MonoBehaviour
 
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, attackRange);
+
+        if (!Application.isPlaying) return;
+
+        if (config != null)
+        {
+            Gizmos.color = Color.gray;
+            Gizmos.DrawWireSphere(transform.position, config.enemyLeashRange);
+        }
+
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireSphere(homePosition, 0.5f);
     }
 }

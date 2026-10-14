@@ -44,7 +44,7 @@ public class BalanceConfig : ScriptableObject
     [Tooltip("레벨 1마다 적 피해에 곱해지는 배율 (1.09 = 9%씩, 레벨 13 ≈ 2.8배)")]
     [Min(1f)] public float enemyDamageGrowth = 1.09f;
 
-    [Header("몬스터 등급: 일반 대비 능력 배율 (체력·공격력·경험치) — 고정 배치 무리(EnemyPack)에 적용")]
+    [Header("몬스터 등급: 일반 대비 능력 배율 (체력·공격력·경험치) — 고정 배치 무리·무작위 배치기에 적용")]
     [Min(0f)] public float championPower = 2f;
     [Min(0f)] public float uniquePower = 3f;
     [Min(0f)] public float minionPower = 1.5f;
@@ -59,6 +59,19 @@ public class BalanceConfig : ScriptableObject
     [Min(0f)] public float championRarityBonus = 2f;
     [Min(0f)] public float uniqueRarityBonus = 3f;
     [Min(0f)] public float minionRarityBonus = 1.5f;
+
+    [Header("귀신 AI")]
+    [Tooltip("추격 포기 거리(m): 싸움이 붙은 귀신은 플레이어가 이보다 멀어질 때까지 계속 쫓아오고, 넘으면 제자리로 돌아감 (엑셀 EnemyLeashRange)")]
+    [Min(0f)] public float enemyLeashRange = 25f;
+
+    [Tooltip("쫓아갈 때 길찾기 목적지를 다시 계산하는 간격(초) 최소 — 귀신마다 최소~최대 사이 무작위라 시점이 엇갈림 (귀신 떼 성능 대비)")]
+    [Min(0.05f)] public float enemyRepathIntervalMin = 0.2f;
+
+    [Tooltip("길찾기 목적지를 다시 계산하는 간격(초) 최대")]
+    [Min(0.05f)] public float enemyRepathIntervalMax = 0.3f;
+
+    [Tooltip("추격을 포기하고 돌아가는 동안 초당 회복하는 체력 (최대 체력 비율, 0.5 = 초당 50% → 2초면 가득). 제자리에 도착하면 무조건 가득 참")]
+    [Min(0f)] public float enemyReturnHealPerSecond = 0.5f;
 
     [Header("상한 (비율: 0.75 = 75%)")]
     [Range(0f, 1f)] public float critChanceCap = 0.75f;        // 치명타 확률

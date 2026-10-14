@@ -4,12 +4,14 @@ using TMPro;                     // TMP_FontAsset 사용 (머리 위 이름표 �
 using UnityEngine;
 using UnityEngine.AI;            // NavMesh 사용
 
-// 몬스터 무리 배치기 (디아블로 방식)
+// 몬스터 무리 무작위 배치기 (디아블로 방식) — 지금은 귀문 균열용으로 보관 (스토리 지역은 고정 배치 무리 EnemyPack)
 // 게임이 시작되면 맵(NavMesh) 전체에 몬스터 무리를 무작위 개수로 한 번 배치합니다. (다시 채우지 않음)
 // - 일반 무리: 같은 종류의 일반 몬스터 여러 마리
-// - 챔피언 무리: 챔피언 2~4마리 (일반의 2배 능력, 파란빛, 이름표 "챔피언 ○○")
-// - 유니크 무리: 이름 있는 유니크 1마리 (3배, 금빛) + 하수인 3~4마리 (1.5배)
+// - 챔피언 무리: 챔피언 2~4마리 (이름표 "챔피언 ○○")
+// - 유니크 무리: 이름 있는 유니크 1마리 + 하수인 3~4마리
 // 무리마다 귀신 종류(잡귀·강시·아귀·도깨비 — EnemyData 파일)를 출현 가중치 확률로 하나 골라 그 종류로만 채웁니다.
+// 몬스터 만들기(등급 배율·색·크기·이름표)는 MonsterFactory, 등급 배율 숫자는 BalanceConfig에서 가져옵니다.
+// 한 마리가 깨어나면 같은 무리가 함께 깨어납니다.
 public class EnemySpawner : MonoBehaviour, IEnemyOwner
 {
     [Header("몬스터")]
@@ -19,7 +21,7 @@ public class EnemySpawner : MonoBehaviour, IEnemyOwner
     [Tooltip("출현할 귀신 종류 (데이터 파일 Assets/Data/Enemies + 출현 가중치)")]
     [SerializeField] private List<EnemySpawnEntry> enemyTypes = new List<EnemySpawnEntry>();
 
-    [Tooltip("이 배치기가 만드는 몬스터의 레벨 (레벨마다 체력 ×1.12·피해 ×1.09, 플레이어 방어력 계산에도 쓰임)")]
+    [Tooltip("이 배치기가 만드는 몬스터의 레벨 (체력·피해 배율, 떨어지는 아이템 레벨)")]
     [Min(1)] [SerializeField] private int monsterLevel = 1;
 
     [Header("일반 무리")]
@@ -35,31 +37,11 @@ public class EnemySpawner : MonoBehaviour, IEnemyOwner
     [Tooltip("챔피언 무리 하나의 챔피언 수")]
     [SerializeField] private IntRange championPackSize = new IntRange(2, 4);
 
-    [Tooltip("일반 몬스터 대비 능력 배율 (체력·공격력·경험치)")]
-    [SerializeField] private float championPower = 2f;
-
-    [Tooltip("처치 시 떨어뜨리는 장비 개수")]
-    [SerializeField] private int championLootDrops = 2;
-
-    [Tooltip("좋은 등급(매직·레어·유니크)이 나올 확률 배율")]
-    [SerializeField] private float championRarityBonus = 2f;
-
     [Header("유니크 무리")]
     [SerializeField] private IntRange uniquePackCount = new IntRange(1, 2);
 
     [Tooltip("유니크 하나를 따르는 하수인 수")]
     [SerializeField] private IntRange minionCount = new IntRange(3, 4);
-
-    [Tooltip("유니크의 능력 배율 (체력·공격력·경험치)")]
-    [SerializeField] private float uniquePower = 3f;
-
-    [Tooltip("하수인의 능력 배율 (체력·공격력·경험치)")]
-    [SerializeField] private float minionPower = 1.5f;
-
-    [SerializeField] private int uniqueLootDrops = 3;
-    [SerializeField] private float uniqueRarityBonus = 3f;
-    [SerializeField] private int minionLootDrops = 1;
-    [SerializeField] private float minionRarityBonus = 1.5f;
 
     [Header("배치")]
     [Tooltip("플레이어 시작 위치와 이 거리(m)보다 가까운 곳에는 무리를 두지 않음")]
@@ -80,14 +62,6 @@ public class EnemySpawner : MonoBehaviour, IEnemyOwner
     [Header("머리 위 이름표 (챔피언·유니크·하수인만)")]
     [Tooltip("비워 두면 Enemy 프리팹의 LootDropper에 지정된 글꼴(NotoSansKR)을 사용")]
     [SerializeField] private TMP_FontAsset labelFont;
-    [SerializeField] private float labelFontSize = 3.5f;
-
-    [Tooltip("몸 중심에서 이름표까지의 높이(m), 몸 크기에 맞춰 자동으로 늘어남")]
-    [SerializeField] private float labelHeight = 1.7f;
-
-    [SerializeField] private Color championColor = new Color(0.4f, 0.6f, 1f);   // 파랑
-    [SerializeField] private Color uniqueColor = new Color(1f, 0.8f, 0.2f);     // 금색
-    [SerializeField] private Color minionColor = new Color(0.85f, 0.85f, 0.85f); // 밝은 회색
 
     [Header("상태 (Play 중 확인용)")]
     [Tooltip("이 배치기가 만든 몬스터 중 살아 있는 수")]
@@ -95,19 +69,14 @@ public class EnemySpawner : MonoBehaviour, IEnemyOwner
 
     public int CurrentEnemyCount => currentEnemyCount;
 
-    // 유니크 이름을 만들 때 쓰는 앞말·뒷말 (예: "천년 묵은 강시 왕")
-    // 화면 글자 표의 enemy.unique_prefix.0~5, enemy.unique_suffix.0~2 (표에 줄을 늘리면 이 숫자도 함께 늘림)
-    private const int UniquePrefixCount = 6;
-    private const int UniqueSuffixCount = 3;
-
     private readonly List<Vector3> packCenters = new List<Vector3>(); // 이미 배치한 무리 중심들
     private readonly List<Enemy> spawnedEnemies = new List<Enemy>();  // 이 배치기가 꺼낸 살아 있는 적 (지역을 떠날 때 창고로 돌려보냄)
+    private readonly Dictionary<Enemy, List<Enemy>> packByEnemy = new Dictionary<Enemy, List<Enemy>>(); // 적 → 그 적이 속한 무리 (함께 깨우기용)
     private readonly List<EnemySpawnEntry> activeTypes = new List<EnemySpawnEntry>(); // 실제로 뽑을 귀신 종류 (빈 칸 제외)
     private Bounds mapBounds;     // NavMesh 전체를 감싸는 범위
     private Transform player;
+    private BalanceConfig config; // 레벨 성장·등급 배율 (플레이어가 가진 밸런스 숫자 모음)
     private bool hasPopulated;    // 배치를 마쳤는지 (마지막 한 마리 처치 알림용)
-    private float levelHealthMultiplier = 1f; // 몬스터 레벨에 따른 체력 배율
-    private float levelDamageMultiplier = 1f; // 몬스터 레벨에 따른 피해 배율
 
     // 적은 풀(DontDestroyOnLoad의 [ObjectPool]) 아래에 있어 지역 씬을 내려도 함께 사라지지 않으므로,
     // 배치기가 사라질 때(= 지역을 떠날 때) 남은 적을 직접 창고로 돌려보냄
@@ -120,6 +89,7 @@ public class EnemySpawner : MonoBehaviour, IEnemyOwner
             if (spawnedEnemies[i] != null) spawnedEnemies[i].Despawn();
         }
         spawnedEnemies.Clear();
+        packByEnemy.Clear();
     }
 
     // 지역 씬이 막 불러와진 순간에는 플레이어가 아직 입구로 옮겨지기 전이므로,
@@ -140,21 +110,17 @@ public class EnemySpawner : MonoBehaviour, IEnemyOwner
         }
 
         PlayerStats stats = FindFirstObjectByType<PlayerStats>();
-        if (stats != null) player = stats.transform;
+        if (stats != null)
+        {
+            player = stats.transform;
+            if (stats.Stats != null) config = stats.Stats.Config;
+        }
 
         BuildActiveTypes();
         if (activeTypes.Count == 0)
         {
             Debug.LogWarning($"{gameObject.name}: 출현할 귀신 종류가 없어 몬스터를 배치하지 않습니다. Enemy Types에 데이터 파일을 넣어 주세요.");
             yield break;
-        }
-
-        // 몬스터 레벨 배율은 플레이어가 가진 밸런스 숫자 모음(BalanceConfig)에서 계산
-        BalanceConfig config = stats != null && stats.Stats != null ? stats.Stats.Config : null;
-        if (config != null)
-        {
-            levelHealthMultiplier = config.GetEnemyHealthMultiplier(monsterLevel);
-            levelDamageMultiplier = config.GetEnemyDamageMultiplier(monsterLevel);
         }
 
         PopulateMap();
@@ -210,72 +176,51 @@ public class EnemySpawner : MonoBehaviour, IEnemyOwner
     private void SpawnNormalPack(Vector3 center)
     {
         EnemyData data = PickEnemyType();
+        List<Enemy> pack = new List<Enemy>();
         int size = normalPackSize.Roll();
         for (int i = 0; i < size; i++)
         {
-            SpawnMonster(GetMemberPosition(center), data, MonsterRank.Normal, null, Color.white);
+            SpawnMonster(GetMemberPosition(center), data, MonsterRank.Normal, null, pack);
         }
     }
 
     private void SpawnChampionPack(Vector3 center)
     {
         EnemyData data = PickEnemyType();
-        string championName = Loc.Format("enemy.champion_name", data.LocalizedName);
+        List<Enemy> pack = new List<Enemy>();
+        string championName = MonsterFactory.MakeChampionName(data);
         int size = championPackSize.Roll();
         for (int i = 0; i < size; i++)
         {
-            SpawnMonster(GetMemberPosition(center), data, MonsterRank.Champion, championName, championColor);
+            SpawnMonster(GetMemberPosition(center), data, MonsterRank.Champion, championName, pack);
         }
     }
 
     private void SpawnUniquePack(Vector3 center)
     {
         EnemyData data = PickEnemyType();
-        string uniqueName = MakeUniqueName(data);
+        List<Enemy> pack = new List<Enemy>();
 
-        SpawnMonster(center, data, MonsterRank.Unique, uniqueName, uniqueColor);
+        SpawnMonster(center, data, MonsterRank.Unique, MonsterFactory.MakeUniqueName(data), pack);
 
-        string minionName = Loc.Format("enemy.minion_name", data.LocalizedName);
+        string minionName = MonsterFactory.MakeMinionName(data);
         int minions = minionCount.Roll();
         for (int i = 0; i < minions; i++)
         {
-            SpawnMonster(GetMemberPosition(center), data, MonsterRank.Minion, minionName, minionColor);
+            SpawnMonster(GetMemberPosition(center), data, MonsterRank.Minion, minionName, pack);
         }
     }
 
-    // 몬스터 한 마리 생성 → 데이터·레벨 적용 → 등급 적용 → 모양·이름표
-    private void SpawnMonster(Vector3 position, EnemyData data, MonsterRank rank, string labelText, Color labelColor)
+    // 몬스터 한 마리 생성 (MonsterFactory) → 이 배치기와 무리에 등록
+    private void SpawnMonster(Vector3 position, EnemyData data, MonsterRank rank, string labelText, List<Enemy> pack)
     {
-        Quaternion rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-        GameObject monsterObject = ObjectPoolManager.Spawn(enemyPrefab, position, rotation);
-        if (monsterObject == null) return;
-
-        if (!monsterObject.TryGetComponent(out Enemy enemy))
-        {
-            Debug.LogWarning($"{enemyPrefab.name} 프리팹에 Enemy 스크립트가 없어 몬스터로 쓸 수 없습니다.");
-            ObjectPoolManager.Release(monsterObject);
-            return;
-        }
-
-        string displayName = string.IsNullOrEmpty(labelText) ? data.LocalizedName : labelText;
-        monsterObject.name = displayName;
+        Enemy enemy = MonsterFactory.Spawn(enemyPrefab, data, monsterLevel, rank, labelText, position, config, labelFont);
+        if (enemy == null) return;
 
         enemy.SetOwner(this);
-        enemy.ApplyData(data, monsterLevel, levelHealthMultiplier, levelDamageMultiplier);
-        enemy.ApplyRank(rank, GetPower(rank), GetLootDrops(rank), GetRarityBonus(rank));
-        enemy.SetBodyColor(GetBodyColor(data.bodyColor, rank));
-
-        float rankScale = GetRankScale(rank);
-        Vector3 bodyScale = Vector3.Scale(monsterObject.transform.localScale, data.bodyScale) * rankScale;
-        monsterObject.transform.localScale = bodyScale;
-
-        if (!string.IsNullOrEmpty(labelText) && labelFont != null)
-        {
-            monsterObject.AddComponent<ItemNameLabel>().Setup(
-                labelText, labelColor, labelFont, labelFontSize, labelHeight * bodyScale.y);
-        }
-
         spawnedEnemies.Add(enemy);
+        pack.Add(enemy);
+        packByEnemy[enemy] = pack;
         currentEnemyCount++;
     }
 
@@ -283,11 +228,28 @@ public class EnemySpawner : MonoBehaviour, IEnemyOwner
     public void OnEnemyDied(Enemy enemy)
     {
         spawnedEnemies.Remove(enemy);
+        if (packByEnemy.TryGetValue(enemy, out List<Enemy> pack))
+        {
+            pack.Remove(enemy);
+            packByEnemy.Remove(enemy);
+        }
+
         currentEnemyCount = Mathf.Max(currentEnemyCount - 1, 0);
 
         if (hasPopulated && currentEnemyCount == 0)
         {
             NotificationUI.Show(Loc.Get("notice.area_cleared"), NotificationUI.NoticeType.Success);
+        }
+    }
+
+    // 한 마리가 깨어나면 같은 무리를 모두 깨움
+    public void OnEnemyAlerted(Enemy enemy)
+    {
+        if (!packByEnemy.TryGetValue(enemy, out List<Enemy> pack)) return;
+
+        foreach (Enemy member in pack)
+        {
+            if (member != null && member != enemy) member.WakeUp();
         }
     }
 
@@ -362,68 +324,6 @@ public class EnemySpawner : MonoBehaviour, IEnemyOwner
             if (roll < 0f) return entry.data;
         }
         return activeTypes[activeTypes.Count - 1].data; // 계산 오차로 끝까지 못 고른 경우 마지막 종류
-    }
-
-    private static string MakeUniqueName(EnemyData data)
-    {
-        string prefix = Loc.Get("enemy.unique_prefix." + Random.Range(0, UniquePrefixCount));
-        string suffix = Loc.Get("enemy.unique_suffix." + Random.Range(0, UniqueSuffixCount));
-        return Loc.Format("enemy.unique_name", prefix, data.LocalizedName, suffix);
-    }
-
-    private float GetPower(MonsterRank rank)
-    {
-        switch (rank)
-        {
-            case MonsterRank.Champion: return championPower;
-            case MonsterRank.Unique: return uniquePower;
-            case MonsterRank.Minion: return minionPower;
-            default: return 1f;
-        }
-    }
-
-    private int GetLootDrops(MonsterRank rank)
-    {
-        switch (rank)
-        {
-            case MonsterRank.Champion: return championLootDrops;
-            case MonsterRank.Unique: return uniqueLootDrops;
-            case MonsterRank.Minion: return minionLootDrops;
-            default: return 1;
-        }
-    }
-
-    private float GetRarityBonus(MonsterRank rank)
-    {
-        switch (rank)
-        {
-            case MonsterRank.Champion: return championRarityBonus;
-            case MonsterRank.Unique: return uniqueRarityBonus;
-            case MonsterRank.Minion: return minionRarityBonus;
-            default: return 1f;
-        }
-    }
-
-    // 챔피언은 파란빛, 유니크는 금빛이 돌게 몸 색을 섞음
-    private Color GetBodyColor(Color typeColor, MonsterRank rank)
-    {
-        switch (rank)
-        {
-            case MonsterRank.Champion: return Color.Lerp(typeColor, championColor, 0.5f);
-            case MonsterRank.Unique: return Color.Lerp(typeColor, uniqueColor, 0.5f);
-            default: return typeColor;
-        }
-    }
-
-    // 강한 등급일수록 조금 더 크게
-    private static float GetRankScale(MonsterRank rank)
-    {
-        switch (rank)
-        {
-            case MonsterRank.Champion: return 1.15f;
-            case MonsterRank.Unique: return 1.35f;
-            default: return 1f;
-        }
     }
 
     // 높이 차이는 무시한 바닥 기준 거리

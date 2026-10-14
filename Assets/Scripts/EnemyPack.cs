@@ -91,6 +91,15 @@ public class EnemyPack : MonoBehaviour, IEnemyOwner
         if (region != null) region.OnPackMemberDied();
     }
 
+    // 구성원 한 마리가 깨어나면(플레이어가 다가오거나 맞음) 무리 전체를 깨움
+    public void OnEnemyAlerted(Enemy enemy)
+    {
+        foreach (Enemy member in members)
+        {
+            if (member != null && member != enemy) member.WakeUp();
+        }
+    }
+
     // 적은 풀(DontDestroyOnLoad) 아래에 있어 지역 씬과 함께 사라지지 않으므로, 지역을 떠날 때 남은 구성원을 창고로 돌려보냄
     private void OnDestroy()
     {

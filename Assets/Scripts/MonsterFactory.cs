@@ -3,7 +3,7 @@ using UnityEngine;
 
 // 몬스터 한 마리 만들기 (씬에 붙이지 않는 정적 클래스)
 // 풀에서 꺼냄 → 귀신 데이터·레벨 적용 → 등급 적용(BalanceConfig의 배율) → 몸 색·크기 → 머리 위 이름표
-// 고정 배치 무리(EnemyPack)가 사용합니다. (무작위 배치기 EnemySpawner는 아직 자기 Inspector 숫자를 사용)
+// 고정 배치 무리(EnemyPack)와 무작위 배치기(EnemySpawner)가 함께 사용합니다.
 public static class MonsterFactory
 {
     public static readonly Color ChampionColor = new Color(0.4f, 0.6f, 1f);   // 파랑

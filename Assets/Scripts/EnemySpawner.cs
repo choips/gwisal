@@ -10,7 +10,7 @@ using UnityEngine.AI;            // NavMesh 사용
 // - 챔피언 무리: 챔피언 2~4마리 (일반의 2배 능력, 파란빛, 이름표 "챔피언 ○○")
 // - 유니크 무리: 이름 있는 유니크 1마리 (3배, 금빛) + 하수인 3~4마리 (1.5배)
 // 무리마다 귀신 종류(잡귀·강시·아귀·도깨비 — EnemyData 파일)를 출현 가중치 확률로 하나 골라 그 종류로만 채웁니다.
-public class EnemySpawner : MonoBehaviour
+public class EnemySpawner : MonoBehaviour, IEnemyOwner
 {
     [Header("몬스터")]
     [Tooltip("생성할 적 프리팹 (Enemy 스크립트와 NavMeshAgent가 붙어 있어야 합니다)")]
@@ -102,7 +102,6 @@ public class EnemySpawner : MonoBehaviour
 
     private readonly List<Vector3> packCenters = new List<Vector3>(); // 이미 배치한 무리 중심들
     private readonly List<Enemy> spawnedEnemies = new List<Enemy>();  // 이 배치기가 꺼낸 살아 있는 적 (지역을 떠날 때 창고로 돌려보냄)
-    private static bool isQuitting; // 게임(또는 에디터 Play)이 끝나는 중인지 — 이때는 정리하지 않음
     private readonly List<EnemySpawnEntry> activeTypes = new List<EnemySpawnEntry>(); // 실제로 뽑을 귀신 종류 (빈 칸 제외)
     private Bounds mapBounds;     // NavMesh 전체를 감싸는 범위
     private Transform player;
@@ -110,24 +109,11 @@ public class EnemySpawner : MonoBehaviour
     private float levelHealthMultiplier = 1f; // 몬스터 레벨에 따른 체력 배율
     private float levelDamageMultiplier = 1f; // 몬스터 레벨에 따른 피해 배율
 
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics()
-    {
-        isQuitting = false;
-        Application.quitting -= OnApplicationQuitting;
-        Application.quitting += OnApplicationQuitting;
-    }
-
-    private static void OnApplicationQuitting()
-    {
-        isQuitting = true;
-    }
-
     // 적은 풀(DontDestroyOnLoad의 [ObjectPool]) 아래에 있어 지역 씬을 내려도 함께 사라지지 않으므로,
     // 배치기가 사라질 때(= 지역을 떠날 때) 남은 적을 직접 창고로 돌려보냄
     private void OnDestroy()
     {
-        if (isQuitting) return;
+        if (ObjectPoolManager.IsShuttingDown) return;
 
         for (int i = spawnedEnemies.Count - 1; i >= 0; i--)
         {
@@ -274,7 +260,7 @@ public class EnemySpawner : MonoBehaviour
         string displayName = string.IsNullOrEmpty(labelText) ? data.LocalizedName : labelText;
         monsterObject.name = displayName;
 
-        enemy.SetSpawner(this);
+        enemy.SetOwner(this);
         enemy.ApplyData(data, monsterLevel, levelHealthMultiplier, levelDamageMultiplier);
         enemy.ApplyRank(rank, GetPower(rank), GetLootDrops(rank), GetRarityBonus(rank));
         enemy.SetBodyColor(GetBodyColor(data.bodyColor, rank));

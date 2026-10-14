@@ -44,6 +44,22 @@ public class BalanceConfig : ScriptableObject
     [Tooltip("레벨 1마다 적 피해에 곱해지는 배율 (1.09 = 9%씩, 레벨 13 ≈ 2.8배)")]
     [Min(1f)] public float enemyDamageGrowth = 1.09f;
 
+    [Header("몬스터 등급: 일반 대비 능력 배율 (체력·공격력·경험치) — 고정 배치 무리(EnemyPack)에 적용")]
+    [Min(0f)] public float championPower = 2f;
+    [Min(0f)] public float uniquePower = 3f;
+    [Min(0f)] public float minionPower = 1.5f;
+
+    [Header("몬스터 등급: 처치 시 떨어뜨리는 장비 개수")]
+    [Min(0)] public int normalLootDrops = 1;
+    [Min(0)] public int championLootDrops = 2;
+    [Min(0)] public int uniqueLootDrops = 3;
+    [Min(0)] public int minionLootDrops = 1;
+
+    [Header("몬스터 등급: 좋은 등급(매직·레어·유니크) 아이템 확률 배율")]
+    [Min(0f)] public float championRarityBonus = 2f;
+    [Min(0f)] public float uniqueRarityBonus = 3f;
+    [Min(0f)] public float minionRarityBonus = 1.5f;
+
     [Header("상한 (비율: 0.75 = 75%)")]
     [Range(0f, 1f)] public float critChanceCap = 0.75f;        // 치명타 확률
     [Min(0f)] public float attackSpeedCap = 1f;                // 공격 속도 (+100%)
@@ -78,6 +94,42 @@ public class BalanceConfig : ScriptableObject
     public float GetEnemyDamageMultiplier(int monsterLevel)
     {
         return Mathf.Pow(enemyDamageGrowth, Mathf.Max(0, monsterLevel - 1));
+    }
+
+    // 몬스터 등급별 능력 배율 (일반은 1)
+    public float GetRankPower(MonsterRank rank)
+    {
+        switch (rank)
+        {
+            case MonsterRank.Champion: return championPower;
+            case MonsterRank.Unique: return uniquePower;
+            case MonsterRank.Minion: return minionPower;
+            default: return 1f;
+        }
+    }
+
+    // 몬스터 등급별 처치 시 장비 개수
+    public int GetRankLootDrops(MonsterRank rank)
+    {
+        switch (rank)
+        {
+            case MonsterRank.Champion: return championLootDrops;
+            case MonsterRank.Unique: return uniqueLootDrops;
+            case MonsterRank.Minion: return minionLootDrops;
+            default: return normalLootDrops;
+        }
+    }
+
+    // 몬스터 등급별 좋은 등급 아이템 확률 배율 (일반은 1)
+    public float GetRankRarityBonus(MonsterRank rank)
+    {
+        switch (rank)
+        {
+            case MonsterRank.Champion: return championRarityBonus;
+            case MonsterRank.Unique: return uniqueRarityBonus;
+            case MonsterRank.Minion: return minionRarityBonus;
+            default: return 1f;
+        }
     }
 
     // 능력치의 상한 (상한이 없으면 아주 큰 수)

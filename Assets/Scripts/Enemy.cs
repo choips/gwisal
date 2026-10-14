@@ -88,7 +88,7 @@ public class Enemy : MonoBehaviour
 
     private NavMeshAgent agent;        // 적의 길찾기 이동 컴포넌트
     private PlayerStats player;        // 추적/공격할 플레이어
-    private EnemySpawner spawner;      // 이 적을 생성한 스포너 (씬에 직접 배치한 적은 null)
+    private IEnemyOwner owner;         // 이 적을 배치한 쪽 (배치기 또는 고정 배치 무리, 씬에 직접 놓은 적은 null)
     private float nextAttackTime = 0f; // 다음 공격이 가능한 시각
     private bool isDead;               // 이미 사망 처리되었는지 여부 (중복 파괴 방지)
 
@@ -168,10 +168,10 @@ public class Enemy : MonoBehaviour
         StopFlash();
     }
 
-    // 창고로 돌아갈 때: 배치기 연결을 끊고, 배치기가 붙인 머리 위 이름표를 떼어 냄 (다음에 꺼낼 때 새 이름표를 붙임)
+    // 창고로 돌아갈 때: 배치한 쪽과의 연결을 끊고, 배치기가 붙인 머리 위 이름표를 떼어 냄 (다음에 꺼낼 때 새 이름표를 붙임)
     private void OnDisable()
     {
-        spawner = null;
+        owner = null;
         if (TryGetComponent(out ItemNameLabel nameLabel)) Destroy(nameLabel);
     }
 
@@ -182,10 +182,10 @@ public class Enemy : MonoBehaviour
         ObjectPoolManager.Release(gameObject);
     }
 
-    // 스포너가 적을 생성한 직후 호출해서 자신을 알려 줌
-    public void SetSpawner(EnemySpawner owner)
+    // 배치기·고정 배치 무리가 적을 꺼낸 직후 호출해서 자신을 알려 줌 (죽으면 OnEnemyDied로 알림)
+    public void SetOwner(IEnemyOwner newOwner)
     {
-        spawner = owner;
+        owner = newOwner;
     }
 
     // 귀신 데이터 적용: 생성 직후 배치기가 호출해서 데이터 파일의 능력치로 바꿈 (등급 배율은 이 다음에 ApplyRank로)
@@ -463,10 +463,10 @@ public class Enemy : MonoBehaviour
             lootDropper.DropItem(transform.position, lootDropCount, lootRarityMultiplier, level);
         }
 
-        // 자신을 생성한 스포너에게 사망을 알려 적 수를 줄이게 함
-        if (spawner != null)
+        // 자신을 배치한 쪽에 사망을 알려 남은 수를 줄이게 함
+        if (owner != null)
         {
-            spawner.OnEnemyDied(this);
+            owner.OnEnemyDied(this);
         }
 
         // 파괴하지 않고 창고로 돌려보냄 (풀에서 나오지 않은 적은 파괴됨)

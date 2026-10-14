@@ -18,6 +18,9 @@ public static class ObjectPoolManager
     private static Transform activeRoot;  // 사용 중인 오브젝트를 모아 두는 곳 ([ObjectPool])
     private static Transform storageRoot; // 쉬는 오브젝트를 모아 두는 꺼진 창고 ([ObjectPool]/Storage)
 
+    // 게임(또는 에디터 Play)이 끝나는 중인지 — 이때는 모든 오브젝트가 지워지므로 창고로 돌려보내는 정리를 하지 않음
+    public static bool IsShuttingDown { get; private set; }
+
     // 플레이를 시작할 때마다 이전 플레이의 기록을 비움 (에디터 설정에 따라 정적 변수가 남아 있을 수 있음)
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
@@ -25,6 +28,15 @@ public static class ObjectPoolManager
         storedByPrefab.Clear();
         activeRoot = null;
         storageRoot = null;
+
+        IsShuttingDown = false;
+        Application.quitting -= OnApplicationQuitting;
+        Application.quitting += OnApplicationQuitting;
+    }
+
+    private static void OnApplicationQuitting()
+    {
+        IsShuttingDown = true;
     }
 
     // 프리팹의 복제본을 꺼냄 (창고에 쉬는 것이 있으면 재사용, 없으면 새로 만듦)

@@ -184,7 +184,7 @@ public class EnemySpawner : MonoBehaviour, IEnemyOwner
         int normalPacks = PlacePacks(normalPackCount.Roll(), SpawnNormalPack);
 
         hasPopulated = true;
-        Debug.Log($"몬스터 배치 완료 (레벨 {monsterLevel}): 일반 무리 {normalPacks}개, 챔피언 무리 {championPacks}개, 유니크 무리 {uniquePacks}개 (총 {currentEnemyCount}마리)");
+        GameLog.Region($"몬스터 배치 완료 (레벨 {monsterLevel}): 일반 무리 {normalPacks}개, 챔피언 무리 {championPacks}개, 유니크 무리 {uniquePacks}개 (총 {currentEnemyCount}마리)");
         NotificationUI.Show(Loc.Format("notice.area_threats", championPacks, uniquePacks));
     }
 

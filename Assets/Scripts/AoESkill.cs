@@ -128,7 +128,7 @@ public class AoESkill : MonoBehaviour
             enemy.TakeDamage(finalDamage, isCritical, transform.position); // 폭발 중심에서 바깥쪽으로 밀려남
         }
 
-        Debug.Log($"부적 폭발! 적 {damagedEnemies.Count}명에게 기본 {damage}의 데미지");
+        GameLog.Combat($"부적 폭발! 적 {damagedEnemies.Count}명에게 기본 {damage}의 데미지");
         damagedEnemies.Clear(); // 적 참조를 붙잡아 두지 않도록 비움
     }
 

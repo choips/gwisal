@@ -481,13 +481,12 @@ public class PlayerController : MonoBehaviour
     {
         if (distance <= attackRange)
         {
-            // 사거리 안: 처음 들어온 순간에만 멈추고 공격 메시지 출력
+            // 사거리 안: 처음 들어온 순간에만 멈춤
             if (!isAttacking)
             {
                 isAttacking = true;
                 agent.isStopped = true;
                 agent.ResetPath();
-                Debug.Log("적을 공격합니다!");
             }
 
             // 멈춰 있는 동안 계속 적을 바라보도록 회전
@@ -515,7 +514,7 @@ public class PlayerController : MonoBehaviour
 
         // 기본 공격 = 무기 피해의 100% (스킬이 아니므로 스킬 피해 % 미적용)
         float damage = stats.RollDamage(stats.RollWeaponDamage(1f, false), out bool isCritical);
-        Debug.Log(isCritical ? $"치명타! {damage}의 데미지" : $"적중! {damage}의 데미지");
+        GameLog.Combat(isCritical ? $"치명타! {damage}의 데미지" : $"적중! {damage}의 데미지");
         targetEnemy.TakeDamage(damage, isCritical);
 
         // 공격 간격 = 1 ÷ (초당 공격 횟수 × (1 + 공격 속도 +%)), 0 이하이면 0으로 나누게 되므로 최소값을 보장

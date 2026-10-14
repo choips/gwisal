@@ -25,7 +25,7 @@ public class Item : MonoBehaviour
         }
 
         isPickedUp = true;
-        Debug.Log($"아이템 획득: {data.DisplayName} ({data.StatDescription})");
+        GameLog.Item($"아이템 획득: {data.DisplayName} ({data.StatDescription})");
         Destroy(gameObject);
     }
 }

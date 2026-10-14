@@ -53,7 +53,7 @@ public class SaveManager : MonoBehaviour
         account.lastCharacterSlot = slot;
         WriteJson(AccountPath, account);
 
-        Debug.Log($"세이브 파일 위치: {GetCharacterPath(slot)}");
+        GameLog.Save($"세이브 파일 위치: {GetCharacterPath(slot)}");
         return true;
     }
 

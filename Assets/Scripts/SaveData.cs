@@ -57,7 +57,7 @@ public class SaveData
         skipped += AddEquipment(data, SavedEquipment.WeaponSlot, equippedWeapon);
         skipped += AddEquipment(data, SavedEquipment.ArmorSlot, equippedArmor);
 
-        Debug.Log($"옛 세이브(버전 {version})를 버전 {CharacterSaveData.CurrentVersion}으로 변환했습니다. 가방 {data.inventoryItems.Count}개, 장비 {data.equipment.Count}개, 찾지 못해 건너뛴 아이템 {skipped}개");
+        GameLog.Save($"옛 세이브(버전 {version})를 버전 {CharacterSaveData.CurrentVersion}으로 변환했습니다. 가방 {data.inventoryItems.Count}개, 장비 {data.equipment.Count}개, 찾지 못해 건너뛴 아이템 {skipped}개");
         return data;
     }
 

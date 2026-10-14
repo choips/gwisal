@@ -62,7 +62,7 @@ public class RegionSettings : MonoBehaviour
         }
 
         hasPopulated = true;
-        Debug.Log($"고정 배치 완료 (지역 레벨 {regionLevel}): 무리 {packs.Count}개, 총 {aliveEnemyCount}마리");
+        GameLog.Region($"고정 배치 완료 (지역 레벨 {regionLevel}): 무리 {packs.Count}개, 총 {aliveEnemyCount}마리");
         if (aliveEnemyCount > 0)
         {
             NotificationUI.Show(Loc.Format("notice.area_threats", championPacks, uniquePacks));

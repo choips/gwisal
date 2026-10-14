@@ -356,7 +356,7 @@ public class InventoryManager : MonoBehaviour
 
         equippedWeapon = weapon;
         AddWeaponBonus(stats, weapon);
-        Debug.Log($"무기 장착: 무기 피해가 {weapon.statValue} 증가했습니다!");
+        GameLog.Item($"무기 장착: 무기 피해가 {weapon.statValue} 증가했습니다!");
     }
 
     // 방어구 장착: 기존 방어구가 있으면 먼저 해제(가방으로)한 뒤 새 방어구 장착
@@ -369,7 +369,7 @@ public class InventoryManager : MonoBehaviour
 
         equippedArmor = armor;
         AddArmorBonus(stats, armor);
-        Debug.Log($"방어구 장착: 최대 체력이 {armor.statValue} 증가했습니다!");
+        GameLog.Item($"방어구 장착: 최대 체력이 {armor.statValue} 증가했습니다!");
     }
 
     // 장착 중인 무기를 빼서 가방에 넣고 무기 피해를 되돌림
@@ -377,7 +377,7 @@ public class InventoryManager : MonoBehaviour
     {
         stats.RemoveEquipmentBonus(equippedWeapon);
         inventory.Add(equippedWeapon);
-        Debug.Log($"무기 해제: {equippedWeapon.DisplayName} (공격력 -{equippedWeapon.statValue})");
+        GameLog.Item($"무기 해제: {equippedWeapon.DisplayName} (공격력 -{equippedWeapon.statValue})");
         equippedWeapon = null;
     }
 
@@ -388,7 +388,7 @@ public class InventoryManager : MonoBehaviour
         stats.RemoveEquipmentBonus(equippedArmor);
 
         inventory.Add(equippedArmor);
-        Debug.Log($"방어구 해제: {equippedArmor.DisplayName} (최대 체력 -{equippedArmor.statValue})");
+        GameLog.Item($"방어구 해제: {equippedArmor.DisplayName} (최대 체력 -{equippedArmor.statValue})");
         equippedArmor = null;
     }
 

@@ -177,7 +177,7 @@ public class RegionManager : MonoBehaviour
 
         IsLoading = false;
         SetPlayerControl(true);
-        Debug.Log($"지역 '{sceneName}'에 도착했습니다. (입구: {entryId})");
+        GameLog.Region($"지역 '{sceneName}'에 도착했습니다. (입구: {entryId})");
         RegionLoaded?.Invoke(sceneName);
 
         // 5) 화면을 밝히면서 지역 이름 표시

@@ -142,7 +142,7 @@ public class LootDropper : MonoBehaviour
         if (item.TryGetComponent(out Item itemComponent))
         {
             itemComponent.data = data;
-            Debug.Log($"아이템 드랍! {data.DisplayName} ({data.StatDescription}, 아이템 레벨 {data.itemLevel})");
+            GameLog.Item($"아이템 드랍! {data.DisplayName} ({data.StatDescription}, 아이템 레벨 {data.itemLevel})");
 
             // 아이템 위에 이름을 등급 색으로 표시 (글꼴이 없으면 한글이 □로 깨지므로 생략)
             if (labelFont != null)

@@ -296,7 +296,7 @@ public class Enemy : MonoBehaviour
     // 플레이어에게 데미지를 주고 다음 공격 시각을 설정
     private void AttackPlayer()
     {
-        Debug.Log($"{gameObject.name}의 공격! 플레이어에게 {attackDamage}의 데미지");
+        GameLog.Combat($"{gameObject.name}의 공격! 플레이어에게 {attackDamage}의 데미지");
         player.TakeDamage(attackDamage, level);
 
         nextAttackTime = Time.time + attackCooldown;
@@ -330,7 +330,7 @@ public class Enemy : MonoBehaviour
         DamageMeter.Record(damage); // 개발자 메뉴의 DPS 측정용 기록
 
         currentHealth -= damage;
-        Debug.Log($"{gameObject.name} 남은 체력: {Mathf.Max(currentHealth, 0f)} / {maxHealth}");
+        GameLog.Combat($"{gameObject.name} 남은 체력: {Mathf.Max(currentHealth, 0f)} / {maxHealth}");
 
         // 마지막 일격에도 숫자가 보이도록 사망 처리보다 먼저 생성
         ShowDamageText(damage, isCritical);
@@ -445,7 +445,7 @@ public class Enemy : MonoBehaviour
     private void Die()
     {
         isDead = true;
-        Debug.Log($"{gameObject.name} 사망!");
+        GameLog.Combat($"{gameObject.name} 사망!");
 
         // 플레이어에게 경험치 지급
         if (player != null)

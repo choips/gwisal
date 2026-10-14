@@ -57,14 +57,16 @@ public class NotificationUI : MonoBehaviour
         if (Instance == this) Instance = null;
     }
 
-    // 알림 띄우기 (Console에도 같은 문구를 남김). 씬에 알림 창이 없으면 Console에만 표시
+    // 알림 띄우기. 씬에 알림 창이 없으면 화면에 보일 곳이 없으므로 Console에 경고로 남김
     public static void Show(string message, NoticeType type = NoticeType.Info)
     {
-        Debug.Log(message);
-
         if (Instance != null)
         {
             Instance.Display(message, type);
+        }
+        else
+        {
+            Debug.LogWarning($"[알림 창 없음] {message}");
         }
     }
 

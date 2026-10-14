@@ -272,7 +272,7 @@ public class PlayerStats : MonoBehaviour
     public void AddExperience(float amount)
     {
         currentXP += amount;
-        Debug.Log($"경험치 +{amount} ({currentXP} / {requiredXP})");
+        GameLog.Combat($"경험치 +{amount} ({currentXP} / {requiredXP})");
 
         // 한 번에 많은 경험치를 얻으면 여러 레벨이 오를 수 있으므로 while로 반복
         while (currentXP >= requiredXP)
@@ -377,7 +377,7 @@ public class PlayerStats : MonoBehaviour
         invincibleUntil = Time.time + respawnInvincibleTime;
 
         Revive();
-        Debug.Log("부활했습니다!");
+        GameLog.Combat("부활했습니다!");
     }
 
     // 적의 공격을 받아 체력 감소 (체력바는 Update의 UpdateUI에서 자동 갱신)
@@ -390,7 +390,7 @@ public class PlayerStats : MonoBehaviour
         damage = DamageCalculator.ReducePhysicalDamage(Stats, damage, attackerLevel);
 
         currentHP = Mathf.Max(currentHP - damage, 0f);
-        Debug.Log($"플레이어 피격! 남은 체력: {currentHP} / {maxHP}");
+        GameLog.Combat($"플레이어 피격! 남은 체력: {currentHP} / {maxHP}");
 
         // 마지막 일격에도 숫자가 보이도록 사망 처리보다 먼저 생성
         ShowDamageText(damage);
@@ -420,7 +420,7 @@ public class PlayerStats : MonoBehaviour
     private void Die()
     {
         IsDead = true;
-        Debug.Log("플레이어 사망!");
+        GameLog.Combat("플레이어 사망!");
 
         if (TryGetComponent(out PlayerController controller))
         {

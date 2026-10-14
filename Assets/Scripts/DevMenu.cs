@@ -3,7 +3,7 @@ using UnityEngine;
 
 // 개발자 메뉴 (F1로 열고 닫기) — 에디터와 개발 빌드(Development Build)에만 포함되고, 정식 출시 빌드에서는 통째로 빠집니다.
 // 씬에 붙이지 않아도 플레이를 시작하면 스스로 만들어집니다 (Hierarchy의 DontDestroyOnLoad → [DevMenu]).
-// 화면 왼쪽 위 창에서 무적·기력 무한·쿨타임 없음을 켜고 끄고(켠 값은 DevCheats에 저장), 레벨을 바로 올리고,
+// 화면 왼쪽 위 창에서 무적·기력 무한·쿨타임 없음·전투 로그(GameLog)를 켜고 끄고(켠 값은 DevCheats·GameLog에 저장), 레벨을 바로 올리고,
 // 적에게 준 피해(DPS 측정, DamageMeter)와 능력치를 보고, 테스트용 능력치 수정치를 켜고 끕니다.
 // Unity 기본 즉석 UI(IMGUI, OnGUI)로 그려서 Canvas·프리팹 설정이 필요 없습니다. 마우스로 조작합니다.
 public class DevMenu : MonoBehaviour
@@ -131,6 +131,7 @@ public class DevMenu : MonoBehaviour
         DevCheats.GodMode = GUILayout.Toggle(DevCheats.GodMode, " 무적 (피해를 받지 않음)");
         DevCheats.InfiniteMana = GUILayout.Toggle(DevCheats.InfiniteMana, " 기력 무한");
         DevCheats.NoCooldown = GUILayout.Toggle(DevCheats.NoCooldown, " 쿨타임 없음");
+        GameLog.CombatEnabled = GUILayout.Toggle(GameLog.CombatEnabled, " 전투 로그 표시 (Console)");
 
         GUILayout.Space(8f);
         GUILayout.Label(levelLabel);

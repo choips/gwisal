@@ -14,6 +14,9 @@ public class DroppedItem : MonoBehaviour
     // 착지할(또는 이미 착지한) 위치 — 날아가는 중에도 이 자리는 이미 찬 것으로 봄
     public Vector3 LandingPosition { get; private set; }
 
+    // 아직 날아가는 중인지 (바닥 이름표는 착지한 뒤에 보임)
+    public bool IsFlying => isFlying;
+
     private Vector3 startPosition;    // 날아오르기 시작한 위치
     private Quaternion startRotation; // 출발할 때의 회전 (한 바퀴 돌고 이 회전으로 착지)
     private Vector3 flipAxis;         // 공중제비 회전축 (날아가는 방향의 옆쪽)

@@ -67,6 +67,13 @@ public class BalanceConfig : ScriptableObject
     [Tooltip("바닥 아이템끼리 떨어져야 하는 최소 간격(m) (엑셀 LootMinSpacing)")]
     [Min(0.1f)] public float lootMinSpacing = 0.8f;
 
+    [Header("바닥 아이템 이름표 (S7 설정 메뉴 → 게임플레이 슬라이더가 생기기 전까지 여기서)")]
+    [Tooltip("이름 글자 크기 배율 (1 = 100%, 엑셀 ItemLabelScaleMin~Max = 0.8~1.5)")]
+    [Range(0.8f, 1.5f)] public float itemLabelTextScale = 1f;
+
+    [Tooltip("이름 박스 크기(글자 둘레 여백) 배율 (1 = 100%)")]
+    [Range(0.8f, 1.5f)] public float itemLabelBoxScale = 1f;
+
     [Header("귀신 AI")]
     [Tooltip("추격 포기 거리(m): 싸움이 붙은 귀신은 플레이어가 이보다 멀어질 때까지 계속 쫓아오고, 넘으면 제자리로 돌아감 (엑셀 EnemyLeashRange)")]
     [Min(0f)] public float enemyLeashRange = 25f;

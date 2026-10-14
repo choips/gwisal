@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.AI;            // NavMeshAgent, NavMesh 사용
-using UnityEngine.EventSystems;  // UI 위에 마우스가 있는지 확인 (EventSystem) 사용
 using UnityEngine.InputSystem;   // 새 Input System (InputAction) 사용
 
 // 디아블로 스타일 클릭 이동 + 적/아이템 타겟팅 컨트롤러
@@ -8,7 +7,7 @@ using UnityEngine.InputSystem;   // 새 Input System (InputAction) 사용
 // 마우스 좌클릭 위치로 Raycast를 쏴서
 //  - 바닥(Ground 레이어)을 클릭하면 그 위치로 이동하고
 //  - 적(Enemy 태그)을 클릭하면 타겟으로 지정해 다가간 뒤 사거리 안에서 공격하고
-//  - 아이템(Item 태그)을 클릭하면 다가가서 줍습니다.
+//  - 아이템(Item 태그)을 클릭하면 다가가서 줍습니다. (바닥 이름표를 클릭해도 줍습니다 — ItemLabelBox가 TargetItem 호출)
 // 게임패드: 왼쪽 스틱으로 화면 기준 방향 이동, A 버튼으로 가장 가까운 적 공격(적이 없으면 가장 가까운 아이템 줍기)
 // 스킬은 PlayerSkills(스킬 칸 1~6)와 각 스킬 스크립트가 처리하고,
 // 이 스크립트는 스킬이 쓰는 바닥 위치 찾기(TryGetGroundPoint)와 멈추고 바라보기(StopAndFace)를 제공합니다.
@@ -294,8 +293,8 @@ public class PlayerController : MonoBehaviour
     // 키 연결은 Assets/InputSystem_Actions의 Player 묶음에서 바꿉니다.
     private void HandleMouseInput()
     {
-        // 인벤토리 같은 UI 위를 클릭한 경우 뒤쪽 바닥으로 이동하지 않도록 무시
-        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+        // 인벤토리 같은 UI 위를 클릭한 경우 뒤쪽 바닥으로 이동하지 않도록 무시 (바닥 아이템 이름표 위는 제외)
+        if (ItemLabelManager.IsPointerOverBlockingUI()) return;
 
         Vector2 pointerPosition = GameInput.PointerPosition;
 
@@ -308,6 +307,9 @@ public class PlayerController : MonoBehaviour
 
         if (select.WasPressedThisFrame())
         {
+            // 이름표를 클릭한 경우는 이름표(ItemLabelBox)가 줍기를 처리
+            if (ItemLabelManager.IsPointerOverLabel) return;
+
             // 새로 클릭한 순간: 적/아이템/바닥 중 무엇인지 판단해서 처리
             HandleClick(pointerPosition, true);
         }
@@ -389,6 +391,13 @@ public class PlayerController : MonoBehaviour
         {
             Debug.LogWarning($"{newTarget.name}에 Enemy 스크립트가 없어 공격할 수 없습니다.");
         }
+    }
+
+    // 바닥 아이템 이름표를 클릭했을 때: 그 아이템으로 걸어가 주움
+    public void TargetItem(Item item)
+    {
+        if (item == null) return;
+        SetItemTarget(item.transform, item.transform.position);
     }
 
     // 아이템을 타겟으로 지정

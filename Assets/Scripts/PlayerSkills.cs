@@ -1,6 +1,5 @@
 using System;
 using UnityEngine;
-using UnityEngine.EventSystems;  // UI 위에 커서가 있는지 확인 (EventSystem) 사용
 using UnityEngine.InputSystem;   // InputAction 사용
 
 // 플레이어의 스킬 칸 1~6 관리자 (Player에 붙임)
@@ -84,7 +83,7 @@ public class PlayerSkills : MonoBehaviour
         }
 
         Vector2 pointerPosition = GameInput.PointerPosition;
-        bool pointerOverUI = (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+        bool pointerOverUI = ItemLabelManager.IsPointerOverBlockingUI() // 바닥 아이템 이름표 위에서는 스킬을 쓸 수 있음
             || DevCheats.IsPointerOverMenu(pointerPosition); // 개발자 메뉴(F1) 창 위도 UI로 취급
 
         for (int i = 0; i < slots.Length; i++)

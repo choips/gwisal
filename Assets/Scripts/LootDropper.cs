@@ -59,12 +59,9 @@ public class LootDropper : MonoBehaviour
     [Tooltip("날아오르기 시작하는 높이 (죽은 자리 발밑보다 이만큼 위에서 출발)")]
     [SerializeField] private float spawnHeightOffset = 0.5f;
 
-    [Header("바닥 이름표")]
-    [Tooltip("아이템 위에 띄울 이름표의 글꼴 (한글이 보이도록 NotoSansKR-Regular SDF 지정, 비워 두면 이름표 없음)")]
+    [Header("바닥 이름표 (글자·박스 크기는 BalanceConfig)")]
+    [Tooltip("이름표 글꼴 (한글이 보이도록 NotoSansKR-Regular SDF 지정, 비워 두면 한글이 □로 깨짐) — 귀신 이름표도 이 글꼴을 빌려 씀")]
     [SerializeField] private TMP_FontAsset labelFont;
-
-    [Tooltip("이름표 글자 크기 (3이면 글자 높이 약 0.3m)")]
-    [SerializeField] private float labelFontSize = 3f;
 
     [Tooltip("아이템 중심에서 이름표까지의 높이(m)")]
     [SerializeField] private float labelHeight = 0.5f;
@@ -182,12 +179,8 @@ public class LootDropper : MonoBehaviour
             itemComponent.data = data;
             GameLog.Item($"아이템 드랍! {data.DisplayName} ({data.StatDescription}, 아이템 레벨 {data.itemLevel})");
 
-            // 아이템 위에 이름을 등급 색으로 표시 (글꼴이 없으면 한글이 □로 깨지므로 생략)
-            if (labelFont != null)
-            {
-                item.AddComponent<ItemNameLabel>().Setup(
-                    itemName, data.NameColor, labelFont, labelFontSize, labelHeight);
-            }
+            // 아이템 위에 이름 박스를 등급 색으로 표시 (화면 UI, 겹치면 위로 쌓임, 클릭하면 주움)
+            ItemLabelManager.Register(itemComponent, labelFont, labelHeight);
         }
 
         // 프리팹에 DroppedItem이 없어도 포물선 착지·빈자리 목록에 오르도록 자동으로 붙여 줌

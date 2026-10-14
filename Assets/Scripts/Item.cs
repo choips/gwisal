@@ -30,12 +30,10 @@ public class Item : MonoBehaviour
         ItemRarityColors.ColorsChanged -= RefreshColor;
     }
 
-    // 등급 색 표가 바뀌면 바닥 구슬과 이름표를 새 색으로 다시 칠함 (에디터에서 색을 고를 때)
+    // 등급 색 표가 바뀌면 바닥 구슬을 새 색으로 다시 칠함 (에디터에서 색을 고를 때, 이름표는 ItemLabelManager가 칠함)
     private void RefreshColor()
     {
-        Color color = data.NameColor;
-        ApplyObjectColor(gameObject, color);
-        if (TryGetComponent(out ItemNameLabel label)) label.SetColor(color);
+        ApplyObjectColor(gameObject, data.NameColor);
     }
 #endif
 

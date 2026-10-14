@@ -71,6 +71,7 @@ public class PlayerController : MonoBehaviour
     private NavMeshAgent agent;   // 캐릭터 길찾기 이동 컴포넌트
     private PlayerStats stats;    // 플레이어 능력치 (공격력 등)
     private PlayerSkills playerSkills; // 스킬 칸 관리자 (사망 시 조준 취소용)
+    private PlayerEvade playerEvade;   // 회피(축지) — 회피 중에는 이동·공격 입력을 받지 않음
     private Transform target;     // 현재 타겟팅 중인 대상 (적 또는 아이템, 없으면 null)
     private Enemy targetEnemy;    // 타겟이 적일 때: 체력 관리 스크립트
     private Item targetItem;      // 타겟이 아이템일 때: 아이템 스크립트
@@ -86,6 +87,11 @@ public class PlayerController : MonoBehaviour
         agent = GetComponent<NavMeshAgent>();
         stats = GetComponent<PlayerStats>();
         playerSkills = GetComponent<PlayerSkills>();
+        // 회피(축지)는 모든 직업의 기본 능력이므로 Player에 없으면 스스로 붙임 (씬에서 직접 붙이지 않아도 됨)
+        if (!TryGetComponent(out playerEvade))
+        {
+            playerEvade = gameObject.AddComponent<PlayerEvade>();
+        }
         if (agent != null) baseMoveSpeed = agent.speed;
         if (stats == null)
         {
@@ -135,6 +141,9 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
+        // 회피로 옮겨 가는 0.25초 동안은 PlayerEvade가 캐릭터를 움직임 (끝나면 누르고 있던 이동이 이어짐)
+        if (playerEvade != null && playerEvade.IsEvading) return;
+
         HandleStickMove();
         HandleGamepadSelect();
         HandleMouseInput();
@@ -174,8 +183,8 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // 스틱 입력(화면의 위·오른쪽)을 바닥 위의 방향으로 바꿈 (카메라가 바라보는 쪽 = 위)
-    private Vector3 GetScreenRelativeDirection(Vector2 stick)
+    // 스틱 입력(화면의 위·오른쪽)을 바닥 위의 방향으로 바꿈 (카메라가 바라보는 쪽 = 위) — 게임패드 회피 방향에도 사용
+    public Vector3 GetScreenRelativeDirection(Vector2 stick)
     {
         Vector3 forward = Vector3.forward;
         Vector3 right = Vector3.right;
@@ -252,6 +261,12 @@ public class PlayerController : MonoBehaviour
 
         Vector3 lookPoint = new Vector3(point.x, transform.position.y, point.z);
         transform.LookAt(lookPoint);
+    }
+
+    // 게임패드 왼쪽 스틱이 무시 범위보다 기울어져 있는지
+    public bool IsStickTilted(Vector2 stick)
+    {
+        return stick.sqrMagnitude >= stickDeadZone * stickDeadZone;
     }
 
     // 화면상의 마우스 좌표가 가리키는 바닥(Ground 레이어) 좌표 구하기 (바닥이 아니면 false)

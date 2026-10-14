@@ -87,6 +87,19 @@ public class BalanceConfig : ScriptableObject
     [Tooltip("추격을 포기하고 돌아가는 동안 초당 회복하는 체력 (최대 체력 비율, 0.5 = 초당 50% → 2초면 가득). 제자리에 도착하면 무조건 가득 참")]
     [Min(0f)] public float enemyReturnHealPerSecond = 0.5f;
 
+    [Header("회피 — 축지 (Space): 쿨타임 감소 옵션은 적용 안 함")]
+    [Tooltip("한 번에 옮겨 가는 거리(m) (엑셀 EvadeDistance)")]
+    [Min(0.5f)] public float evadeDistance = 4f;
+
+    [Tooltip("옮겨 가는 데 걸리는 시간(초) (엑셀 EvadeDuration)")]
+    [Min(0.05f)] public float evadeDuration = 0.25f;
+
+    [Tooltip("연속으로 쓸 수 있는 횟수 (엑셀 EvadeCharges)")]
+    [Min(1)] public int evadeCharges = 2;
+
+    [Tooltip("쓴 충전이 하나 돌아오는 시간(초) — 하나씩 차례로 참 (엑셀 EvadeRechargeTime)")]
+    [Min(0.1f)] public float evadeRechargeTime = 5f;
+
     [Header("상한 (비율: 0.75 = 75%)")]
     [Range(0f, 1f)] public float critChanceCap = 0.75f;        // 치명타 확률
     [Min(0f)] public float attackSpeedCap = 1f;                // 공격 속도 (+100%)

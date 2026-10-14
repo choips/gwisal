@@ -22,6 +22,7 @@ public static class GameInput
     private static InputAction quickSave;
     private static InputAction quickLoad;
     private static InputAction devMenu;
+    private static InputAction evade;
     private static readonly InputAction[] skills = new InputAction[SkillSlotCount];
     private static InputAction emptyAction; // 잘못된 스킬 칸 번호를 요청했을 때 돌려줄, 키 연결이 없는 빈 행동
 
@@ -49,6 +50,9 @@ public static class GameInput
 
     // 개발자 메뉴 (F1)
     public static InputAction DevMenu { get { EnsureInitialized(); return devMenu; } }
+
+    // 회피 — 축지 (Space, 게임패드 LT)
+    public static InputAction Evade { get { EnsureInitialized(); return evade; } }
 
     // 지금 커서가 가리키는 화면 좌표
     public static Vector2 PointerPosition => Point.ReadValue<Vector2>();
@@ -86,7 +90,7 @@ public static class GameInput
     {
         isInitialized = false;
         point = select = moveDirection = cancel = usePotion = null;
-        inventory = quickSave = quickLoad = devMenu = null;
+        inventory = quickSave = quickLoad = devMenu = evade = null;
         emptyAction = null;
         for (int i = 0; i < SkillSlotCount; i++)
         {
@@ -129,6 +133,7 @@ public static class GameInput
         quickSave = FindAction(map, "QuickSave");
         quickLoad = FindAction(map, "QuickLoad");
         devMenu = FindAction(map, "DevMenu");
+        evade = FindAction(map, "Evade");
 
         for (int i = 0; i < SkillSlotCount; i++)
         {

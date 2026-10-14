@@ -24,6 +24,7 @@ public class PlayerSkills : MonoBehaviour
     [SerializeField] private float noTargetAimDistance = 5f; // 적이 없을 때 앞쪽 거리
 
     private PlayerController controller;
+    private PlayerEvade playerEvade; // 회피(축지) 중에는 스킬을 쓰지 않음
     private readonly bool[] pressedWithGamepad = new bool[GameInput.SkillSlotCount]; // 칸마다 이번 누름이 게임패드였는지 (뗄 때도 같은 방식으로 겨누기 위해 기억)
     private Func<bool> tryCancelAimingFunction; // UIWindowStack에 등록할 조준 취소 함수 (등록·해제에 같은 객체를 쓰기 위해 저장)
 
@@ -32,6 +33,12 @@ public class PlayerSkills : MonoBehaviour
         controller = GetComponent<PlayerController>();
         tryCancelAimingFunction = TryCancelAiming;
         EnsureSlotCount();
+    }
+
+    // PlayerEvade는 PlayerController의 Awake에서 붙을 수 있으므로 모든 Awake가 끝난 뒤 찾음
+    private void Start()
+    {
+        playerEvade = GetComponent<PlayerEvade>();
     }
 
     private void OnEnable()
@@ -103,6 +110,9 @@ public class PlayerSkills : MonoBehaviour
     {
         // 사망 중에는 PlayerController가 꺼지므로 스킬도 쓰지 않음
         if (controller == null || !controller.isActiveAndEnabled) return;
+
+        // 회피 중(0.25초)에는 스킬을 쓰지 않음 (회피 중 누른 스킬을 기억했다가 쓰는 "입력 기억"은 S5)
+        if (playerEvade != null && playerEvade.IsEvading) return;
 
         Vector2 pointerPosition = GameInput.PointerPosition;
         bool pointerOverUI = ItemLabelManager.IsPointerOverBlockingUI() // 바닥 아이템 이름표 위에서는 스킬을 쓸 수 있음

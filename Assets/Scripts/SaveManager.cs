@@ -7,11 +7,15 @@ using UnityEngine;
 //   Account.json      — 계정 공용 (모든 캐릭터가 함께 쓰는 것)
 //   Character_0.json  — 캐릭터별 (0번 칸 캐릭터의 레벨·가방·장비 등)
 //   SaveData.json     — 옛 세이브 (버전 1·2). 캐릭터 파일이 없을 때만 읽어서 버전 3으로 변환 (파일은 지우지 않음)
+// 안전한 저장: 같은 폴더의 "파일이름.tmp"에 끝까지 쓴 뒤 진짜 파일과 바꿔치기하고, 바로 전 파일은 "파일이름.bak"에 보관
+// (저장하는 순간 게임이 꺼져도 진짜 파일은 이전 내용 그대로 남음)
 public class SaveManager : MonoBehaviour
 {
     private const string AccountFileName = "Account.json";
     private const string CharacterFilePrefix = "Character_";
     private const string LegacySaveFileName = "SaveData.json";
+    private const string TempSuffix = ".tmp";   // 쓰는 중인 임시 파일
+    private const string BackupSuffix = ".bak"; // 바로 전 저장 보관
 
     // 어디서든 SaveManager.Instance로 접근하기 위한 전역 참조
     public static SaveManager Instance { get; private set; }
@@ -94,20 +98,52 @@ public class SaveManager : MonoBehaviour
         return File.Exists(GetCharacterPath(slot)) || (slot == 0 && File.Exists(LegacySavePath));
     }
 
-    // 데이터를 JSON 파일로 저장 (성공 시 true)
+    // 데이터를 JSON 파일로 안전하게 저장 (성공 시 true, 실패해도 진짜 파일은 그대로)
     private static bool WriteJson(string path, object data)
     {
+        string tempPath = path + TempSuffix;
+        string backupPath = path + BackupSuffix;
         try
         {
             // 두 번째 인자 true: 사람이 읽기 쉽게 줄바꿈/들여쓰기 적용
             string json = JsonUtility.ToJson(data, true);
-            File.WriteAllText(path, json);
+
+            // 1) 지난번 저장에서 남은 임시 파일을 지우고, 임시 파일에 끝까지 씀
+            if (File.Exists(tempPath)) File.Delete(tempPath);
+            File.WriteAllText(tempPath, json);
+
+            // 2) 바꿔치기 (진짜 파일이 있으면 그 내용은 .bak으로)
+            if (File.Exists(path))
+            {
+                ReplaceWithBackup(tempPath, path, backupPath);
+            }
+            else
+            {
+                File.Move(tempPath, path);
+            }
             return true;
         }
         catch (Exception e)
         {
             Debug.LogError($"게임 저장 실패 ({path}): {e.Message}");
             return false;
+        }
+    }
+
+    // 임시 파일로 진짜 파일을 바꾸고, 원래 진짜 파일은 백업 파일로 남김
+    private static void ReplaceWithBackup(string tempPath, string path, string backupPath)
+    {
+        try
+        {
+            File.Replace(tempPath, path, backupPath);
+        }
+        catch (Exception e) when (File.Exists(tempPath) && File.Exists(path))
+        {
+            // File.Replace를 지원하지 않는 환경(일부 모바일 등)이면 직접 복사 → 바꿔치기
+            GameLog.Save($"File.Replace 대신 직접 바꿔치기합니다 ({e.GetType().Name})");
+            File.Copy(path, backupPath, true);
+            File.Delete(path);
+            File.Move(tempPath, path);
         }
     }
 

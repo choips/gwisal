@@ -44,8 +44,13 @@ public class RegionManager : MonoBehaviour
     [Header("상태 (Play 중 확인용)")]
     [Tooltip("지금 불러와 있는 지역 씬 이름")]
     [SerializeField] private string currentRegionScene;
+    [Tooltip("지금 서 있는 입구 ID (세이브·불러오기용)")]
+    [SerializeField] private string currentEntryId;
 
     public string CurrentRegionScene => currentRegionScene;
+    public string CurrentEntryId => currentEntryId;
+    public string StartRegionScene => startRegionScene;
+    public string StartEntryId => startEntryId;
     public bool IsLoading { get; private set; }
 
     // 새 지역에 도착해 플레이어를 입구에 세운 직후 알림 (인자: 지역 씬 이름)
@@ -318,6 +323,8 @@ public class RegionManager : MonoBehaviour
                              "빈 오브젝트에 RegionEntry를 붙여 입구를 만들어 주세요.");
             return;
         }
+
+        currentEntryId = entry.EntryId;
 
         Vector3 position = entry.transform.position;
         Quaternion rotation = Quaternion.Euler(0f, entry.transform.eulerAngles.y, 0f);

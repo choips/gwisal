@@ -2,8 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // 게임 전체 단축키 관리자 (씬에 하나 배치)
-// 빠른 저장(QuickSave, 기본 S 키): 현재 플레이어 상태와 인벤토리를 저장
-// 빠른 불러오기(QuickLoad, 기본 L 키): 저장된 데이터를 불러와 플레이어 상태와 인벤토리를 덮어씀
+// 빠른 저장(QuickSave, 기본 S 키): 현재 플레이어 상태·인벤토리·마지막 지역/입구를 저장
+// 빠른 불러오기(QuickLoad, 기본 L 키): 저장된 데이터를 불러와 덮어쓰고, 저장한 지역 입구로 이동
 // 키 연결은 Assets/InputSystem_Actions의 Player 묶음에서 바꿉니다.
 public class GameController : MonoBehaviour
 {
@@ -12,6 +12,9 @@ public class GameController : MonoBehaviour
 
     [Tooltip("저장/불러오기할 플레이어 (비워두면 씬에서 자동으로 찾음)")]
     [SerializeField] private PlayerStats playerStats;
+
+    // 산 아래 마을 탈환 여부 ([전달-19] — 아직 게임플레이 없음, 세이브만 주고받음)
+    private bool villageLiberated;
 
     private void Update()
     {
@@ -37,7 +40,11 @@ public class GameController : MonoBehaviour
             requiredXP = stats.requiredXP,
             currentHP = stats.currentHP,
             currentMP = stats.currentMP,
+            villageLiberated = villageLiberated,
         };
+
+        // 지금 지역·입구 (RegionManager가 없으면 시작 지역으로)
+        FillLocationFromRegionManager(data);
 
         InventoryManager inventory = InventoryManager.Instance;
         if (inventory != null)
@@ -57,10 +64,16 @@ public class GameController : MonoBehaviour
         }
     }
 
-    // 저장된 데이터를 불러와 현재 상태에 덮어씀
+    // 저장된 데이터를 불러와 현재 상태에 덮어쓰고, 저장한 지역 입구로 이동
     private void LoadSavedGame()
     {
         if (!TryGetReferences(out PlayerStats stats)) return;
+
+        if (RegionManager.Instance != null && RegionManager.Instance.IsLoading)
+        {
+            Debug.LogWarning("지역을 불러오는 중이라 세이브를 불러오지 않습니다. 잠시 후 다시 L 키를 눌러 주세요.");
+            return;
+        }
 
         CharacterSaveData data = SaveManager.Instance.LoadCharacter(CharacterSlot);
         if (data == null)
@@ -86,8 +99,38 @@ public class GameController : MonoBehaviour
         }
 
         stats.ApplyCharacterData(data);
+        villageLiberated = data.villageLiberated;
+
+        // 저장한 지역 입구로 이동 (좌표가 아니라 입구 기준 — 무작위 지역에도 안전)
+        if (RegionManager.Instance != null && !string.IsNullOrEmpty(data.regionSceneName))
+        {
+            string entry = string.IsNullOrEmpty(data.entryId)
+                ? RegionManager.Instance.StartEntryId
+                : data.entryId;
+            RegionManager.Instance.TravelTo(data.regionSceneName, entry);
+        }
 
         NotificationUI.Show(Loc.Get("notice.load_done"), NotificationUI.NoticeType.Success);
+    }
+
+    // RegionManager의 지금 지역·입구를 세이브에 넣고, 없으면 시작 지역으로 채움
+    private static void FillLocationFromRegionManager(CharacterSaveData data)
+    {
+        if (RegionManager.Instance != null)
+        {
+            string region = RegionManager.Instance.CurrentRegionScene;
+            string entry = RegionManager.Instance.CurrentEntryId;
+            data.regionSceneName = string.IsNullOrEmpty(region)
+                ? RegionManager.Instance.StartRegionScene
+                : region;
+            data.entryId = string.IsNullOrEmpty(entry)
+                ? RegionManager.Instance.StartEntryId
+                : entry;
+        }
+        else
+        {
+            data.FillLocationDefaults("Region_01", "start");
+        }
     }
 
     private static ItemData ToItem(SavedItem saved)

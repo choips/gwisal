@@ -19,12 +19,17 @@ public enum ItemRarity
     Unique  // 유니크 (주사 붉은색)
 }
 
-// 아이템에 붙은 무작위 옵션 하나 (예: 공격 속도 +15%) — 옵션 ID와 굴린 수치
+// 아이템에 붙은 무작위 옵션 하나 (예: 공격 속도 +15%)
+// 버전 4부터: 옵션 Id + 굴림 위치(0~1) + 단계로 저장하고, 수치는 S6에서 표로 계산 (지금은 value도 함께 둠)
 [System.Serializable]
 public class ItemAffix
 {
     public string affixId = "";
     public float value;
+
+    // —— 버전 4부터 (맨 뒤에만 추가) ——
+    public float rollPosition; // 굴림 위치 0~1 (같은 단계 안에서의 위치)
+    public int tier;           // 옵션 단계 1~11
 
     public ItemAffix() { }
 
@@ -32,6 +37,16 @@ public class ItemAffix
     {
         this.affixId = affixId;
         this.value = value;
+    }
+
+    // 복사 (세이브·인벤토리 복제용)
+    public ItemAffix(ItemAffix source)
+    {
+        if (source == null) return;
+        affixId = source.affixId;
+        value = source.value;
+        rollPosition = source.rollPosition;
+        tier = source.tier;
     }
 }
 
@@ -56,6 +71,12 @@ public class ItemData
 
     [Tooltip("붙은 무작위 옵션 목록 (옵션 굴리기는 아이템 & 파밍 단계에서, 지금은 항상 비어 있음)")]
     public List<ItemAffix> affixes = new List<ItemAffix>();
+
+    // —— 버전 4부터 ([전달-28] 자리만, 값은 지금은 0) ——
+    [Tooltip("벼림(품 올리기) 횟수 — 대장장이는 나중에")]
+    public int upgradeCount;
+    [Tooltip("품 올리기로 얻은 옵션 단계 보너스 (+0~2)")]
+    public int tierBonus;
 
     // 찾아 둔 기본 아이템 (저장하지 않음)
     [System.NonSerialized] private ItemBase cachedBase;
@@ -83,12 +104,15 @@ public class ItemData
         itemLevel = source.itemLevel;
         cachedBase = source.cachedBase;
 
+        upgradeCount = source.upgradeCount;
+        tierBonus = source.tierBonus;
+
         affixes = new List<ItemAffix>();
         if (source.affixes != null)
         {
             foreach (ItemAffix affix in source.affixes)
             {
-                if (affix != null) affixes.Add(new ItemAffix(affix.affixId, affix.value));
+                if (affix != null) affixes.Add(new ItemAffix(affix));
             }
         }
     }

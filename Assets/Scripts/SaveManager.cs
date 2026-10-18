@@ -63,7 +63,8 @@ public class SaveManager : MonoBehaviour
 
     // 캐릭터 세이브 불러오기 (없거나 읽기에 실패하면 null)
     // 파일이 깨져 있으면 .bak(바로 전 저장)으로 복구
-    // 0번 칸에 캐릭터 파일이 없고 옛 세이브(SaveData.json)가 있으면 그것을 버전 3으로 변환해서 돌려줌
+    // 0번 칸에 캐릭터 파일이 없고 옛 세이브(SaveData.json)가 있으면 그것을 변환해서 돌려줌
+    // 버전 3 이하는 시작 지역·시작 입구로 채움 (버전 4)
     public CharacterSaveData LoadCharacter(int slot)
     {
         string path = GetCharacterPath(slot);
@@ -75,16 +76,33 @@ public class SaveManager : MonoBehaviour
                 Debug.LogError($"세이브 파일이 더 새로운 형식(버전 {data.version})이라 불러오지 않습니다. 게임을 최신 버전으로 실행해 주세요.");
                 return null;
             }
+            if (data != null) ApplyLocationDefaults(data);
             return data;
         }
 
         if (slot == 0 && File.Exists(LegacySavePath))
         {
             SaveData legacy = ReadJson<SaveData>(LegacySavePath);
-            return legacy != null ? legacy.ToCharacterSaveData() : null;
+            if (legacy == null) return null;
+            CharacterSaveData data = legacy.ToCharacterSaveData();
+            ApplyLocationDefaults(data);
+            return data;
         }
 
         return null;
+    }
+
+    // 지역·입구가 비어 있으면 RegionManager 시작 값(없으면 Region_01 / start)으로 채움
+    private static void ApplyLocationDefaults(CharacterSaveData data)
+    {
+        string defaultRegion = "Region_01";
+        string defaultEntry = "start";
+        if (RegionManager.Instance != null)
+        {
+            defaultRegion = RegionManager.Instance.StartRegionScene;
+            defaultEntry = RegionManager.Instance.StartEntryId;
+        }
+        data.FillLocationDefaults(defaultRegion, defaultEntry);
     }
 
     // 계정 공용 세이브 불러오기 (없거나 읽기에 실패하면 null, 깨져 있으면 .bak으로 복구)

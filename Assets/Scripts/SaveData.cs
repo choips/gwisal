@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// 옛 세이브 형식 (버전 1·2, 파일: SaveData.json) — 옛 파일을 읽어 버전 3으로 바꿀 때만 사용합니다.
+// 옛 세이브 형식 (버전 1·2, 파일: SaveData.json) — 옛 파일을 읽어 최신 CharacterSaveData로 바꿀 때만 사용합니다.
 // 버전 3부터는 캐릭터별 CharacterSaveData(Character_칸번호.json) + 계정 공용 AccountSaveData(Account.json)에 저장합니다.
 // JsonUtility는 public 필드만 읽으므로 모든 변수를 public으로 선언합니다. (칸 이름을 바꾸면 옛 파일을 못 읽음)
 [System.Serializable]

@@ -2,14 +2,16 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // 캐릭터 한 명의 세이브 (세이브 형식 버전 3부터, 파일: Character_칸번호.json)
-// 레벨·경험치·현재 체력/기력·가방·장비를 저장합니다.
+// 레벨·경험치·현재 체력/기력·가방·장비·마지막 지역/입구를 저장합니다.
 // 최대 체력·최대 기력·무기 피해는 레벨과 장비로 다시 계산하므로 저장하지 않습니다.
 // JsonUtility는 public 필드만 저장하므로 모든 변수를 public으로 선언합니다. 새 칸은 맨 뒤에 추가합니다.
 [System.Serializable]
 public class CharacterSaveData
 {
-    // 저장 형식 버전 (1: 기력 없음, 2: 기력 추가, 3: 아이템을 ID로 + 계정 공용 / 캐릭터별 파일 분리)
-    public const int CurrentVersion = 3;
+    // 저장 형식 버전
+    // 1: 기력 없음 / 2: 기력 추가 / 3: 아이템을 ID로 + 계정·캐릭터 파일 분리
+    // 4: 마지막 지역·입구·마을 탈환 + 아이템 옵션 단계·벼림 칸
+    public const int CurrentVersion = 4;
 
     public int version;
 
@@ -25,6 +27,11 @@ public class CharacterSaveData
 
     // 장착 중인 장비 (칸 이름 + 아이템, 빈 칸은 저장하지 않음)
     public List<SavedEquipment> equipment = new List<SavedEquipment>();
+
+    // —— 버전 4부터 (맨 뒤에만 추가) ——
+    public string regionSceneName = "";   // 마지막 지역 씬 이름 (예: Region_02)
+    public string entryId = "";           // 마지막 입구(또는 웨이포인트) ID (예: start)
+    public bool villageLiberated;         // 산 아래 마을 탈환 여부 ([전달-19], 아직 게임플레이 없음)
 
     // 장비 칸 이름의 아이템을 찾음 (없으면 null)
     public SavedItem FindEquipment(string slotId)
@@ -44,6 +51,15 @@ public class CharacterSaveData
         {
             equipment.Add(new SavedEquipment { slotId = slotId, item = saved });
         }
+    }
+
+    // 버전 3 이하(또는 지역이 비어 있는) 세이브를 시작 지역·시작 입구로 채움
+    public void FillLocationDefaults(string defaultRegionScene, string defaultEntryId)
+    {
+        if (string.IsNullOrEmpty(regionSceneName))
+            regionSceneName = defaultRegionScene;
+        if (string.IsNullOrEmpty(entryId))
+            entryId = defaultEntryId;
     }
 }
 
@@ -68,6 +84,10 @@ public class SavedItem
     public float statValue;
     public List<ItemAffix> affixes = new List<ItemAffix>();
 
+    // —— 버전 4부터 ([전달-28] 자리만, S6에서 수치 계산에 사용) ——
+    public int upgradeCount; // 벼림(품 올리기) 횟수
+    public int tierBonus;    // 단계 보너스 (+0~2)
+
     // 게임 속 아이템 → 저장용 (비어 있거나 기본 아이템을 못 찾으면 null)
     public static SavedItem FromItem(ItemData item)
     {
@@ -86,12 +106,14 @@ public class SavedItem
             rarity = item.rarity,
             itemLevel = item.itemLevel,
             statValue = item.statValue,
+            upgradeCount = item.upgradeCount,
+            tierBonus = item.tierBonus,
         };
         if (item.affixes != null)
         {
             foreach (ItemAffix affix in item.affixes)
             {
-                if (affix != null) saved.affixes.Add(new ItemAffix(affix.affixId, affix.value));
+                if (affix != null) saved.affixes.Add(new ItemAffix(affix));
             }
         }
         return saved;
@@ -111,11 +133,13 @@ public class SavedItem
         }
 
         ItemData item = new ItemData(baseItem, rarity, Mathf.Max(1, itemLevel), statValue);
+        item.upgradeCount = upgradeCount;
+        item.tierBonus = tierBonus;
         if (affixes != null)
         {
             foreach (ItemAffix affix in affixes)
             {
-                if (affix != null) item.affixes.Add(new ItemAffix(affix.affixId, affix.value));
+                if (affix != null) item.affixes.Add(new ItemAffix(affix));
             }
         }
         return item;

@@ -2,11 +2,10 @@ using UnityEditor;
 using UnityEngine;
 
 // 에디터 전용 도구 (게임 빌드에는 포함되지 않음 — Editor 폴더 안에 있기 때문)
-// 메뉴 [귀살 → 적 데이터 만들기 (기존 4종)]을 누르면 처음 4종(잡귀·강시·아귀·도깨비)의 EnemyData 파일을
+// 메뉴 [귀살 → 적 데이터 만들기 (슬라이스)]을 누르면 슬라이스 귀신 EnemyData를
 // Assets/Data/Enemies에 만들고, Assets/Resources/EnemyDatabase.asset 목록에도 넣습니다.
-// 파일을 실수로 지웠을 때 처음 값으로 다시 만드는 용도입니다.
-// 값 = 옛 배치기의 기본값(체력 30, 공격력 5, 쿨타임 1.5초, 속도 3.5, 경험치 50) × 종류별 배율 (2026-10-13 결정: 공격력 기준 5)
 // 같은 이름의 파일이 이미 있으면 건드리지 않습니다 (직접 고친 숫자를 덮어쓰지 않기 위함).
+// 수치 = 밸런스 엑셀 "귀신" 시트 (망자: 체력 30, 피해 5, 간격 1.5초, 속도 3.5, 경험치 50)
 public static class EnemyDataCreator
 {
     private const string FolderParent = "Assets/Data";
@@ -14,19 +13,17 @@ public static class EnemyDataCreator
     private const string FolderPath = FolderParent + "/" + FolderName;
     private const string DatabasePath = "Assets/Resources/" + EnemyDatabase.ResourcePath + ".asset";
 
-    [MenuItem("귀살/적 데이터 만들기 (기존 4종)")]
-    private static void CreateDefaultEnemyData()
+    [MenuItem("귀살/적 데이터 만들기 (슬라이스)")]
+    private static void CreateSliceEnemyData()
     {
         if (!AssetDatabase.IsValidFolder(FolderParent)) AssetDatabase.CreateFolder("Assets", "Data");
         if (!AssetDatabase.IsValidFolder(FolderPath)) AssetDatabase.CreateFolder(FolderParent, FolderName);
         if (!AssetDatabase.IsValidFolder("Assets/Resources")) AssetDatabase.CreateFolder("Assets", "Resources");
 
         int created = 0;
-        //                  파일 이름        ID          이름      몸 색                              크기(너비, 키, 두께)            체력  공격 쿨타임 속도  경험치
-        created += Create("Enemy_Japgwi",   "japgwi",   "잡귀",   new Color(0.45f, 0.55f, 0.45f), new Vector3(1f, 1f, 1f),       30f, 5f, 1.5f,  3.5f,  50f);
-        created += Create("Enemy_Gangsi",   "gangsi",   "강시",   new Color(0.55f, 0.6f, 0.8f),   new Vector3(0.8f, 1.4f, 0.8f), 54f, 6f, 1.95f, 2.1f,  70f);
-        created += Create("Enemy_Agwi",     "agwi",     "아귀",   new Color(0.75f, 0.75f, 0.3f),  new Vector3(0.7f, 0.7f, 0.7f), 18f, 4f, 0.9f,  5.6f,  45f);
-        created += Create("Enemy_Dokkaebi", "dokkaebi", "도깨비", new Color(0.8f, 0.2f, 0.15f),   new Vector3(1.4f, 1.4f, 1.4f), 75f, 9f, 1.8f,  3.15f, 100f);
+        //                  파일 이름         ID         이름     몸 색(회색빛)                         크기                 체력  공격 쿨타임 속도  경험치
+        created += Create("Enemy_Mangja", "mangja", "망자", new Color(0.55f, 0.55f, 0.58f), Vector3.one, 30f, 5f, 1.5f, 3.5f, 50f);
+        // 창귀·도깨비불·산군은 각 S2 항목에서 추가
 
         int added = FillDatabase();
 

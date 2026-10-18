@@ -8,7 +8,7 @@ using UnityEngine.AI;            // NavMeshAgent 사용
 // - 깨어난 뒤에는 플레이어가 추격 포기 거리(BalanceConfig, 25m)보다 멀어질 때까지 쫓아오고,
 //   넘으면 제자리로 돌아가며 체력을 회복하고 다시 잠듭니다. 공격 사거리 안이면 멈춰서 쿨타임마다 공격합니다.
 // - 피격 시 체력이 깎이고, 체력이 0 이하가 되면 사망합니다.
-// - 고정 배치 무리·무작위 배치기가 MonsterFactory로 꺼낸 직후 귀신 데이터(EnemyData: 잡귀·강시 등)·몬스터 레벨과 등급(챔피언·유니크 등)을 적용합니다.
+// - 고정 배치 무리·무작위 배치기가 MonsterFactory로 꺼낸 직후 귀신 데이터(EnemyData: 망자 등)·몬스터 레벨과 등급(정예·이름 있는 정예 등)을 적용합니다.
 //   (아래 Inspector 숫자는 데이터가 적용되기 전의 기본값입니다)
 // - 오브젝트 풀로 재사용합니다: 죽거나 지역을 떠나면 파괴하지 않고 창고로 돌아가고(Release), 다시 꺼낼 때 OnEnable에서 상태를 초기화합니다.
 //   (씬에 직접 놓은 적은 풀에서 나온 것이 아니므로 예전처럼 파괴됨)
@@ -77,7 +77,7 @@ public class Enemy : MonoBehaviour
     [SerializeField] private int level = 1;
 
     [Header("등급과 보상 (배치기가 설정, Play 중 확인용)")]
-    [Tooltip("일반 / 챔피언 / 유니크 / 하수인")]
+    [Tooltip("일반 / 정예 / 이름 있는 정예 / 하수인")]
     [SerializeField] private MonsterRank rank = MonsterRank.Normal;
 
     [Tooltip("죽을 때 떨어뜨리는 장비 개수")]
@@ -229,14 +229,15 @@ public class Enemy : MonoBehaviour
         if (agent != null) agent.speed = data.moveSpeed;
     }
 
-    // 등급 적용: 체력·공격력·경험치를 power배로 늘리고, 죽을 때 떨어뜨릴 장비 수와 좋은 등급 확률 배율을 정함
-    public void ApplyRank(MonsterRank monsterRank, float power, int lootDrops, float lootRarityBonus)
+    // 등급 적용: 체력·피해·경험치를 각각 배율로 늘리고, 죽을 때 떨어뜨릴 장비 수와 좋은 등급 확률 배율을 정함
+    public void ApplyRank(MonsterRank monsterRank, float healthMult, float damageMult, float expMult,
+                          int lootDrops, float lootRarityBonus)
     {
         rank = monsterRank;
-        maxHealth *= power;
+        maxHealth *= healthMult;
         currentHealth = maxHealth;
-        attackDamage *= power;
-        experienceReward = Mathf.Round(experienceReward * power);
+        attackDamage *= damageMult;
+        experienceReward = Mathf.Round(experienceReward * expMult);
 
         lootDropCount = Mathf.Max(lootDrops, 0);
         lootRarityMultiplier = Mathf.Max(lootRarityBonus, 0f);
@@ -549,7 +550,7 @@ public class Enemy : MonoBehaviour
             Debug.LogWarning("씬에서 PlayerStats를 찾지 못해 경험치를 지급하지 못했습니다.");
         }
 
-        // LootDropper가 붙어 있는 적만 아이템을 드랍 (챔피언·유니크는 더 많이, 더 좋은 등급으로, 아이템 레벨 = 몬스터 레벨)
+        // LootDropper가 붙어 있는 적만 아이템을 드랍 (정예·이름 있는 정예는 더 많이, 더 좋은 등급으로, 아이템 레벨 = 몬스터 레벨)
         if (TryGetComponent(out LootDropper lootDropper))
         {
             lootDropper.DropItem(transform.position, lootDropCount, lootRarityMultiplier, level, config);

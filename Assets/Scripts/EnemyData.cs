@@ -2,20 +2,20 @@ using UnityEngine;
 
 // 귀신(적) 한 종류의 데이터 파일 (ScriptableObject — Project 창에서 Create > 귀살 > Enemy Data로 만듦)
 // 이름·모양·능력치를 프리팹이 아니라 이 파일에 적어 두면, 프리팹 하나로 여러 종류·변종을 만들 수 있습니다.
-// 능력치는 몬스터 레벨 1·일반 등급 기준이고, 레벨·등급(챔피언 등) 배율은 배치할 때 곱해집니다.
+// 능력치는 몬스터 레벨 1·일반 등급 기준이고, 레벨·등급(정예 등) 배율은 배치할 때 곱해집니다.
 [CreateAssetMenu(fileName = "EnemyData", menuName = "귀살/Enemy Data")]
 public class EnemyData : ScriptableObject
 {
     [Header("기본 정보")]
-    [Tooltip("코드·세이브에서 이 귀신을 구분하는 영문 ID (한 번 정하면 바꾸지 않기, 예: japgwi)")]
-    public string enemyId = "japgwi";
+    [Tooltip("코드·세이브에서 이 귀신을 구분하는 영문 ID (한 번 정하면 바꾸지 않기, 예: mangja)")]
+    public string enemyId = "mangja";
 
-    [Tooltip("(참고용) 한국어 이름. 실제 화면 이름은 화면 글자 표 \"UI\"의 enemy.{ID} 키 (예: enemy.japgwi)")]
-    public string displayName = "잡귀";
+    [Tooltip("(참고용) 한국어 이름. 실제 화면 이름은 화면 글자 표 \"UI\"의 enemy.{ID} 키 (예: enemy.mangja)")]
+    public string displayName = "망자";
 
     [Header("모양")]
-    [Tooltip("몸 색")]
-    public Color bodyColor = Color.gray;
+    [Tooltip("몸 색 (망자 = 회색빛)")]
+    public Color bodyColor = new Color(0.55f, 0.55f, 0.58f, 1f);
 
     [Tooltip("몸 크기 배율 (X 너비, Y 키, Z 두께)")]
     public Vector3 bodyScale = Vector3.one;

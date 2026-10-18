@@ -21,6 +21,39 @@ MonoBehaviour:
   baseMaxMana: 100
   manaPerLevel: 2
   baseManaRegen: 5
+  armorPerEnemyLevel: 15
+  armorBase: 50
+  armorReductionCap: 0.85
+  enemyHealthGrowth: 1.12
+  enemyDamageGrowth: 1.09
+  eliteHealthMult: 3
+  eliteDamageMult: 1.5
+  eliteExpMult: 3
+  namedEliteHealthMult: 6
+  namedEliteDamageMult: 1.8
+  namedEliteExpMult: 6
+  minionHealthMult: 1.5
+  minionDamageMult: 1.5
+  minionExpMult: 1.5
+  normalLootDrops: 1
+  eliteLootDrops: 2
+  namedEliteLootDrops: 3
+  minionLootDrops: 1
+  eliteRarityBonus: 2
+  namedEliteRarityBonus: 3
+  minionRarityBonus: 1.5
+  lootScatterRadius: 2
+  lootMinSpacing: 0.8
+  itemLabelTextScale: 1
+  itemLabelBoxScale: 1
+  enemyLeashRange: 25
+  enemyRepathIntervalMin: 0.2
+  enemyRepathIntervalMax: 0.3
+  enemyReturnHealPerSecond: 0.5
+  evadeDistance: 4
+  evadeDuration: 0.25
+  evadeCharges: 2
+  evadeRechargeTime: 5
   critChanceCap: 0.75
   attackSpeedCap: 1
   resistanceCap: 0.75

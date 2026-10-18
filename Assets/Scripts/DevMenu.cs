@@ -81,7 +81,7 @@ public class DevMenu : MonoBehaviour, IUIWindow
     private LootDropper cachedDropper;                  // 아이템 프리팹·드랍을 빌려 쓸 귀신의 LootDropper
 
     // —— 귀신 소환 (S1-13 2단계) ——
-    private static readonly string[] RankLabels = { "일반", "챔피언", "유니크", "하수인" };
+    private static readonly string[] RankLabels = { "일반", "정예", "이름있는정예", "하수인" };
     private const float SpawnDistance = 3f;             // 플레이어 앞쪽으로 소환할 거리(m)
     private MonsterRank spawnRank = MonsterRank.Normal; // 소환할 등급
     private int spawnEnemyLevel = 1;                    // 소환할 몬스터 레벨
@@ -564,8 +564,8 @@ public class DevMenu : MonoBehaviour, IUIWindow
     {
         switch (rank)
         {
-            case MonsterRank.Champion: return MonsterFactory.MakeChampionName(data);
-            case MonsterRank.Unique: return MonsterFactory.MakeUniqueName(data);
+            case MonsterRank.Elite: return MonsterFactory.MakeEliteName(data);
+            case MonsterRank.NamedElite: return MonsterFactory.MakeNamedEliteName(data);
             case MonsterRank.Minion: return MonsterFactory.MakeMinionName(data);
             default: return null; // 일반은 이름표 없음 (기존 고정 배치와 같음)
         }

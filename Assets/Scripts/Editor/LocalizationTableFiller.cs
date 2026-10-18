@@ -29,7 +29,7 @@ public static class LocalizationTableFiller
         { "notice.no_mana_potion",    "기력 물약이 없습니다." },
         { "notice.potion_used",       "{0} 사용! 기력 +{1}" },
         { "notice.dead_cannot_use",   "사망한 상태에서는 아이템을 쓸 수 없습니다." },
-        { "notice.area_threats",      "이 지역에 챔피언 무리 {0}개와 유니크 몬스터 {1}마리가 도사리고 있습니다" },
+        { "notice.area_threats",      "이 지역에 정예 무리 {0}개와 이름 있는 정예 {1}마리가 도사리고 있습니다" },
         { "notice.area_cleared",      "이 지역의 모든 요괴를 처치했습니다!" },
 
         // 화면 위 정보 (HUD)
@@ -82,24 +82,21 @@ public static class LocalizationTableFiller
         { "death.revive",                      "부활하기" },
 
         // 귀신 이름 (EnemyData의 ID 기준: enemy.ID)
-        { "enemy.japgwi",             "잡귀" },
-        { "enemy.gangsi",             "강시" },
-        { "enemy.agwi",               "아귀" },
-        { "enemy.dokkaebi",           "도깨비" },
+        { "enemy.mangja",             "망자" },
 
-        // 챔피언·하수인·유니크 이름표 (MonsterFactory)
-        { "enemy.champion_name",      "챔피언 {0}" },
+        // 정예·하수인·이름 있는 정예 이름표 (MonsterFactory) — 📬 전달-26
+        { "enemy.elite_name",         "정예 {0}" },
         { "enemy.minion_name",        "{0} 하수인" },
-        { "enemy.unique_name",        "{0} {1} {2}" },
-        { "enemy.unique_prefix.0",    "피에 굶주린" },
-        { "enemy.unique_prefix.1",    "저주받은" },
-        { "enemy.unique_prefix.2",    "흉포한" },
-        { "enemy.unique_prefix.3",    "썩어 가는" },
-        { "enemy.unique_prefix.4",    "천년 묵은" },
-        { "enemy.unique_prefix.5",    "원한 서린" },
-        { "enemy.unique_suffix.0",    "왕" },
-        { "enemy.unique_suffix.1",    "우두머리" },
-        { "enemy.unique_suffix.2",    "대장" },
+        { "enemy.named_elite_name",   "{0} {1} {2}" },
+        { "enemy.named_elite_prefix.0", "피에 굶주린" },
+        { "enemy.named_elite_prefix.1", "저주받은" },
+        { "enemy.named_elite_prefix.2", "흉포한" },
+        { "enemy.named_elite_prefix.3", "썩어 가는" },
+        { "enemy.named_elite_prefix.4", "천년 묵은" },
+        { "enemy.named_elite_prefix.5", "원한 서린" },
+        { "enemy.named_elite_suffix.0", "왕" },
+        { "enemy.named_elite_suffix.1", "우두머리" },
+        { "enemy.named_elite_suffix.2", "대장" },
 
         // 기본 아이템 이름 (ItemBase의 ID 기준: item.name.ID)
         { "item.name.weapon_old_dagger",      "낡은 단검" },

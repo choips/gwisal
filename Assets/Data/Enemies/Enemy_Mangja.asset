@@ -10,16 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 90e028c3eb416eb47b2f2b242ed11c20, type: 3}
-  m_Name: Enemy_Dokkaebi
+  m_Name: Enemy_Mangja
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
-  enemyId: dokkaebi
-  displayName: "\uB3C4\uAE68\uBE44"
-  bodyColor: {r: 0.8, g: 0.2, b: 0.15, a: 1}
-  bodyScale: {x: 1.4, y: 1.4, z: 1.4}
-  maxHealth: 75
-  attackDamage: 9
-  attackCooldown: 1.8
-  moveSpeed: 3.15
-  experienceReward: 100
+  enemyId: mangja
+  displayName: "\uB9DD\uC790"
+  bodyColor: {r: 0.55, g: 0.55, b: 0.58, a: 1}
+  bodyScale: {x: 1, y: 1, z: 1}
+  maxHealth: 30
+  attackDamage: 5
+  attackCooldown: 1.5
+  moveSpeed: 3.5
+  experienceReward: 50
   aggroRange: 10
   attackRange: 1.5

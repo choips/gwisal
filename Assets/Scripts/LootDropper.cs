@@ -79,7 +79,7 @@ public class LootDropper : MonoBehaviour
     public TMP_FontAsset LabelFont => labelFont;
 
     // dropPosition 위치에 장비를 equipmentCount개 떨어뜨리고, 장비마다 확률에 따라 기력 물약도 하나씩 더 떨어뜨림
-    // rarityBonus: 좋은 등급(매직·레어·유니크) 확률 배율 (챔피언 2, 유니크 3 등)
+    // rarityBonus: 좋은 등급(매직·레어·유니크) 확률 배율 (정예 2, 이름 있는 정예 3 등)
     // itemLevel: 숨겨진 아이템 레벨 (떨어뜨린 귀신의 몬스터 레벨)
     // config: 흩어지는 반경·최소 간격 (null이면 기본값 2m·0.8m)
     public void DropItem(Vector3 dropPosition, int equipmentCount = 1, float rarityBonus = 1f, int itemLevel = 1,

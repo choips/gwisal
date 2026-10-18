@@ -26,7 +26,7 @@ public class EnemyDatabase : ScriptableObject
                 instance = Resources.Load<EnemyDatabase>(ResourcePath);
                 if (instance == null)
                 {
-                    Debug.LogError($"Assets/Resources/{ResourcePath}.asset 파일이 없습니다. 메뉴 [귀살 → 적 데이터 만들기 (기존 4종)]을 눌러 만들어 주세요.");
+                    Debug.LogError($"Assets/Resources/{ResourcePath}.asset 파일이 없습니다. 메뉴 [귀살 → 적 데이터 만들기 (슬라이스)]을 눌러 만들어 주세요.");
                 }
             }
             return instance;

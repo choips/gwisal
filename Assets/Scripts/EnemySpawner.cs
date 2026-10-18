@@ -4,12 +4,12 @@ using TMPro;                     // TMP_FontAsset 사용 (머리 위 이름표 �
 using UnityEngine;
 using UnityEngine.AI;            // NavMesh 사용
 
-// 몬스터 무리 무작위 배치기 (디아블로 방식) — 지금은 귀문 균열용으로 보관 (스토리 지역은 고정 배치 무리 EnemyPack)
+// 몬스터 무리 무작위 배치기 — 지금은 귀문 균열용으로 보관 (스토리 지역은 고정 배치 무리 EnemyPack)
 // 게임이 시작되면 맵(NavMesh) 전체에 몬스터 무리를 무작위 개수로 한 번 배치합니다. (다시 채우지 않음)
 // - 일반 무리: 같은 종류의 일반 몬스터 여러 마리
-// - 챔피언 무리: 챔피언 2~4마리 (이름표 "챔피언 ○○")
-// - 유니크 무리: 이름 있는 유니크 1마리 + 하수인 3~4마리
-// 무리마다 귀신 종류(잡귀·강시·아귀·도깨비 — EnemyData 파일)를 출현 가중치 확률로 하나 골라 그 종류로만 채웁니다.
+// - 정예 무리: 정예 1마리 + 일반 여러 마리 (이름표 "정예 ○○")
+// - 이름 있는 정예는 무작위로 만들지 않음 — 정해진 자리의 EnemyPack만 사용 (📬 전달-26)
+// 무리마다 귀신 종류(EnemyData)를 출현 가중치 확률로 하나 골라 그 종류로만 채웁니다.
 // 몬스터 만들기(등급 배율·색·크기·이름표)는 MonsterFactory, 등급 배율 숫자는 BalanceConfig에서 가져옵니다.
 // 한 마리가 깨어나면 같은 무리가 함께 깨어납니다.
 public class EnemySpawner : MonoBehaviour, IEnemyOwner
@@ -31,17 +31,11 @@ public class EnemySpawner : MonoBehaviour, IEnemyOwner
     [Tooltip("일반 무리 하나의 몬스터 수")]
     [SerializeField] private IntRange normalPackSize = new IntRange(3, 5);
 
-    [Header("챔피언 무리")]
-    [SerializeField] private IntRange championPackCount = new IntRange(1, 3);
+    [Header("정예 무리")]
+    [SerializeField] private IntRange elitePackCount = new IntRange(1, 3);
 
-    [Tooltip("챔피언 무리 하나의 챔피언 수")]
-    [SerializeField] private IntRange championPackSize = new IntRange(2, 4);
-
-    [Header("유니크 무리")]
-    [SerializeField] private IntRange uniquePackCount = new IntRange(1, 2);
-
-    [Tooltip("유니크 하나를 따르는 하수인 수")]
-    [SerializeField] private IntRange minionCount = new IntRange(3, 4);
+    [Tooltip("정예 하나에 따라다니는 일반 수")]
+    [SerializeField] private IntRange eliteEscortCount = new IntRange(2, 3);
 
     [Header("배치")]
     [Tooltip("플레이어 시작 위치와 이 거리(m)보다 가까운 곳에는 무리를 두지 않음")]
@@ -59,7 +53,7 @@ public class EnemySpawner : MonoBehaviour, IEnemyOwner
     [Tooltip("무리 하나의 자리를 찾을 때 무작위 위치를 뽑아 보는 최대 횟수")]
     [SerializeField] private int maxPlacementAttempts = 40;
 
-    [Header("머리 위 이름표 (챔피언·유니크·하수인만)")]
+    [Header("머리 위 이름표 (정예·하수인만)")]
     [Tooltip("비워 두면 Enemy 프리팹의 LootDropper에 지정된 글꼴(NotoSansKR)을 사용")]
     [SerializeField] private TMP_FontAsset labelFont;
 
@@ -136,7 +130,7 @@ public class EnemySpawner : MonoBehaviour, IEnemyOwner
         }
     }
 
-    // 맵 전체에 무리 배치 (강한 무리가 좋은 자리를 먼저 차지하도록 유니크 → 챔피언 → 일반 순서)
+    // 맵 전체에 무리 배치 (강한 무리가 좋은 자리를 먼저 차지하도록 정예 → 일반 순서)
     private void PopulateMap()
     {
         if (!TryCalculateMapBounds())
@@ -145,13 +139,13 @@ public class EnemySpawner : MonoBehaviour, IEnemyOwner
             return;
         }
 
-        int uniquePacks = PlacePacks(uniquePackCount.Roll(), SpawnUniquePack);
-        int championPacks = PlacePacks(championPackCount.Roll(), SpawnChampionPack);
+        int elitePacks = PlacePacks(elitePackCount.Roll(), SpawnElitePack);
         int normalPacks = PlacePacks(normalPackCount.Roll(), SpawnNormalPack);
 
         hasPopulated = true;
-        GameLog.Region($"몬스터 배치 완료 (레벨 {monsterLevel}): 일반 무리 {normalPacks}개, 챔피언 무리 {championPacks}개, 유니크 무리 {uniquePacks}개 (총 {currentEnemyCount}마리)");
-        NotificationUI.Show(Loc.Format("notice.area_threats", championPacks, uniquePacks));
+        GameLog.Region($"몬스터 배치 완료 (레벨 {monsterLevel}): 일반 무리 {normalPacks}개, 정예 무리 {elitePacks}개 (총 {currentEnemyCount}마리)");
+        // 이름 있는 정예는 무작위 배치하지 않으므로 두 번째 인자는 0
+        NotificationUI.Show(Loc.Format("notice.area_threats", elitePacks, 0));
     }
 
     // count개의 무리 자리를 찾아 spawnPack으로 채움 (실제로 배치한 무리 수를 돌려줌)
@@ -184,30 +178,17 @@ public class EnemySpawner : MonoBehaviour, IEnemyOwner
         }
     }
 
-    private void SpawnChampionPack(Vector3 center)
+    private void SpawnElitePack(Vector3 center)
     {
         EnemyData data = PickEnemyType();
         List<Enemy> pack = new List<Enemy>();
-        string championName = MonsterFactory.MakeChampionName(data);
-        int size = championPackSize.Roll();
-        for (int i = 0; i < size; i++)
+        string eliteName = MonsterFactory.MakeEliteName(data);
+        SpawnMonster(center, data, MonsterRank.Elite, eliteName, pack);
+
+        int escorts = eliteEscortCount.Roll();
+        for (int i = 0; i < escorts; i++)
         {
-            SpawnMonster(GetMemberPosition(center), data, MonsterRank.Champion, championName, pack);
-        }
-    }
-
-    private void SpawnUniquePack(Vector3 center)
-    {
-        EnemyData data = PickEnemyType();
-        List<Enemy> pack = new List<Enemy>();
-
-        SpawnMonster(center, data, MonsterRank.Unique, MonsterFactory.MakeUniqueName(data), pack);
-
-        string minionName = MonsterFactory.MakeMinionName(data);
-        int minions = minionCount.Roll();
-        for (int i = 0; i < minions; i++)
-        {
-            SpawnMonster(GetMemberPosition(center), data, MonsterRank.Minion, minionName, pack);
+            SpawnMonster(GetMemberPosition(center), data, MonsterRank.Normal, null, pack);
         }
     }
 

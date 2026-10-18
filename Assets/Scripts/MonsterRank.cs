@@ -1,12 +1,11 @@
 using UnityEngine;
 
-// 몬스터 등급 (디아블로 방식)
-// 일반 / 챔피언(무리 전체가 강함) / 유니크(이름 있는 우두머리) / 하수인(유니크를 따르는 부하)
-// 세이브 파일 등에 숫자로 저장될 수 있으므로 새 등급은 맨 뒤에 추가
-// (귀신 종류별 능력치는 EnemyData 데이터 파일에 있음)
-public enum MonsterRank { Normal, Champion, Unique, Minion }
+// 몬스터 등급 (기획: 일반 · 정예 · 이름 있는 정예 · 하수인)
+// 세이브·씬 파일에 번호로 저장되므로 값은 바꾸지 않음 (0=일반, 1=정예, 2=이름 있는 정예, 3=하수인)
+// 예전 이름 Champion·Unique는 Elite·NamedElite로만 바꿈 (📬 전달-26)
+public enum MonsterRank { Normal, Elite, NamedElite, Minion }
 
-// Inspector에서 "최소 ~ 최대"를 입력받는 정수 범위 (예: 챔피언 2~4마리)
+// Inspector에서 "최소 ~ 최대"를 입력받는 정수 범위 (예: 정예 무리의 일반 2~3마리)
 [System.Serializable]
 public struct IntRange
 {

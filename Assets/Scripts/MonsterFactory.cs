@@ -6,16 +6,16 @@ using UnityEngine;
 // 고정 배치 무리(EnemyPack)와 무작위 배치기(EnemySpawner)가 함께 사용합니다.
 public static class MonsterFactory
 {
-    public static readonly Color ChampionColor = new Color(0.4f, 0.6f, 1f);   // 파랑
-    public static readonly Color UniqueColor = new Color(1f, 0.8f, 0.2f);     // 금색
+    public static readonly Color EliteColor = new Color(0.4f, 0.6f, 1f);      // 파랑 (정예)
+    public static readonly Color NamedEliteColor = new Color(1f, 0.8f, 0.2f); // 금색 (이름 있는 정예)
     public static readonly Color MinionColor = new Color(0.85f, 0.85f, 0.85f); // 밝은 회색
 
     private const float LabelFontSize = 3.5f;
     private const float LabelHeight = 1.7f; // 몸 중심에서 이름표까지의 높이(m), 몸 크기에 맞춰 늘어남
 
-    // 유니크 이름의 앞말·뒷말 수 (화면 글자 표의 enemy.unique_prefix.0~5, enemy.unique_suffix.0~2)
-    private const int UniquePrefixCount = 6;
-    private const int UniqueSuffixCount = 3;
+    // 이름 있는 정예 이름의 앞말·뒷말 수 (화면 글자 표 enemy.named_elite_prefix.0~5, enemy.named_elite_suffix.0~2)
+    private const int NamedElitePrefixCount = 6;
+    private const int NamedEliteSuffixCount = 3;
 
     // 몬스터 한 마리를 풀에서 꺼내 준비함 (실패하면 null)
     // labelText: 머리 위 이름표 (비우면 이름표 없음), config: 레벨 성장·등급 배율 (null이면 배율 1)
@@ -42,12 +42,14 @@ public static class MonsterFactory
         float damageMultiplier = (config != null ? config.GetEnemyDamageMultiplier(level) : 1f) * DevCheats.EnemyDamageMult;
         enemy.ApplyData(data, level, healthMultiplier, damageMultiplier);
 
-        float power = config != null ? config.GetRankPower(rank) : 1f;
+        float healthMult = config != null ? config.GetRankHealthMult(rank) : 1f;
+        float damageMult = config != null ? config.GetRankDamageMult(rank) : 1f;
+        float expMult = config != null ? config.GetRankExpMult(rank) : 1f;
         int lootDrops = config != null ? config.GetRankLootDrops(rank) : 1;
         float rarityBonus = config != null ? config.GetRankRarityBonus(rank) : 1f;
         lootDrops = Mathf.Max(0, Mathf.RoundToInt(lootDrops * DevCheats.EnemyLootMult));
         rarityBonus *= DevCheats.EnemyLootMult;
-        enemy.ApplyRank(rank, power, lootDrops, rarityBonus);
+        enemy.ApplyRank(rank, healthMult, damageMult, expMult, lootDrops, rarityBonus);
 
         enemy.SetBodyColor(GetBodyColor(data.bodyColor, rank));
 
@@ -63,9 +65,9 @@ public static class MonsterFactory
         return enemy;
     }
 
-    public static string MakeChampionName(EnemyData data)
+    public static string MakeEliteName(EnemyData data)
     {
-        return Loc.Format("enemy.champion_name", data.LocalizedName);
+        return Loc.Format("enemy.elite_name", data.LocalizedName);
     }
 
     public static string MakeMinionName(EnemyData data)
@@ -73,32 +75,32 @@ public static class MonsterFactory
         return Loc.Format("enemy.minion_name", data.LocalizedName);
     }
 
-    // 예: "천년 묵은 강시 왕"
-    public static string MakeUniqueName(EnemyData data)
+    // 예: "천년 묵은 망자 왕"
+    public static string MakeNamedEliteName(EnemyData data)
     {
-        string prefix = Loc.Get("enemy.unique_prefix." + Random.Range(0, UniquePrefixCount));
-        string suffix = Loc.Get("enemy.unique_suffix." + Random.Range(0, UniqueSuffixCount));
-        return Loc.Format("enemy.unique_name", prefix, data.LocalizedName, suffix);
+        string prefix = Loc.Get("enemy.named_elite_prefix." + Random.Range(0, NamedElitePrefixCount));
+        string suffix = Loc.Get("enemy.named_elite_suffix." + Random.Range(0, NamedEliteSuffixCount));
+        return Loc.Format("enemy.named_elite_name", prefix, data.LocalizedName, suffix);
     }
 
     public static Color GetLabelColor(MonsterRank rank)
     {
         switch (rank)
         {
-            case MonsterRank.Champion: return ChampionColor;
-            case MonsterRank.Unique: return UniqueColor;
+            case MonsterRank.Elite: return EliteColor;
+            case MonsterRank.NamedElite: return NamedEliteColor;
             case MonsterRank.Minion: return MinionColor;
             default: return Color.white;
         }
     }
 
-    // 챔피언은 파란빛, 유니크는 금빛이 돌게 몸 색을 섞음
+    // 정예는 파란빛, 이름 있는 정예는 금빛이 돌게 몸 색을 섞음
     private static Color GetBodyColor(Color typeColor, MonsterRank rank)
     {
         switch (rank)
         {
-            case MonsterRank.Champion: return Color.Lerp(typeColor, ChampionColor, 0.5f);
-            case MonsterRank.Unique: return Color.Lerp(typeColor, UniqueColor, 0.5f);
+            case MonsterRank.Elite: return Color.Lerp(typeColor, EliteColor, 0.5f);
+            case MonsterRank.NamedElite: return Color.Lerp(typeColor, NamedEliteColor, 0.5f);
             default: return typeColor;
         }
     }
@@ -108,8 +110,8 @@ public static class MonsterFactory
     {
         switch (rank)
         {
-            case MonsterRank.Champion: return 1.15f;
-            case MonsterRank.Unique: return 1.35f;
+            case MonsterRank.Elite: return 1.15f;
+            case MonsterRank.NamedElite: return 1.35f;
             default: return 1f;
         }
     }

@@ -1,7 +1,7 @@
 using TMPro;
 using UnityEngine;
 
-// 오브젝트 위에 3D 공간 글자로 띄우는 이름표 — 챔피언·유니크·하수인 몬스터 머리 위(MonsterFactory), 지역 출구(RegionExit)
+// 오브젝트 위에 3D 공간 글자로 띄우는 이름표 — 정예·이름 있는 정예·하수인 몬스터 머리 위(MonsterFactory), 지역 출구(RegionExit)
 // 바닥 아이템 이름표는 화면 UI로 바뀌었습니다 (ItemLabelManager, [전달-21] ④).
 // 이름표는 대상의 자식이 아닌 별도 오브젝트라서, 대상이 굴러도 기울어지지 않고 항상 카메라를 향합니다.
 // 대상이 사라지면 이름표도 함께 사라집니다.

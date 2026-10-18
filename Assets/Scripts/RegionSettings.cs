@@ -6,7 +6,7 @@ using UnityEngine;
 // 지역 설정 (지역 씬마다 하나, 빈 오브젝트에 붙임)
 // 지역 레벨(= 이 지역 몬스터 레벨)과 귀신 프리팹을 정하고,
 // 지역 준비가 끝나면 이 씬에 놓인 고정 배치 무리(EnemyPack)를 모두 채웁니다.
-// 위협 알림("챔피언 무리 ○개…")과 "모든 요괴를 처치했습니다" 알림도 여기서 띄웁니다.
+// 위협 알림("정예 무리 ○개…")과 "모든 요괴를 처치했습니다" 알림도 여기서 띄웁니다.
 public class RegionSettings : MonoBehaviour
 {
     [Tooltip("지역 레벨 = 이 지역 몬스터 레벨 (체력·피해 배율, 떨어지는 아이템 레벨)")]
@@ -15,7 +15,7 @@ public class RegionSettings : MonoBehaviour
     [Tooltip("귀신 프리팹 (Assets/Prefabs/Enemy)")]
     [SerializeField] private GameObject enemyPrefab;
 
-    [Tooltip("챔피언·유니크·하수인 머리 위 이름표 글꼴 (비워 두면 Enemy 프리팹의 LootDropper 글꼴)")]
+    [Tooltip("정예·이름 있는 정예·하수인 머리 위 이름표 글꼴 (비워 두면 Enemy 프리팹의 LootDropper 글꼴)")]
     [SerializeField] private TMP_FontAsset labelFont;
 
     [Header("상태 (Play 중 확인용)")]
@@ -57,8 +57,8 @@ public class RegionSettings : MonoBehaviour
             if (spawned == 0) continue;
 
             aliveEnemyCount += spawned;
-            if (pack.Kind == EnemyPack.PackKind.Champion) championPacks++;
-            else if (pack.Kind == EnemyPack.PackKind.Unique) uniquePacks++;
+            if (pack.Kind == EnemyPack.PackKind.Elite) championPacks++;
+            else if (pack.Kind == EnemyPack.PackKind.NamedElite) uniquePacks++;
         }
 
         hasPopulated = true;

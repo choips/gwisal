@@ -5,19 +5,20 @@ using UnityEngine.AI;            // NavMesh 위 위치 찾기
 // 고정 배치 귀신 무리 (스토리 지역 씬에 직접 놓는 빈 오브젝트)
 // 이 오브젝트 위치를 중심으로, 지역 준비가 끝나면 정해 둔 귀신 무리를 풀에서 꺼내 세웁니다.
 // 지역 레벨·귀신 프리팹은 같은 씬의 RegionSettings에서 가져오고, 등급 배율은 BalanceConfig에서 가져옵니다.
-// Scene 뷰에는 무리 범위가 원(일반 흰색 / 챔피언 파랑 / 유니크 금색)과 이름으로 표시됩니다.
+// Scene 뷰에는 무리 범위가 원(일반 흰색 / 정예 파랑 / 이름 있는 정예 금색)과 이름으로 표시됩니다.
 public class EnemyPack : MonoBehaviour, IEnemyOwner
 {
-    // 무리 종류 (씬 파일에 번호로 저장되므로 새 종류는 맨 뒤에만 추가)
-    public enum PackKind { Normal, Champion, Unique }
+    // 무리 종류 (씬 파일에 번호로 저장되므로 값은 바꾸지 않음: 0=일반, 1=정예, 2=이름 있는 정예)
+    // 예전 Champion·Unique는 Elite·NamedElite로만 바꿈 (📬 전달-26)
+    public enum PackKind { Normal, Elite, NamedElite }
 
     [Tooltip("이 무리의 귀신 종류 (Assets/Data/Enemies의 데이터 파일)")]
     [SerializeField] private EnemyData enemyData;
 
-    [Tooltip("일반: 일반 몬스터 무리 / 챔피언: 챔피언 무리 / 유니크: 유니크 1마리 + 하수인")]
+    [Tooltip("일반: 일반 몬스터 무리 / 정예: 정예 1 + 일반들 / 이름 있는 정예: 이름 있는 정예 1 + 하수인")]
     [SerializeField] private PackKind packKind = PackKind.Normal;
 
-    [Tooltip("일반: 몬스터 수 / 챔피언: 챔피언 수 / 유니크: 따르는 하수인 수 (최소 ~ 최대 사이에서 무작위)")]
+    [Tooltip("일반: 몬스터 수 / 정예: 따라다니는 일반 수 (정예는 1마리 고정) / 이름 있는 정예: 하수인 수")]
     [SerializeField] private IntRange memberCount = new IntRange(3, 5);
 
     [Tooltip("무리 중심에서 몬스터들이 흩어지는 반경(m)")]
@@ -54,13 +55,15 @@ public class EnemyPack : MonoBehaviour, IEnemyOwner
         int count = memberCount.Roll();
         switch (packKind)
         {
-            case PackKind.Champion:
-                string championName = MonsterFactory.MakeChampionName(enemyData);
-                for (int i = 0; i < count; i++) SpawnMember(MonsterRank.Champion, championName, GetMemberPosition(center));
+            case PackKind.Elite:
+                // 정예 1마리 + 나머지는 일반 (기획: 정예 무리의 다른 귀신은 일반 그대로)
+                SpawnMember(MonsterRank.Elite, MonsterFactory.MakeEliteName(enemyData), center);
+                for (int i = 0; i < count; i++) SpawnMember(MonsterRank.Normal, null, GetMemberPosition(center));
                 break;
 
-            case PackKind.Unique:
-                SpawnMember(MonsterRank.Unique, MonsterFactory.MakeUniqueName(enemyData), center);
+            case PackKind.NamedElite:
+                // 이름 있는 정예는 정해진 자리에만 (무작위 배치기는 만들지 않음 — 📬 전달-26)
+                SpawnMember(MonsterRank.NamedElite, MonsterFactory.MakeNamedEliteName(enemyData), center);
                 string minionName = MonsterFactory.MakeMinionName(enemyData);
                 for (int i = 0; i < count; i++) SpawnMember(MonsterRank.Minion, minionName, GetMemberPosition(center));
                 break;
@@ -120,18 +123,19 @@ public class EnemyPack : MonoBehaviour, IEnemyOwner
         return NavMesh.SamplePosition(candidate, out NavMeshHit hit, 1f, NavMesh.AllAreas) ? hit.position : center;
     }
 
-    // Scene 뷰에 무리 범위(원)와 이름 표시 — 일반 흰색 / 챔피언 파랑 / 유니크 금색
+    // Scene 뷰에 무리 범위(원)와 이름 표시 — 일반 흰색 / 정예 파랑 / 이름 있는 정예 금색
     private void OnDrawGizmos()
     {
-        Color color = packKind == PackKind.Champion ? MonsterFactory.ChampionColor
-                    : packKind == PackKind.Unique ? MonsterFactory.UniqueColor
+        Color color = packKind == PackKind.Elite ? MonsterFactory.EliteColor
+                    : packKind == PackKind.NamedElite ? MonsterFactory.NamedEliteColor
                     : Color.white;
         Gizmos.color = color;
         DrawCircle(transform.position, spread + 0.5f, 32);
 
 #if UNITY_EDITOR
         string typeName = enemyData != null ? enemyData.displayName : "(귀신 종류 없음)";
-        string kindName = packKind == PackKind.Champion ? "챔피언" : packKind == PackKind.Unique ? "유니크" : "일반";
+        string kindName = packKind == PackKind.Elite ? "정예"
+                        : packKind == PackKind.NamedElite ? "이름 있는 정예" : "일반";
         UnityEditor.Handles.color = color;
         UnityEditor.Handles.Label(transform.position + Vector3.up * 2f, $"{kindName} {typeName} {memberCount.min}~{memberCount.max}");
 #endif

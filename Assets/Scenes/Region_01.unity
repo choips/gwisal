@@ -130,7 +130,7 @@ GameObject:
   - component: {fileID: 172080415}
   - component: {fileID: 172080416}
   m_Layer: 0
-  m_Name: Pack_Unique_Dokkaebi
+  m_Name: Pack_NamedElite_Mangja
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -163,7 +163,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c0884cf3512172d4db175f3eba041133, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyPack
-  enemyData: {fileID: 11400000, guid: e512fa4446c22124f94ed819a07b9b11, type: 2}
+  enemyData: {fileID: 11400000, guid: 721f82aa22b38df499dd090f3e671f5c, type: 2}
   packKind: 2
   memberCount:
     min: 3
@@ -520,7 +520,7 @@ GameObject:
   - component: {fileID: 751152268}
   - component: {fileID: 751152269}
   m_Layer: 0
-  m_Name: Pack_Champion_Gangsi
+  m_Name: Pack_Elite_Mangja
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -553,7 +553,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c0884cf3512172d4db175f3eba041133, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyPack
-  enemyData: {fileID: 11400000, guid: 8813989a38b9aca45845f67daf9c796b, type: 2}
+  enemyData: {fileID: 11400000, guid: 721f82aa22b38df499dd090f3e671f5c, type: 2}
   packKind: 1
   memberCount:
     min: 2
@@ -713,7 +713,7 @@ GameObject:
   - component: {fileID: 1345514851}
   - component: {fileID: 1345514852}
   m_Layer: 0
-  m_Name: Pack_Gangsi_01
+  m_Name: Pack_Mangja_03
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -746,7 +746,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c0884cf3512172d4db175f3eba041133, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyPack
-  enemyData: {fileID: 11400000, guid: 8813989a38b9aca45845f67daf9c796b, type: 2}
+  enemyData: {fileID: 11400000, guid: 721f82aa22b38df499dd090f3e671f5c, type: 2}
   packKind: 0
   memberCount:
     min: 3
@@ -764,7 +764,7 @@ GameObject:
   - component: {fileID: 1446792364}
   - component: {fileID: 1446792365}
   m_Layer: 0
-  m_Name: Pack_Japgwi_01
+  m_Name: Pack_Mangja_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -815,7 +815,7 @@ GameObject:
   - component: {fileID: 1461453624}
   - component: {fileID: 1461453625}
   m_Layer: 0
-  m_Name: Pack_Japgwi_02
+  m_Name: Pack_Mangja_02
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -866,7 +866,7 @@ GameObject:
   - component: {fileID: 1849701701}
   - component: {fileID: 1849701702}
   m_Layer: 0
-  m_Name: Pack_Agwi_01
+  m_Name: Pack_Mangja_04
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -899,7 +899,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c0884cf3512172d4db175f3eba041133, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyPack
-  enemyData: {fileID: 11400000, guid: 449f2fe3a1f588e4a94e359d42f1ce12, type: 2}
+  enemyData: {fileID: 11400000, guid: 721f82aa22b38df499dd090f3e671f5c, type: 2}
   packKind: 0
   memberCount:
     min: 3
@@ -939,11 +939,11 @@ MonoBehaviour:
   enemyTypes:
   - data: {fileID: 11400000, guid: 721f82aa22b38df499dd090f3e671f5c, type: 2}
     spawnWeight: 40
-  - data: {fileID: 11400000, guid: 8813989a38b9aca45845f67daf9c796b, type: 2}
+  - data: {fileID: 11400000, guid: 721f82aa22b38df499dd090f3e671f5c, type: 2}
     spawnWeight: 25
-  - data: {fileID: 11400000, guid: 449f2fe3a1f588e4a94e359d42f1ce12, type: 2}
+  - data: {fileID: 11400000, guid: 721f82aa22b38df499dd090f3e671f5c, type: 2}
     spawnWeight: 25
-  - data: {fileID: 11400000, guid: e512fa4446c22124f94ed819a07b9b11, type: 2}
+  - data: {fileID: 11400000, guid: 721f82aa22b38df499dd090f3e671f5c, type: 2}
     spawnWeight: 10
   monsterLevel: 5
   normalPackCount:
@@ -952,38 +952,18 @@ MonoBehaviour:
   normalPackSize:
     min: 3
     max: 5
-  championPackCount:
+  elitePackCount:
     min: 1
     max: 3
-  championPackSize:
+  eliteEscortCount:
     min: 2
-    max: 4
-  championPower: 2
-  championLootDrops: 2
-  championRarityBonus: 2
-  uniquePackCount:
-    min: 1
-    max: 2
-  minionCount:
-    min: 3
-    max: 4
-  uniquePower: 3
-  minionPower: 1.5
-  uniqueLootDrops: 3
-  uniqueRarityBonus: 3
-  minionLootDrops: 1
-  minionRarityBonus: 1.5
+    max: 3
   minDistanceFromPlayer: 6
   packSpacing: 14
   packSpread: 2.5
   mapEdgeMargin: 3
   maxPlacementAttempts: 40
   labelFont: {fileID: 0}
-  labelFontSize: 3.5
-  labelHeight: 1.7
-  championColor: {r: 0.4, g: 0.6, b: 1, a: 1}
-  uniqueColor: {r: 1, g: 0.8, b: 0.2, a: 1}
-  minionColor: {r: 0.85, g: 0.85, b: 0.85, a: 1}
   currentEnemyCount: 0
 --- !u!4 &2023322575
 Transform:

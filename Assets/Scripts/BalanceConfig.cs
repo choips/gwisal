@@ -44,20 +44,30 @@ public class BalanceConfig : ScriptableObject
     [Tooltip("레벨 1마다 적 피해에 곱해지는 배율 (1.09 = 9%씩, 레벨 13 ≈ 2.8배)")]
     [Min(1f)] public float enemyDamageGrowth = 1.09f;
 
-    [Header("몬스터 등급: 일반 대비 능력 배율 (체력·공격력·경험치) — 고정 배치 무리·무작위 배치기에 적용")]
-    [Min(0f)] public float championPower = 2f;
-    [Min(0f)] public float uniquePower = 3f;
-    [Min(0f)] public float minionPower = 1.5f;
+    [Header("몬스터 등급: 정예 (엑셀 Elite*Mult / ExpEliteMult)")]
+    [Min(0f)] public float eliteHealthMult = 3f;
+    [Min(0f)] public float eliteDamageMult = 1.5f;
+    [Min(0f)] public float eliteExpMult = 3f;
+
+    [Header("몬스터 등급: 이름 있는 정예 (엑셀 NamedElite*Mult / ExpNamedEliteMult)")]
+    [Min(0f)] public float namedEliteHealthMult = 6f;
+    [Min(0f)] public float namedEliteDamageMult = 1.8f;
+    [Min(0f)] public float namedEliteExpMult = 6f;
+
+    [Header("몬스터 등급: 하수인 (엑셀 MinionHealthMult — 피해·경험치도 같은 배율)")]
+    [Min(0f)] public float minionHealthMult = 1.5f;
+    [Min(0f)] public float minionDamageMult = 1.5f;
+    [Min(0f)] public float minionExpMult = 1.5f;
 
     [Header("몬스터 등급: 처치 시 떨어뜨리는 장비 개수")]
     [Min(0)] public int normalLootDrops = 1;
-    [Min(0)] public int championLootDrops = 2;
-    [Min(0)] public int uniqueLootDrops = 3;
+    [Min(0)] public int eliteLootDrops = 2;
+    [Min(0)] public int namedEliteLootDrops = 3;
     [Min(0)] public int minionLootDrops = 1;
 
     [Header("몬스터 등급: 좋은 등급(매직·레어·유니크) 아이템 확률 배율")]
-    [Min(0f)] public float championRarityBonus = 2f;
-    [Min(0f)] public float uniqueRarityBonus = 3f;
+    [Min(0f)] public float eliteRarityBonus = 2f;
+    [Min(0f)] public float namedEliteRarityBonus = 3f;
     [Min(0f)] public float minionRarityBonus = 1.5f;
 
     [Header("아이템 드랍 위치")]
@@ -136,14 +146,38 @@ public class BalanceConfig : ScriptableObject
         return Mathf.Pow(enemyDamageGrowth, Mathf.Max(0, monsterLevel - 1));
     }
 
-    // 몬스터 등급별 능력 배율 (일반은 1)
-    public float GetRankPower(MonsterRank rank)
+    // 몬스터 등급별 체력 배율 (일반은 1)
+    public float GetRankHealthMult(MonsterRank rank)
     {
         switch (rank)
         {
-            case MonsterRank.Champion: return championPower;
-            case MonsterRank.Unique: return uniquePower;
-            case MonsterRank.Minion: return minionPower;
+            case MonsterRank.Elite: return eliteHealthMult;
+            case MonsterRank.NamedElite: return namedEliteHealthMult;
+            case MonsterRank.Minion: return minionHealthMult;
+            default: return 1f;
+        }
+    }
+
+    // 몬스터 등급별 피해 배율 (일반은 1)
+    public float GetRankDamageMult(MonsterRank rank)
+    {
+        switch (rank)
+        {
+            case MonsterRank.Elite: return eliteDamageMult;
+            case MonsterRank.NamedElite: return namedEliteDamageMult;
+            case MonsterRank.Minion: return minionDamageMult;
+            default: return 1f;
+        }
+    }
+
+    // 몬스터 등급별 경험치 배율 (일반은 1)
+    public float GetRankExpMult(MonsterRank rank)
+    {
+        switch (rank)
+        {
+            case MonsterRank.Elite: return eliteExpMult;
+            case MonsterRank.NamedElite: return namedEliteExpMult;
+            case MonsterRank.Minion: return minionExpMult;
             default: return 1f;
         }
     }
@@ -153,8 +187,8 @@ public class BalanceConfig : ScriptableObject
     {
         switch (rank)
         {
-            case MonsterRank.Champion: return championLootDrops;
-            case MonsterRank.Unique: return uniqueLootDrops;
+            case MonsterRank.Elite: return eliteLootDrops;
+            case MonsterRank.NamedElite: return namedEliteLootDrops;
             case MonsterRank.Minion: return minionLootDrops;
             default: return normalLootDrops;
         }
@@ -165,8 +199,8 @@ public class BalanceConfig : ScriptableObject
     {
         switch (rank)
         {
-            case MonsterRank.Champion: return championRarityBonus;
-            case MonsterRank.Unique: return uniqueRarityBonus;
+            case MonsterRank.Elite: return eliteRarityBonus;
+            case MonsterRank.NamedElite: return namedEliteRarityBonus;
             case MonsterRank.Minion: return minionRarityBonus;
             default: return 1f;
         }

@@ -66,6 +66,7 @@ public class EnemySpawner : MonoBehaviour, IEnemyOwner
     private readonly List<Vector3> packCenters = new List<Vector3>(); // 이미 배치한 무리 중심들
     private readonly List<Enemy> spawnedEnemies = new List<Enemy>();  // 이 배치기가 꺼낸 살아 있는 적 (지역을 떠날 때 창고로 돌려보냄)
     private readonly Dictionary<Enemy, List<Enemy>> packByEnemy = new Dictionary<Enemy, List<Enemy>>(); // 적 → 그 적이 속한 무리 (함께 깨우기용)
+    private readonly HashSet<List<Enemy>> packsThatCalled = new HashSet<List<Enemy>>(); // 부르는 소리를 이미 쓴 무리 (무리당 한 번)
     private readonly List<EnemySpawnEntry> activeTypes = new List<EnemySpawnEntry>(); // 실제로 뽑을 귀신 종류 (빈 칸 제외)
     private Bounds mapBounds;     // NavMesh 전체를 감싸는 범위
     private Transform player;
@@ -84,6 +85,7 @@ public class EnemySpawner : MonoBehaviour, IEnemyOwner
         }
         spawnedEnemies.Clear();
         packByEnemy.Clear();
+        packsThatCalled.Clear();
     }
 
     // 지역 씬이 막 불러와진 순간에는 플레이어가 아직 입구로 옮겨지기 전이므로,
@@ -224,6 +226,7 @@ public class EnemySpawner : MonoBehaviour, IEnemyOwner
     }
 
     // 한 마리가 깨어나면 같은 무리를 모두 깨움
+    // (창귀가 부르는 소리 중일 때는 Enemy가 울기가 끝난 뒤에만 이 메서드를 부름)
     public void OnEnemyAlerted(Enemy enemy)
     {
         if (!packByEnemy.TryGetValue(enemy, out List<Enemy> pack)) return;
@@ -232,6 +235,16 @@ public class EnemySpawner : MonoBehaviour, IEnemyOwner
         {
             if (member != null && member != enemy) member.WakeUp();
         }
+    }
+
+    // 창귀 부르는 소리: 무리당 한 번만 허용
+    public bool TryBeginCall(Enemy caller)
+    {
+        if (!packByEnemy.TryGetValue(caller, out List<Enemy> pack)) return false;
+        if (packsThatCalled.Contains(pack)) return false;
+
+        packsThatCalled.Add(pack);
+        return true;
     }
 
     // 구워진 NavMesh의 모든 꼭짓점을 감싸는 범위 = 몬스터를 둘 수 있는 맵 범위

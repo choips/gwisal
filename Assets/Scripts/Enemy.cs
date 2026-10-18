@@ -5,10 +5,12 @@ using UnityEngine.AI;            // NavMeshAgent 사용
 // 적의 체력(HP)과 AI를 관리하는 스크립트
 // - 처음에는 잠든 채 제자리에 있다가, 플레이어가 인식 거리 안에 들어오거나 맞으면 깨어나 쫓아갑니다.
 //   깨어나면 배치한 쪽(무리)에 알려 같은 무리 전체가 함께 깨어납니다.
+// - 창귀처럼 부르는 소리가 있으면: 처음 발견 때 잠깐 멈춰 울고, 끝난 뒤에 반경 안의 잠든 창귀를 깨웁니다.
+//   우는 동안 죽으면 호출이 없고, 무리당 한 번만 웁니다 (EnemyData.callRadius / callDuration).
 // - 깨어난 뒤에는 플레이어가 추격 포기 거리(BalanceConfig, 25m)보다 멀어질 때까지 쫓아오고,
 //   넘으면 제자리로 돌아가며 체력을 회복하고 다시 잠듭니다. 공격 사거리 안이면 멈춰서 쿨타임마다 공격합니다.
 // - 피격 시 체력이 깎이고, 체력이 0 이하가 되면 사망합니다.
-// - 고정 배치 무리·무작위 배치기가 MonsterFactory로 꺼낸 직후 귀신 데이터(EnemyData: 망자 등)·몬스터 레벨과 등급(정예·이름 있는 정예 등)을 적용합니다.
+// - 고정 배치 무리·무작위 배치기가 MonsterFactory로 꺼낸 직후 귀신 데이터(EnemyData: 망자·창귀 등)·몬스터 레벨과 등급을 적용합니다.
 //   (아래 Inspector 숫자는 데이터가 적용되기 전의 기본값입니다)
 // - 오브젝트 풀로 재사용합니다: 죽거나 지역을 떠나면 파괴하지 않고 창고로 돌아가고(Release), 다시 꺼낼 때 OnEnable에서 상태를 초기화합니다.
 //   (씬에 직접 놓은 적은 풀에서 나온 것이 아니므로 예전처럼 파괴됨)
@@ -87,11 +89,11 @@ public class Enemy : MonoBehaviour
     [SerializeField] private float lootRarityMultiplier = 1f;
 
     [Header("AI 상태 (Play 중 확인용)")]
-    [Tooltip("잠듦: 제자리 대기 / 쫓아감: 싸우는 중 / 돌아감: 추격을 포기하고 제자리로")]
+    [Tooltip("잠듦 / 부르는 소리 / 쫓아감 / 돌아감")]
     [SerializeField] private AIState aiState = AIState.Asleep;
 
-    // AI 상태 (잠듦 → 쫓아감 → (플레이어가 멀어지면) 돌아감 → 잠듦)
-    private enum AIState { Asleep, Chasing, Returning }
+    // AI 상태 (잠듦 → [부르는 소리] → 쫓아감 → (플레이어가 멀어지면) 돌아감 → 잠듦)
+    private enum AIState { Asleep, Howling, Chasing, Returning }
 
     private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor"); // 발광 색 속성
     private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");         // URP 기본 색 속성
@@ -106,6 +108,11 @@ public class Enemy : MonoBehaviour
     private float nextRepathTime;      // 다음에 길찾기 목적지를 다시 계산할 시각
     private Vector3 homePosition;      // 처음 선 자리 (추격을 포기하면 돌아옴)
     private bool isDead;               // 이미 사망 처리되었는지 여부 (중복 파괴 방지)
+
+    private float callRadius;          // 부르는 소리 반경 (EnemyData, 0이면 없음)
+    private float callDuration;        // 울고 멈추는 시간(초)
+    private float howlEndTime;         // 부르는 소리가 끝나는 시각
+    private bool hasPersonalCallUsed;  // 배치한 쪽이 없을 때(개발자 소환 등) 개체당 한 번
 
     private Material[] flashMaterials;  // 번쩍임에 쓸 이 적 전용 재질들
     private Color[] originalEmissions;  // 재질마다 원래 발광 색
@@ -128,8 +135,14 @@ public class Enemy : MonoBehaviour
     // 죽었는지 (풀로 돌아간 적은 null이 되지 않으므로, 타겟이 사라졌는지는 이것으로 확인)
     public bool IsDead => isDead;
 
-    // 깨어나 싸우는 중인지
-    public bool IsAwake => aiState == AIState.Chasing;
+    // 깨어나 싸우는 중인지 (부르는 소리 중도 이미 반응한 상태로 봄)
+    public bool IsAwake => aiState == AIState.Chasing || aiState == AIState.Howling;
+
+    // 잠든 상태인지 (부르는 소리가 깨울 대상)
+    public bool IsAsleep => aiState == AIState.Asleep;
+
+    // 부르는 소리로 멈춰 있는지 (우는 동안 처치하면 호출 없음)
+    public bool IsHowling => aiState == AIState.Howling;
 
     private void Awake()
     {
@@ -180,6 +193,8 @@ public class Enemy : MonoBehaviour
         nextAttackTime = 0f;
         nextRepathTime = 0f;
         knockbackEndTime = 0f;
+        howlEndTime = 0f;
+        hasPersonalCallUsed = false;
         aiState = AIState.Asleep;
         homePosition = transform.position; // 풀은 위치를 먼저 정한 뒤 켜므로 지금 위치 = 배치된 자리
         transform.localScale = baseScale;
@@ -225,6 +240,8 @@ public class Enemy : MonoBehaviour
         aggroRange = data.aggroRange;
         attackRange = data.attackRange;
         experienceReward = data.experienceReward;
+        callRadius = data.callRadius;
+        callDuration = data.callDuration;
 
         if (agent != null) agent.speed = data.moveSpeed;
     }
@@ -276,6 +293,13 @@ public class Enemy : MonoBehaviour
 
         if (isDead || agent == null || !agent.isOnNavMesh) return;
 
+        // 부르는 소리 중에는 제자리 (밀려나기도 잠시 무시 — 울기 시간이 끊기지 않게)
+        if (aiState == AIState.Howling)
+        {
+            UpdateHowling();
+            return;
+        }
+
         // 밀려나는 중에는 추격·공격을 멈추고 뒤로 미끄러짐 (Move는 NavMesh 밖으로 나가지 않음)
         if (Time.time < knockbackEndTime)
         {
@@ -306,6 +330,7 @@ public class Enemy : MonoBehaviour
                 {
                     aiState = AIState.Asleep;
                     currentHealth = maxHealth;
+                    hasPersonalCallUsed = false; // 다시 잠들면 단독 소환 창귀는 부르는 소리를 다시 쓸 수 있음
                     StopMoving();
                 }
                 else
@@ -350,16 +375,78 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    // 깨어나 싸움을 시작하고, 배치한 쪽(무리)에 알려 같은 무리를 모두 깨움
+    // 플레이어를 발견(또는 피격)했을 때: 창귀면 부르는 소리부터, 아니면 바로 싸움 + 무리 깨우기
     private void Alert()
     {
-        if (isDead || aiState == AIState.Chasing) return;
+        if (isDead || aiState == AIState.Chasing || aiState == AIState.Howling) return;
+
+        // 부르는 소리: 무리당(또는 단독 소환이면 개체당) 한 번 — 울기가 끝난 뒤에 주변을 깨움
+        if (callRadius > 0f && TryBeginCall())
+        {
+            BeginHowling();
+            return;
+        }
 
         WakeUp();
         if (owner != null) owner.OnEnemyAlerted(this);
     }
 
-    // 깨어나 싸움 시작 (무리가 같은 무리 구성원을 깨울 때도 호출 — 다시 무리에 알리지는 않음)
+    // 부르는 소리를 이 적(또는 무리)에서 쓸 수 있으면 true
+    private bool TryBeginCall()
+    {
+        if (owner != null) return owner.TryBeginCall(this);
+
+        // 개발자 메뉴 소환처럼 배치한 쪽이 없으면 개체당 한 번
+        if (hasPersonalCallUsed) return false;
+        hasPersonalCallUsed = true;
+        return true;
+    }
+
+    // 제자리에서 울기 시작 (이 동안 죽으면 CompleteHowling이 호출되지 않아 떼가 오지 않음)
+    private void BeginHowling()
+    {
+        aiState = AIState.Howling;
+        howlEndTime = Time.time + Mathf.Max(callDuration, 0f);
+        StopMoving();
+        GameLog.Combat($"{gameObject.name} 부르는 소리! ({callDuration:0.##}초, 반경 {callRadius:0.##}m)");
+    }
+
+    // 울기 시간이 끝나면 쫓아가고, 반경 안의 잠든 호출형 귀신 + 같은 무리를 깨움
+    private void UpdateHowling()
+    {
+        StopMoving();
+        if (Time.time < howlEndTime) return;
+
+        CompleteHowling();
+    }
+
+    private void CompleteHowling()
+    {
+        GameLog.Combat($"{gameObject.name} 부르는 소리 끝 — 주변 창귀를 깨웁니다.");
+        WakeUp();
+        WakeNearbyCallTargets();
+        if (owner != null) owner.OnEnemyAlerted(this);
+    }
+
+    // 반경 안의 잠든 호출형 귀신(callRadius > 0인 EnemyData)을 깨움 — 한 번만 불리므로 Find 사용 가능
+    private void WakeNearbyCallTargets()
+    {
+        if (callRadius <= 0f) return;
+
+        float radiusSq = callRadius * callRadius;
+        Enemy[] all = FindObjectsByType<Enemy>(FindObjectsSortMode.None);
+        foreach (Enemy other in all)
+        {
+            if (other == null || other == this || other.IsDead || !other.IsAsleep) continue;
+            if (other.Data == null || !other.Data.CanCall) continue;
+
+            Vector3 delta = other.transform.position - transform.position;
+            delta.y = 0f;
+            if (delta.sqrMagnitude <= radiusSq) other.WakeUp();
+        }
+    }
+
+    // 깨어나 싸움 시작 (무리가 같은 무리 구성원을 깨울 때·부르는 소리가 끝날 때도 호출 — 다시 무리에 알리지는 않음)
     public void WakeUp()
     {
         if (isDead || aiState == AIState.Chasing) return;
@@ -566,7 +653,8 @@ public class Enemy : MonoBehaviour
         ObjectPoolManager.Release(gameObject);
     }
 
-    // Scene 뷰에서 적을 선택하면 인식 거리(노랑)와 공격 사거리(빨강)를 원으로 표시, Play 중에는 추격 포기 거리(회색)와 제자리(초록)도
+    // Scene 뷰에서 적을 선택하면 인식 거리(노랑)·공격 사거리(빨강)·부르는 소리 반경(주황)을 원으로 표시
+    // Play 중에는 추격 포기 거리(회색)와 제자리(초록)도
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
@@ -574,6 +662,14 @@ public class Enemy : MonoBehaviour
 
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, attackRange);
+
+        float gizmoCallRadius = Application.isPlaying ? callRadius
+            : (enemyData != null ? enemyData.callRadius : 0f);
+        if (gizmoCallRadius > 0f)
+        {
+            Gizmos.color = new Color(1f, 0.55f, 0.15f, 1f);
+            Gizmos.DrawWireSphere(transform.position, gizmoCallRadius);
+        }
 
         if (!Application.isPlaying) return;
 

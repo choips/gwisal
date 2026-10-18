@@ -30,6 +30,7 @@ public class EnemyPack : MonoBehaviour, IEnemyOwner
 
     private readonly List<Enemy> members = new List<Enemy>(); // 살아 있는 무리 구성원 (지역을 떠날 때 창고로 돌려보냄)
     private RegionSettings region;
+    private bool hasCalled; // 부르는 소리(창귀)를 이 무리에서 이미 썼는지 — 무리당 한 번
 
     public PackKind Kind => packKind;
     public int AliveCount => aliveCount;
@@ -95,12 +96,21 @@ public class EnemyPack : MonoBehaviour, IEnemyOwner
     }
 
     // 구성원 한 마리가 깨어나면(플레이어가 다가오거나 맞음) 무리 전체를 깨움
+    // (창귀가 부르는 소리 중일 때는 Enemy가 울기가 끝난 뒤에만 이 메서드를 부름)
     public void OnEnemyAlerted(Enemy enemy)
     {
         foreach (Enemy member in members)
         {
             if (member != null && member != enemy) member.WakeUp();
         }
+    }
+
+    // 창귀 부르는 소리: 무리당 한 번만 허용
+    public bool TryBeginCall(Enemy caller)
+    {
+        if (hasCalled) return false;
+        hasCalled = true;
+        return true;
     }
 
     // 적은 풀(DontDestroyOnLoad) 아래에 있어 지역 씬과 함께 사라지지 않으므로, 지역을 떠날 때 남은 구성원을 창고로 돌려보냄

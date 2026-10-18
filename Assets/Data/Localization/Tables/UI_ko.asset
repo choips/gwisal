@@ -232,6 +232,10 @@ MonoBehaviour:
     m_Localized: "\uB9DD\uC790"
     m_Metadata:
       m_Items: []
+  - m_Id: 3056608821254
+    m_Localized: "\uCC3D\uADC0"
+    m_Metadata:
+      m_Items: []
   - m_Id: 3056608821257
     m_Localized: "\uC815\uC608 {0}"
     m_Metadata:

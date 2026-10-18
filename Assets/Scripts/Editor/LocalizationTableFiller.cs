@@ -83,6 +83,7 @@ public static class LocalizationTableFiller
 
         // 귀신 이름 (EnemyData의 ID 기준: enemy.ID)
         { "enemy.mangja",             "망자" },
+        { "enemy.changgwi",           "창귀" },
 
         // 정예·하수인·이름 있는 정예 이름표 (MonsterFactory) — 📬 전달-26
         { "enemy.elite_name",         "정예 {0}" },

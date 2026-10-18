@@ -223,6 +223,10 @@ MonoBehaviour:
     m_Key: enemy.mangja
     m_Metadata:
       m_Items: []
+  - m_Id: 3056608821254
+    m_Key: enemy.changgwi
+    m_Metadata:
+      m_Items: []
   - m_Id: 3056608821257
     m_Key: enemy.elite_name
     m_Metadata:

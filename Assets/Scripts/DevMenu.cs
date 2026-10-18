@@ -82,7 +82,9 @@ public class DevMenu : MonoBehaviour, IUIWindow
 
     // —— 귀신 소환 (S1-13 2단계) ——
     private static readonly string[] RankLabels = { "일반", "정예", "이름있는정예", "하수인" };
-    private const float SpawnDistance = 3f;             // 플레이어 앞쪽으로 소환할 거리(m)
+    private const float SpawnDistance = 3f;             // 일반 귀신: 플레이어 앞쪽으로 소환할 거리(m)
+    private const float SleepingSpawnMargin = 3f;       // 호출형(창귀): 인식 거리 + 이만큼 밖에 소환 (다가가서 테스트)
+    private const float CallPackSpread = 2f;            // 호출형 여러 마리 소환 시 서로 흩어지는 반경(m)
     private MonsterRank spawnRank = MonsterRank.Normal; // 소환할 등급
     private int spawnEnemyLevel = 1;                    // 소환할 몬스터 레벨
     private int spawnEnemyIndex;                        // EnemyDatabase 목록에서의 번호
@@ -498,7 +500,8 @@ public class DevMenu : MonoBehaviour, IUIWindow
         EnsureSpawnEnemyLabel();
     }
 
-    // 플레이어 앞 NavMesh 위에 고른 귀신을 한 마리 세우고 바로 깨움
+    // 플레이어 앞 NavMesh 위에 고른 귀신을 한 마리 세움
+    // 망자 등: 바로 앞(3m)에 세우고 바로 싸움 / 창귀(호출형): 인식 거리 밖에 잠든 채로 세움
     private void SpawnDevEnemy()
     {
         if (RegionManager.IsBusy)
@@ -531,7 +534,10 @@ public class DevMenu : MonoBehaviour, IUIWindow
             return;
         }
 
-        Vector3 spawnPos = FindSpawnPositionInFront(playerStats.transform);
+        // 호출형은 인식 거리 밖(+여유)에 두고, 여러 마리일 때 서로 가깝게 흩어짐 (부르는 소리 테스트용)
+        float distance = data.CanCall ? data.aggroRange + SleepingSpawnMargin : SpawnDistance;
+        float spread = data.CanCall ? CallPackSpread : 0f;
+        Vector3 spawnPos = FindSpawnPositionInFront(playerStats.transform, distance, spread);
         string label = MakeSpawnLabel(data, spawnRank);
         Enemy enemy = region.SpawnMonster(data, spawnEnemyLevel, spawnRank, label, spawnPos);
         if (enemy == null)
@@ -540,16 +546,31 @@ public class DevMenu : MonoBehaviour, IUIWindow
             return;
         }
 
-        enemy.WakeUp(); // 테스트용: 잠들지 않고 바로 싸움
+        // 망자 등은 바로 싸움. 창귀(호출형)는 잠든 채로 두어 다가가면 부르는 소리를 볼 수 있게 함
+        if (data.CanCall)
+            GameLog.Region($"개발자 소환(잠듦, {distance:0.#}m 앞): {data.displayName} Lv.{spawnEnemyLevel} ({spawnRank}) — 다가가면 부르는 소리");
+        else
+        {
+            enemy.WakeUp();
+            GameLog.Region($"개발자 소환: {data.displayName} Lv.{spawnEnemyLevel} ({spawnRank})");
+        }
+
         devSpawnedEnemies.Add(enemy);
-        GameLog.Region($"개발자 소환: {data.displayName} Lv.{spawnEnemyLevel} ({spawnRank})");
     }
 
-    // 플레이어가 바라보는 쪽 SpawnDistance m 앞의 NavMesh 위 (못 찾으면 발밑)
-    private static Vector3 FindSpawnPositionInFront(Transform player)
+    // 플레이어가 바라보는 쪽 distance m 앞의 NavMesh 위 (spread > 0이면 그 주변을 살짝 흩어 둠)
+    private static Vector3 FindSpawnPositionInFront(Transform player, float distance, float spread = 0f)
     {
-        Vector3 candidate = player.position + player.forward * SpawnDistance;
-        if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, 5f, NavMesh.AllAreas))
+        Vector3 candidate = player.position + player.forward * distance;
+        if (spread > 0f)
+        {
+            Vector2 offset = Random.insideUnitCircle * spread;
+            candidate += new Vector3(offset.x, 0f, offset.y);
+        }
+
+        // 멀리 소환할수록 NavMesh를 넓게 찾아 봄
+        float sampleRadius = Mathf.Max(5f, distance * 0.5f);
+        if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, sampleRadius, NavMesh.AllAreas))
         {
             return hit.position;
         }

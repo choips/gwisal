@@ -43,6 +43,15 @@ public class EnemyData : ScriptableObject
     [Tooltip("이 거리 안에 플레이어가 들어오면 멈춰서 공격함")]
     [Min(0f)] public float attackRange = 1.5f;
 
+    [Tooltip("0보다 크면 처음 플레이어를 발견했을 때 이 반경(m) 안의 잠든 호출형 귀신(창귀 등)을 깨움. 0이면 부르는 소리 없음")]
+    [Min(0f)] public float callRadius = 0f;
+
+    [Tooltip("부르는 소리로 멈춰 있는 시간(초). 이 동안 죽으면 주변 호출이 일어나지 않음")]
+    [Min(0f)] public float callDuration = 0.5f;
+
+    // 부르는 소리로 무리를 부를 수 있는 귀신인지 (창귀 등)
+    public bool CanCall => callRadius > 0f;
+
     // 화면에 보일 이름 (화면 글자 표 "UI"의 "enemy.ID" 키, 표를 찾으므로 생성할 때처럼 필요할 때만 부름)
     public string LocalizedName => Loc.Get("enemy." + enemyId);
 }

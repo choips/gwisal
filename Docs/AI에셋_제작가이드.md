@@ -50,7 +50,12 @@ Korean ink wash painting style (sumukhwa) with light watercolor tints, hanji pap
 
 **빼고 싶은 것 (영어 — 뒤에 붙임)**
 ```
-no Japanese elements, no torii gate, no Japanese architecture, no anime style, no photorealism, no glossy 3D render, no text, no watermark, no signature
+no Japanese elements, no torii gate, no Japanese architecture, no Japanese stone lantern (toro), no anime style, no photorealism, no glossy 3D render, no text, no watermark, no signature
+```
+
+**귀신이 나오는 그림이면 추가 (2026-10-18 컨셉 검토 반영)** — 그냥 두면 모두 긴 머리 흰옷 반투명 귀신(처녀귀신)으로 나옴
+```
+ghosts are opaque solid bodies with a faint glowing rim light, not transparent, varied undead Korean villagers (men and women, old and young) with gray skin and torn hanbok
 ```
 
 **한국어 뜻** (확인용): 한국 수묵화에 옅은 수채 색, 한지 질감, 굵기가 변하는 먹 외곽선, 평평한 색과 부드러운 번짐, 먹·회색·한지색 위주에 강조색은 빨강·파랑·노랑만, 차분하고 어두운 안개 분위기, 조선 시대 한국 소재. 일본풍·애니풍·사진 같은 그림·3D 렌더·글자는 빼기.
@@ -156,4 +161,5 @@ Korean traditional instrumental, daegeum flute and haegeum, slow and calm but da
 
 | 날짜 | 에셋 | 도구 | 요금제 (상업 사용 가능?) | 프롬프트 (요약) | 파일 | 게임에 넣음? |
 |---|---|---|---|---|---|---|
+| 2026-10-18 | 컨셉 그림 3장 (본산·마을·굴) | Gemini | 확인 필요 | 4-① 컨셉 프롬프트 + 장면 바꾸기 | `Docs/ArtReference/gwisal_01~03_*.webp` | 아니오 (참고용) |
 | | | | | | | |

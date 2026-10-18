@@ -10,21 +10,25 @@ using UnityEngine.AI;
 // 적 체력·피해·드랍 배율을 조절하고, 등급별 아이템을 떨어뜨려 색을 보고,
 // 적에게 준 피해(DPS 측정, DamageMeter)와 능력치를 보고, 테스트용 능력치 수정치를 켜고 끕니다.
 // Unity 기본 즉석 UI(IMGUI, OnGUI)로 그려서 Canvas·프리팹 설정이 필요 없습니다. 마우스로 조작합니다.
+// 내용이 화면보다 길면 창 높이를 화면에 맞추고 안쪽을 스크롤합니다.
 // 열린 창 목록(UIWindowStack)에 등록되어 ESC로도 닫힙니다.
 public class DevMenu : MonoBehaviour, IUIWindow
 {
     private const float ReferenceScreenHeight = 1080f; // 이 화면 높이에서 창이 아래 크기 그대로 보임 (화면이 크면 함께 커짐)
     private const float MeterRefreshInterval = 0.25f;  // DPS 글자를 새로 만드는 간격(초) (매 프레임 문자열을 만들지 않기 위함)
     private const int WindowId = 9001;                 // IMGUI 창 구분 번호 (다른 창과 겹치지 않게 아무 숫자)
-    private const float WindowWidth = 400f;            // 기준 화면에서 창 너비 (높이는 내용에 맞춰 자동)
+    private const float WindowWidth = 420f;            // 기준 화면에서 창 너비 (스크롤바 자리 포함)
+    private const float ScreenEdgeMargin = 20f;        // 화면 가장자리와 창 사이 여백 (기준 좌표)
+    private const float MinWindowHeight = 240f;        // 창이 너무 작아지지 않게
+    private const float TitleBarDragHeight = 20f;      // 제목 줄을 드래그해서 창을 옮기는 높이
 
     private bool isOpen;     // 메뉴가 열려 있는지
     private float guiScale = 1f; // 화면 크기에 맞춘 창 확대 배율
-    private Rect windowRect = new Rect(10f, 10f, WindowWidth, 0f); // 기준 화면에서 창의 위치·크기 (높이는 그릴 때 자동으로 정해짐)
+    private Rect windowRect = new Rect(10f, 10f, WindowWidth, MinWindowHeight); // 기준 화면에서 창의 위치·크기
+    private Vector2 scrollPosition; // 창 안쪽 스크롤 위치
 
     // OnGUI에서 매번 새로 만들지 않도록 미리 만들어 두는 것들 (Awake에서 만듦)
     private GUI.WindowFunction drawWindowFunction;     // 창 안쪽을 그리는 함수
-    private GUILayoutOption[] windowLayoutOptions;     // 창 너비 고정
     private GUILayoutOption[] toggleLayoutOptions;     // 테스트용 수정치 스위치 너비 (두 개가 한 줄에 들어가게)
 
     private PlayerStats playerStats;   // 레벨을 올릴 플레이어 (메뉴를 열 때 찾아 둠)
@@ -108,8 +112,7 @@ public class DevMenu : MonoBehaviour, IUIWindow
     private void Awake()
     {
         drawWindowFunction = DrawWindow;
-        windowLayoutOptions = new[] { GUILayout.Width(WindowWidth) };
-        toggleLayoutOptions = new[] { GUILayout.Width(WindowWidth * 0.5f - 12f) };
+        toggleLayoutOptions = new[] { GUILayout.Width(WindowWidth * 0.5f - 20f) };
     }
 
     private void Update()
@@ -180,15 +183,26 @@ public class DevMenu : MonoBehaviour, IUIWindow
     {
         if (!isOpen) return;
 
+        guiScale = Mathf.Max(1f, Screen.height / ReferenceScreenHeight);
         GUI.matrix = Matrix4x4.Scale(new Vector3(guiScale, guiScale, 1f));
 
-        // GUILayout.Window는 내용 전체가 들어가도록 창 높이를 스스로 늘려 줌 (돌려받은 크기를 저장해 클릭 막기에도 씀)
-        windowRect = GUILayout.Window(WindowId, windowRect, drawWindowFunction, "개발자 메뉴 (F1)", windowLayoutOptions);
+        // 기준 좌표에서 화면 아래 여백을 남긴 최대 높이 (내용이 길어도 창이 화면 밖으로 안 나감)
+        float maxHeight = (Screen.height / guiScale) - windowRect.y - ScreenEdgeMargin;
+        maxHeight = Mathf.Max(MinWindowHeight, maxHeight);
+        windowRect.width = WindowWidth;
+        windowRect.height = maxHeight;
+
+        windowRect = GUILayout.Window(WindowId, windowRect, drawWindowFunction, "개발자 메뉴 (F1) — 스크롤",
+            GUILayout.Width(WindowWidth), GUILayout.Height(maxHeight));
     }
 
-    // 창 안쪽 내용
+    // 창 안쪽 내용 (스크롤 영역 + 제목 줄 드래그)
     private void DrawWindow(int windowId)
     {
+        scrollPosition = GUILayout.BeginScrollView(scrollPosition);
+
+        GUILayout.Label("마우스 휠로 아래 항목을 볼 수 있습니다.");
+
         DevCheats.GodMode = GUILayout.Toggle(DevCheats.GodMode, " 무적 (피해를 받지 않음)");
         DevCheats.InfiniteMana = GUILayout.Toggle(DevCheats.InfiniteMana, " 기력 무한");
         DevCheats.NoCooldown = GUILayout.Toggle(DevCheats.NoCooldown, " 쿨타임 없음");
@@ -238,6 +252,11 @@ public class DevMenu : MonoBehaviour, IUIWindow
             if (i + 1 < testBonuses.Length) DrawTestBonusToggle(testBonuses[i + 1]);
             GUILayout.EndHorizontal();
         }
+
+        GUILayout.EndScrollView();
+
+        // 제목 줄을 드래그하면 창 위치를 옮김
+        GUI.DragWindow(new Rect(0f, 0f, 10000f, TitleBarDragHeight));
     }
 
     // 테스트용 수정치 스위치 하나 (바뀌었을 때만 플레이어에게 붙이거나 뗌)

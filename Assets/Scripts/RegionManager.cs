@@ -53,6 +53,10 @@ public class RegionManager : MonoBehaviour
     public string StartEntryId => startEntryId;
     public bool IsLoading { get; private set; }
 
+    // 이어하기: 시작 지역 대신 불러올 지역·입구 (GameController가 Start에서 정함, 비어 있으면 시작 지역)
+    private string continueRegionScene;
+    private string continueEntryId;
+
     // 새 지역에 도착해 플레이어를 입구에 세운 직후 알림 (인자: 지역 씬 이름)
     public event Action<string> RegionLoaded;
 
@@ -101,18 +105,39 @@ public class RegionManager : MonoBehaviour
     private void Start()
     {
         string regionScene = startRegionScene;
+        string entryId = startEntryId;
+
+        // 이어하기: 세이브에 적힌 지역·입구부터 시작
+        // (지역 씬 이름이 바뀌어 없어졌으면 시작 지역으로 — 검은 화면에 갇히지 않도록)
+        if (!string.IsNullOrEmpty(continueRegionScene) && !Application.CanStreamedLevelBeLoaded(continueRegionScene))
+        {
+            Debug.LogWarning($"RegionManager: 세이브의 지역 '{continueRegionScene}'을(를) 찾지 못해 시작 지역에서 이어합니다.");
+        }
+        else if (!string.IsNullOrEmpty(continueRegionScene))
+        {
+            regionScene = continueRegionScene;
+            entryId = string.IsNullOrEmpty(continueEntryId) ? startEntryId : continueEntryId;
+        }
 
 #if UNITY_EDITOR
-        // 지역 씬을 열어 둔 채 Play 했으면 그 지역부터 시작 (게임 빌드에서는 항상 Start Region Scene)
+        // 지역 씬을 열어 둔 채 Play 했으면 이어하기보다 그 지역을 먼저 (게임 빌드에서는 시작 지역 또는 이어하기 지역)
         string editorRegion = UnityEditor.SessionState.GetString(EditorStartRegionKey, "");
         if (!string.IsNullOrEmpty(editorRegion))
         {
             regionScene = editorRegion;
+            entryId = startEntryId;
             UnityEditor.SessionState.EraseString(EditorStartRegionKey);
         }
 #endif
 
-        StartCoroutine(LoadRegionRoutine(regionScene, startEntryId));
+        StartCoroutine(LoadRegionRoutine(regionScene, entryId));
+    }
+
+    // 이어하기: 처음 불러올 지역·입구를 세이브 위치로 바꿈 (RegionManager.Start보다 먼저 불러야 함 — GameController.Start)
+    public void SetContinueLocation(string sceneName, string entryId)
+    {
+        continueRegionScene = sceneName;
+        continueEntryId = entryId;
     }
 
     // 다른 지역으로 이동 (지역 출구 등에서 호출)

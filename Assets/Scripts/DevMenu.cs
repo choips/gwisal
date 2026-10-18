@@ -444,17 +444,28 @@ public class DevMenu : MonoBehaviour, IUIWindow
         if (GUILayout.Button("▶", GUILayout.Width(28f))) CycleSpawnEnemy(1);
         GUILayout.EndHorizontal();
 
-        GUILayout.BeginHorizontal();
-        for (int i = 0; i < RankLabels.Length; i++)
+        EnemyData selectedForRank = GetSpawnEnemyData();
+        bool selectedIsBoss = selectedForRank != null && selectedForRank.isBoss;
+        if (selectedIsBoss)
         {
-            MonsterRank rank = (MonsterRank)i;
-            bool selected = spawnRank == rank;
-            if (GUILayout.Toggle(selected, RankLabels[i], GUI.skin.button) && !selected)
-            {
-                spawnRank = rank;
-            }
+            // 보스는 등급(정예 등) 없이 보스 전용으로만 소환
+            spawnRank = MonsterRank.Normal;
+            GUILayout.Label("등급: 보스 (고정)");
         }
-        GUILayout.EndHorizontal();
+        else
+        {
+            GUILayout.BeginHorizontal();
+            for (int i = 0; i < RankLabels.Length; i++)
+            {
+                MonsterRank rank = (MonsterRank)i;
+                bool selected = spawnRank == rank;
+                if (GUILayout.Toggle(selected, RankLabels[i], GUI.skin.button) && !selected)
+                {
+                    spawnRank = rank;
+                }
+            }
+            GUILayout.EndHorizontal();
+        }
 
         GUILayout.BeginHorizontal();
         GUILayout.Label("몬스터 레벨", GUILayout.Width(80f));
@@ -464,7 +475,8 @@ public class DevMenu : MonoBehaviour, IUIWindow
         if (GUILayout.Button("+5", GUILayout.Width(36f))) spawnEnemyLevel = Mathf.Min(99, spawnEnemyLevel + 5);
         GUILayout.EndHorizontal();
 
-        if (GUILayout.Button("귀신 소환 (앞에, 바로 싸움)")) SpawnDevEnemy();
+        string spawnButton = selectedIsBoss ? "보스 소환 (앞에, 바로 싸움)" : "귀신 소환 (앞에, 바로 싸움)";
+        if (GUILayout.Button(spawnButton)) SpawnDevEnemy();
     }
 
     private void EnsureSpawnEnemyLabel()
@@ -477,7 +489,7 @@ public class DevMenu : MonoBehaviour, IUIWindow
         }
 
         string name = string.IsNullOrEmpty(data.displayName) ? data.enemyId : data.displayName;
-        spawnEnemyLabel = $"귀신: {name}";
+        spawnEnemyLabel = data.isBoss ? $"보스: {name}" : $"귀신: {name}";
     }
 
     private EnemyData GetSpawnEnemyData()
@@ -534,12 +546,15 @@ public class DevMenu : MonoBehaviour, IUIWindow
             return;
         }
 
+        // 보스는 정예/이름있는정예 등급을 쓰지 않음
+        MonsterRank rank = data.isBoss ? MonsterRank.Normal : spawnRank;
+
         // 호출형은 인식 거리 밖(+여유)에 두고, 여러 마리일 때 서로 가깝게 흩어짐 (부르는 소리 테스트용)
         float distance = data.CanCall ? data.aggroRange + SleepingSpawnMargin : SpawnDistance;
         float spread = data.CanCall ? CallPackSpread : 0f;
         Vector3 spawnPos = FindSpawnPositionInFront(playerStats.transform, distance, spread);
-        string label = MakeSpawnLabel(data, spawnRank);
-        Enemy enemy = region.SpawnMonster(data, spawnEnemyLevel, spawnRank, label, spawnPos);
+        string label = data.isBoss ? null : MakeSpawnLabel(data, rank);
+        Enemy enemy = region.SpawnMonster(data, spawnEnemyLevel, rank, label, spawnPos);
         if (enemy == null)
         {
             Debug.LogWarning("귀신 소환에 실패했습니다 (프리팹·풀 확인).");
@@ -548,11 +563,19 @@ public class DevMenu : MonoBehaviour, IUIWindow
 
         // 망자 등은 바로 싸움. 창귀(호출형)는 잠든 채로 두어 다가가면 부르는 소리를 볼 수 있게 함
         if (data.CanCall)
-            GameLog.Region($"개발자 소환(잠듦, {distance:0.#}m 앞): {data.displayName} Lv.{spawnEnemyLevel} ({spawnRank}) — 다가가면 부르는 소리");
+            GameLog.Region($"개발자 소환(잠듦, {distance:0.#}m 앞): {data.displayName} Lv.{spawnEnemyLevel} ({rank}) — 다가가면 부르는 소리");
         else
         {
             enemy.WakeUp();
-            GameLog.Region($"개발자 소환: {data.displayName} Lv.{spawnEnemyLevel} ({spawnRank})");
+            GameLog.Region(data.isBoss
+                ? $"개발자 보스 소환: {data.displayName} Lv.{spawnEnemyLevel}"
+                : $"개발자 소환: {data.displayName} Lv.{spawnEnemyLevel} ({rank})");
+        }
+
+        // 보스는 체력바·사망 풀힐·클리어 알림을 위해 BossEncounter에 연결
+        if (data.isBoss)
+        {
+            BossEncounter.BeginFor(enemy);
         }
 
         devSpawnedEnemies.Add(enemy);

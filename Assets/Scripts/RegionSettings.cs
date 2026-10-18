@@ -86,10 +86,16 @@ public class RegionSettings : MonoBehaviour
     }
 
     // 몬스터 레벨을 직접 지정해 세움 (개발자 메뉴 소환 등)
-    public Enemy SpawnMonster(EnemyData data, int monsterLevel, MonsterRank rank, string labelText, Vector3 position)
+    // noRewards: 산군 소환 창귀처럼 경험치·드랍 없음
+    public Enemy SpawnMonster(EnemyData data, int monsterLevel, MonsterRank rank, string labelText, Vector3 position,
+                              bool noRewards = false)
     {
-        return MonsterFactory.Spawn(enemyPrefab, data, monsterLevel, rank, labelText, position, config, labelFont);
+        return MonsterFactory.Spawn(enemyPrefab, data, monsterLevel, rank, labelText, position, config, labelFont, noRewards);
     }
+
+    public GameObject EnemyPrefab => enemyPrefab;
+    public TMP_FontAsset LabelFont => labelFont;
+    public BalanceConfig Config => config;
 
     // 무리 구성원이 죽을 때 무리가 호출
     public void OnPackMemberDied()

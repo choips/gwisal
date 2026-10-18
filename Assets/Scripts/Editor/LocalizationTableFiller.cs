@@ -31,6 +31,9 @@ public static class LocalizationTableFiller
         { "notice.dead_cannot_use",   "사망한 상태에서는 아이템을 쓸 수 없습니다." },
         { "notice.area_threats",      "이 지역에 정예 무리 {0}개와 이름 있는 정예 {1}마리가 도사리고 있습니다" },
         { "notice.area_cleared",      "이 지역의 모든 요괴를 처치했습니다!" },
+        { "notice.boss_cleared",      "보스를 처치했습니다!" },
+        { "boss.phase2",              "2페이즈 (광폭화)" },
+        { "boss.swallow",             "창귀 삼킴! ({0}/{1})" },
 
         // 화면 위 정보 (HUD)
         { "hud.level",                "Lv. {0}" },
@@ -84,6 +87,8 @@ public static class LocalizationTableFiller
         // 귀신 이름 (EnemyData의 ID 기준: enemy.ID)
         { "enemy.mangja",             "망자" },
         { "enemy.changgwi",           "창귀" },
+        { "enemy.dokkaebibul",        "도깨비불" },
+        { "enemy.sangun",             "산군" },
 
         // 정예·하수인·이름 있는 정예 이름표 (MonsterFactory) — 📬 전달-26
         { "enemy.elite_name",         "정예 {0}" },

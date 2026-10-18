@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 90e028c3eb416eb47b2f2b242ed11c20, type: 3}
+  m_Name: Enemy_Dokkaebibul
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyData
+  enemyId: dokkaebibul
+  displayName: "\uB3C4\uAE68\uBE44\uBD88"
+  bodyColor: {r: 0.35, g: 0.85, b: 1, a: 1}
+  bodyScale: {x: 0.7, y: 0.7, z: 0.7}
+  maxHealth: 20
+  attackDamage: 6
+  attackCooldown: 2
+  moveSpeed: 4
+  experienceReward: 45
+  aggroRange: 12
+  attackRange: 9
+  callRadius: 0
+  callDuration: 0.5
+  projectilePrefab: {fileID: 1000000000000000001, guid: 1bbcbaaa4cbd47f492dc355d0fb0695c, type: 3}
+  projectileSpeed: 8
+  hoverHeight: 1.5
+  preferredRangeMin: 6
+  preferredRangeMax: 9
+  fleeRange: 4
+  fleeDistance: 3
+  fleeCooldown: 5

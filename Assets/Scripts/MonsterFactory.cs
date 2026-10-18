@@ -2,7 +2,8 @@ using TMPro;                     // TMP_FontAsset 사용 (머리 위 이름표 �
 using UnityEngine;
 
 // 몬스터 한 마리 만들기 (씬에 붙이지 않는 정적 클래스)
-// 풀에서 꺼냄 → 귀신 데이터·레벨 적용 → 등급 적용(BalanceConfig의 배율) → 몸 색·크기 → 머리 위 이름표
+// 풀에서 꺼냄 → 귀신 데이터·레벨 적용 → 등급 적용(BalanceConfig의 배율) → 몸 색·크기 → 피격 판정 갱신 → 머리 위 이름표
+// 피격 판정(RefreshHitbox)은 몸 크기·부유 높이가 달라도 부적이 빗나가지 않도록 여기서 항상 맞춥니다.
 // 고정 배치 무리(EnemyPack)와 무작위 배치기(EnemySpawner)가 함께 사용합니다.
 public static class MonsterFactory
 {
@@ -19,8 +20,9 @@ public static class MonsterFactory
 
     // 몬스터 한 마리를 풀에서 꺼내 준비함 (실패하면 null)
     // labelText: 머리 위 이름표 (비우면 이름표 없음), config: 레벨 성장·등급 배율 (null이면 배율 1)
+    // noRewards: true면 경험치·드랍 없음 (산군이 소환한 창귀)
     public static Enemy Spawn(GameObject prefab, EnemyData data, int level, MonsterRank rank, string labelText,
-                              Vector3 position, BalanceConfig config, TMP_FontAsset labelFont)
+                              Vector3 position, BalanceConfig config, TMP_FontAsset labelFont, bool noRewards = false)
     {
         if (prefab == null || data == null) return null;
 
@@ -51,10 +53,27 @@ public static class MonsterFactory
         rarityBonus *= DevCheats.EnemyLootMult;
         enemy.ApplyRank(rank, healthMult, damageMult, expMult, lootDrops, rarityBonus);
 
+        if (noRewards) enemy.SuppressRewards();
+
         enemy.SetBodyColor(GetBodyColor(data.bodyColor, rank));
 
         Vector3 bodyScale = Vector3.Scale(monsterObject.transform.localScale, data.bodyScale) * GetRankScale(rank);
         monsterObject.transform.localScale = bodyScale;
+
+        // 크기·부유를 적용한 뒤 피격 판정을 맞춤 (새 귀신을 만들어도 부적이 통과하지 않게)
+        enemy.RefreshHitbox();
+
+        // 보스는 머리 위 작은 체력바를 끔 (화면 위 보스 바 사용)
+        // 컴포넌트만 끄면 Canvas가 켜진 채로 남을 수 있어 오브젝트 자체를 끔
+        if (data.isBoss)
+        {
+            foreach (EnemyHealthBar worldBar in monsterObject.GetComponentsInChildren<EnemyHealthBar>(true))
+            {
+                worldBar.enabled = false;
+                if (worldBar.TryGetComponent(out Canvas barCanvas)) barCanvas.enabled = false;
+                worldBar.gameObject.SetActive(false);
+            }
+        }
 
         if (!string.IsNullOrEmpty(labelText) && labelFont != null)
         {

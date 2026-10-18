@@ -20,12 +20,21 @@ public static class EnemyDataCreator
         if (!AssetDatabase.IsValidFolder(FolderPath)) AssetDatabase.CreateFolder(FolderParent, FolderName);
         if (!AssetDatabase.IsValidFolder("Assets/Resources")) AssetDatabase.CreateFolder("Assets", "Resources");
 
+        // 도깨비불 불덩이 프리팹이 없으면 먼저 만듦
+        GameObject fireball = EnemyFireballPrefabCreator.EnsurePrefab();
+
         int created = 0;
-        //                  파일 이름            ID          이름    몸 색                                    크기                          체력  공격 쿨타임 속도  경험치 호출반경 울기시간
-        created += Create("Enemy_Mangja",   "mangja",   "망자", new Color(0.55f, 0.55f, 0.58f), Vector3.one,                      30f, 5f, 1.5f, 3.5f, 50f, 0f,  0f);
-        // 창귀: 마른 체형·흐린 주황빛, 부르는 소리 반경 12m·0.5초 (기획 04 S2, 엑셀 changgwi)
-        created += Create("Enemy_Changgwi", "changgwi", "창귀", new Color(0.95f, 0.55f, 0.25f), new Vector3(0.65f, 0.8f, 0.65f), 18f, 4f, 1f,   5.5f, 35f, 12f, 0.5f);
-        // 도깨비불·산군은 각 S2 항목에서 추가
+        //                  파일 이름            ID            이름       몸 색                                    크기                          체력  공격 쿨타임 속도  경험치
+        created += Create("Enemy_Mangja",     "mangja",     "망자",   new Color(0.55f, 0.55f, 0.58f), Vector3.one,                      30f, 5f, 1.5f, 3.5f, 50f);
+        created += Create("Enemy_Changgwi",   "changgwi",   "창귀",   new Color(0.95f, 0.55f, 0.25f), new Vector3(0.65f, 0.8f, 0.65f), 18f, 4f, 1f,   5.5f, 35f);
+        created += Create("Enemy_Dokkaebibul","dokkaebibul","도깨비불", new Color(0.35f, 0.85f, 1f),    new Vector3(0.7f, 0.7f, 0.7f),   20f, 6f, 2f,   4f,   45f);
+        // 산군: 체력 700, 피해 18, 간격 1.8초, 속도 5, 경험 2000 (엑셀 sangun) — 크기·색은 보스답게 큼직하게
+        created += Create("Enemy_Sangun",     "sangun",     "산군",   new Color(0.55f, 0.25f, 0.15f), new Vector3(1.8f, 1.8f, 1.8f), 700f, 18f, 1.8f, 5f, 2000f);
+
+        // 창귀 호출 / 도깨비불 원거리 / 산군 보스 칸 (이미 있던 파일도 비어 있으면 채움 — 숫자는 덮지 않음)
+        ApplyChanggwiCall();
+        ApplyDokkaebibulRanged(fireball);
+        ApplySangunBoss();
 
         int added = FillDatabase();
 
@@ -37,7 +46,74 @@ public static class EnemyDataCreator
         Selection.activeObject = AssetDatabase.LoadAssetAtPath<Object>(FolderPath);
     }
 
-    // EnemyDatabase가 없으면 만들고, Assets/Data/Enemies 안의 모든 EnemyData 중 빠진 것을 목록에 넣음
+    private static void ApplyChanggwiCall()
+    {
+        EnemyData data = AssetDatabase.LoadAssetAtPath<EnemyData>($"{FolderPath}/Enemy_Changgwi.asset");
+        if (data == null) return;
+        if (data.callRadius > 0f) return; // 이미 설정됨
+
+        data.callRadius = 12f;
+        data.callDuration = 0.5f;
+        EditorUtility.SetDirty(data);
+    }
+
+    private static void ApplyDokkaebibulRanged(GameObject fireball)
+    {
+        EnemyData data = AssetDatabase.LoadAssetAtPath<EnemyData>($"{FolderPath}/Enemy_Dokkaebibul.asset");
+        if (data == null) return;
+
+        // 프리팹만 비어 있으면 연결, 거리 값은 0일 때만 기획 기본값으로 채움
+        if (data.projectilePrefab == null) data.projectilePrefab = fireball;
+        if (data.hoverHeight <= 0f) data.hoverHeight = 1.5f;
+        if (data.preferredRangeMin <= 0f) data.preferredRangeMin = 6f;
+        if (data.preferredRangeMax <= 0f) data.preferredRangeMax = 9f;
+        if (data.fleeRange <= 0f) data.fleeRange = 4f;
+        if (data.fleeDistance <= 0f) data.fleeDistance = 3f;
+        if (data.fleeCooldown <= 0f) data.fleeCooldown = 5f;
+        if (data.projectileSpeed <= 0f) data.projectileSpeed = 8f;
+        if (data.aggroRange < data.preferredRangeMax) data.aggroRange = 12f;
+        data.attackRange = data.preferredRangeMax; // 기즈모·참고용
+
+        EditorUtility.SetDirty(data);
+    }
+
+    // 산군 보스 플래그·패턴 간격·소환 창귀 연결 (이미 isBoss면 숫자 덮지 않음)
+    private static void ApplySangunBoss()
+    {
+        EnemyData data = AssetDatabase.LoadAssetAtPath<EnemyData>($"{FolderPath}/Enemy_Sangun.asset");
+        if (data == null) return;
+
+        EnemyData changgwi = AssetDatabase.LoadAssetAtPath<EnemyData>($"{FolderPath}/Enemy_Changgwi.asset");
+
+        if (!data.isBoss)
+        {
+            data.isBoss = true;
+            data.clawTelegraph = 0.5f;
+            data.clawRange = 3f;
+            data.clawArcDegrees = 120f;
+            data.pounceTelegraph = 1f;
+            data.pounceRadius = 3f;
+            data.pounceCooldown = 8f;
+            data.pounceDamageMult = 2f;
+            data.summonCount = 4;
+            data.summonIntervalPhase1 = 20f;
+            data.summonIntervalPhase2 = 15f;
+            data.summonMaxAlive = 6;
+            data.phase2HealthRatio = 0.5f;
+            data.swallowHealPercent = 0.05f;
+            data.swallowDamageBonus = 0.1f;
+            data.swallowMaxStacks = 3;
+            data.swallowRange = 2.5f;
+            data.aggroRange = 20f;
+            data.attackRange = data.clawRange;
+        }
+
+        if (data.summonEnemyData == null && changgwi != null)
+            data.summonEnemyData = changgwi;
+
+        EditorUtility.SetDirty(data);
+    }
+
     private static int FillDatabase()
     {
         EnemyDatabase database = AssetDatabase.LoadAssetAtPath<EnemyDatabase>(DatabasePath);
@@ -58,10 +134,8 @@ public static class EnemyDataCreator
         return added;
     }
 
-    // 파일 하나 만들기 (이미 있으면 0, 새로 만들면 1을 돌려줌)
     private static int Create(string fileName, string id, string displayName, Color color, Vector3 scale,
-                              float health, float damage, float cooldown, float speed, float experience,
-                              float callRadius = 0f, float callDuration = 0f)
+                              float health, float damage, float cooldown, float speed, float experience)
     {
         string path = $"{FolderPath}/{fileName}.asset";
         if (AssetDatabase.LoadAssetAtPath<EnemyData>(path) != null) return 0;
@@ -76,8 +150,6 @@ public static class EnemyDataCreator
         data.attackCooldown = cooldown;
         data.moveSpeed = speed;
         data.experienceReward = experience;
-        data.callRadius = callRadius;
-        data.callDuration = callDuration;
 
         AssetDatabase.CreateAsset(data, path);
         return 1;

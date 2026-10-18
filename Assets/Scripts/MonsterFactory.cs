@@ -37,13 +37,16 @@ public static class MonsterFactory
 
         monsterObject.name = string.IsNullOrEmpty(labelText) ? data.LocalizedName : labelText;
 
-        float healthMultiplier = config != null ? config.GetEnemyHealthMultiplier(level) : 1f;
-        float damageMultiplier = config != null ? config.GetEnemyDamageMultiplier(level) : 1f;
+        // 레벨 성장 배율 × 개발자 메뉴(F1) 배율 (출시 빌드는 DevCheats 배율이 항상 1)
+        float healthMultiplier = (config != null ? config.GetEnemyHealthMultiplier(level) : 1f) * DevCheats.EnemyHealthMult;
+        float damageMultiplier = (config != null ? config.GetEnemyDamageMultiplier(level) : 1f) * DevCheats.EnemyDamageMult;
         enemy.ApplyData(data, level, healthMultiplier, damageMultiplier);
 
         float power = config != null ? config.GetRankPower(rank) : 1f;
         int lootDrops = config != null ? config.GetRankLootDrops(rank) : 1;
         float rarityBonus = config != null ? config.GetRankRarityBonus(rank) : 1f;
+        lootDrops = Mathf.Max(0, Mathf.RoundToInt(lootDrops * DevCheats.EnemyLootMult));
+        rarityBonus *= DevCheats.EnemyLootMult;
         enemy.ApplyRank(rank, power, lootDrops, rarityBonus);
 
         enemy.SetBodyColor(GetBodyColor(data.bodyColor, rank));

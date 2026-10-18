@@ -82,7 +82,13 @@ public class RegionSettings : MonoBehaviour
     // 무리가 구성원 한 마리를 세울 때 호출 (이 지역의 레벨·프리팹·글꼴로 만듦)
     public Enemy SpawnMonster(EnemyData data, MonsterRank rank, string labelText, Vector3 position)
     {
-        return MonsterFactory.Spawn(enemyPrefab, data, regionLevel, rank, labelText, position, config, labelFont);
+        return SpawnMonster(data, regionLevel, rank, labelText, position);
+    }
+
+    // 몬스터 레벨을 직접 지정해 세움 (개발자 메뉴 소환 등)
+    public Enemy SpawnMonster(EnemyData data, int monsterLevel, MonsterRank rank, string labelText, Vector3 position)
+    {
+        return MonsterFactory.Spawn(enemyPrefab, data, monsterLevel, rank, labelText, position, config, labelFont);
     }
 
     // 무리 구성원이 죽을 때 무리가 호출

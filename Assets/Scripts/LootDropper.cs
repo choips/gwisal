@@ -146,6 +146,36 @@ public class LootDropper : MonoBehaviour
         DropPotion(dropPosition, 1);
     }
 
+    // 개발자 메뉴용: 기본 아이템·등급·아이템 레벨을 정해 한 개 떨어뜨림 (물약은 등급 무시)
+    public void DropDevItem(Vector3 dropPosition, ItemBase baseItem, ItemRarity rarity, int itemLevel)
+    {
+        if (itemPrefab == null)
+        {
+            Debug.LogWarning($"{gameObject.name}의 LootDropper에 Item Prefab이 등록되지 않았습니다.");
+            return;
+        }
+        if (baseItem == null)
+        {
+            Debug.LogWarning("DropDevItem: 기본 아이템이 비어 있습니다.");
+            return;
+        }
+
+        scatterRadius = DefaultScatterRadius;
+        minSpacing = DefaultMinSpacing;
+        itemLevel = Mathf.Max(1, itemLevel);
+
+        if (baseItem.itemType == ItemType.ManaPotion)
+        {
+            ItemData potionData = new ItemData(baseItem, ItemRarity.Normal, itemLevel, baseItem.baseStatValue);
+            SpawnItem(dropPosition, potionData, potionScale);
+            return;
+        }
+
+        float statValue = Mathf.Round(baseItem.baseStatValue * GetStatMultiplier(rarity));
+        ItemData data = new ItemData(baseItem, rarity, itemLevel, statValue);
+        SpawnItem(dropPosition, data);
+    }
+
     // 기력 물약을 떨어뜨림 (물약은 등급이 없음)
     private void DropPotion(Vector3 dropPosition, int itemLevel)
     {

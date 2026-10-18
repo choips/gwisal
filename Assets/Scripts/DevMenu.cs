@@ -1,9 +1,13 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 // 개발자 메뉴 (F1로 열고 닫기) — 에디터와 개발 빌드(Development Build)에만 포함되고, 정식 출시 빌드에서는 통째로 빠집니다.
 // 씬에 붙이지 않아도 플레이를 시작하면 스스로 만들어집니다 (Hierarchy의 DontDestroyOnLoad → [DevMenu]).
-// 화면 왼쪽 위 창에서 무적·기력 무한·쿨타임 없음·전투 로그(GameLog)를 켜고 끄고(켠 값은 DevCheats·GameLog에 저장), 레벨을 바로 올리고, 등급별 아이템을 떨어뜨려 색을 보고,
+// 화면 왼쪽 위 창에서 무적·기력 무한·쿨타임 없음·전투 로그(GameLog)를 켜고 끄고(켠 값은 DevCheats·GameLog에 저장), 레벨을 바로 올리고,
+// 아이템을 등급·아이템 레벨을 정해 만들고, 귀신을 종류·레벨·등급으로 소환하고, 지역을 바로 옮기고,
+// 적 체력·피해·드랍 배율을 조절하고, 등급별 아이템을 떨어뜨려 색을 보고,
 // 적에게 준 피해(DPS 측정, DamageMeter)와 능력치를 보고, 테스트용 능력치 수정치를 켜고 끕니다.
 // Unity 기본 즉석 UI(IMGUI, OnGUI)로 그려서 Canvas·프리팹 설정이 필요 없습니다. 마우스로 조작합니다.
 // 열린 창 목록(UIWindowStack)에 등록되어 ESC로도 닫힙니다.
@@ -64,6 +68,34 @@ public class DevMenu : MonoBehaviour, IUIWindow
         new TestBonus(" 이동 속도 +50%", StatType.MoveSpeed, 0.5f),
     };
 
+    // —— 아이템 만들기 (S1-13 1단계) ——
+    private static readonly string[] RarityLabels = { "노멀", "매직", "레어", "유니크" };
+    private ItemRarity spawnRarity = ItemRarity.Magic; // 만들 때 쓸 등급
+    private int spawnItemLevel = 1;                     // 만들 때 쓸 아이템 레벨
+    private int spawnItemIndex;                         // ItemDatabase 목록에서의 번호
+    private string spawnItemLabel = "종류: -";          // 창에 보일 종류 이름
+    private LootDropper cachedDropper;                  // 아이템 프리팹·드랍을 빌려 쓸 귀신의 LootDropper
+
+    // —— 귀신 소환 (S1-13 2단계) ——
+    private static readonly string[] RankLabels = { "일반", "챔피언", "유니크", "하수인" };
+    private const float SpawnDistance = 3f;             // 플레이어 앞쪽으로 소환할 거리(m)
+    private MonsterRank spawnRank = MonsterRank.Normal; // 소환할 등급
+    private int spawnEnemyLevel = 1;                    // 소환할 몬스터 레벨
+    private int spawnEnemyIndex;                        // EnemyDatabase 목록에서의 번호
+    private string spawnEnemyLabel = "귀신: -";         // 창에 보일 귀신 이름
+    private readonly List<Enemy> devSpawnedEnemies = new List<Enemy>(); // 개발자 메뉴로 소환한 귀신 (지역 이동 때 정리)
+    private bool wasRegionBusy;                         // 직전 프레임에 지역을 불러오는 중이었는지
+
+    // —— 지역 이동 (S1-13 3단계) ——
+    private static readonly string[] TravelRegionScenes = { "Region_01", "Region_02" };
+    private static readonly string[] TravelRegionLabels = { "백팔 계단", "안개 산길" };
+    private const string TravelEntryId = "start"; // 개발자 이동은 항상 그 지역의 start 입구로
+    private string currentRegionLabel = "지역: -";
+
+    // —— 배율 슬라이더 (S1-13 4단계) ——
+    private const float MultMin = 0.25f;
+    private const float MultMax = 5f;
+
     // 첫 씬이 열린 직후 메뉴 오브젝트를 한 번 만듦 (씬이 바뀌어도 유지)
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void CreateOnStart()
@@ -87,12 +119,18 @@ public class DevMenu : MonoBehaviour, IUIWindow
             SetOpen(!isOpen);
         }
 
+        // 지역이 바뀌기 시작하면 개발자 소환 귀신을 창고로 돌려보냄 (풀 적이라 씬과 함께 안 사라짐)
+        bool busy = RegionManager.IsBusy;
+        if (busy && !wasRegionBusy) ClearDevSpawnedEnemies();
+        wasRegionBusy = busy;
+
         // 메뉴 창 영역을 알려 둠 → 메뉴를 클릭할 때 뒤쪽 바닥으로 이동하거나 스킬이 나가지 않음
         if (isOpen)
         {
             UpdateLevelLabel();
             UpdateMeterLabels();
             UpdateStatsLabels();
+            UpdateCurrentRegionLabel();
 
             guiScale = Mathf.Max(1f, Screen.height / ReferenceScreenHeight);
             DevCheats.MenuScreenRect = new Rect(windowRect.x * guiScale, windowRect.y * guiScale,
@@ -162,7 +200,18 @@ public class DevMenu : MonoBehaviour, IUIWindow
         if (GUILayout.Button("레벨 +1")) LevelUp(1);
         if (GUILayout.Button("레벨 +5")) LevelUp(5);
         GUILayout.EndHorizontal();
-        if (GUILayout.Button("등급 색 보기 (등급별 아이템 떨어뜨리기)")) DropRarityColorPreview();
+
+        GUILayout.Space(8f);
+        DrawItemSpawnSection();
+
+        GUILayout.Space(8f);
+        DrawEnemySpawnSection();
+
+        GUILayout.Space(8f);
+        DrawRegionTravelSection();
+
+        GUILayout.Space(8f);
+        DrawMultiplierSection();
 
         GUILayout.Space(8f);
         GUILayout.Label(meterDamageLabel);
@@ -232,24 +281,388 @@ public class DevMenu : MonoBehaviour, IUIWindow
         playerStats.DevLevelUp(count);
     }
 
-    // 플레이어 발밑에 노멀·매직·레어·유니크 장비와 물약을 하나씩 떨어뜨림 (등급 색 표 ItemRarityColors를 고를 때)
-    private void DropRarityColorPreview()
+    // 아이템 만들기 구역: 종류·등급·아이템 레벨을 고른 뒤 발밑에 한 개 떨어뜨림
+    private void DrawItemSpawnSection()
     {
-        if (playerStats == null)
-        {
-            playerStats = FindFirstObjectByType<PlayerStats>();
-            if (playerStats == null) return;
-        }
+        GUILayout.Label("아이템 만들기");
 
-        // 드랍 표·이름표 글꼴은 귀신의 LootDropper에 들어 있으므로 빌려 씀 (풀에 들어가 꺼진 귀신의 것도 됨)
-        LootDropper dropper = FindFirstObjectByType<LootDropper>(FindObjectsInactive.Include);
-        if (dropper == null)
+        // 종류: ◀ / 이름 / ▶
+        EnsureSpawnItemLabel();
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("◀", GUILayout.Width(28f))) CycleSpawnItem(-1);
+        GUILayout.Label(spawnItemLabel, GUILayout.ExpandWidth(true));
+        if (GUILayout.Button("▶", GUILayout.Width(28f))) CycleSpawnItem(1);
+        GUILayout.EndHorizontal();
+
+        // 등급 네 칸
+        GUILayout.BeginHorizontal();
+        for (int i = 0; i < RarityLabels.Length; i++)
         {
-            Debug.LogWarning("씬에 LootDropper가 붙은 귀신이 없어 아이템을 떨어뜨리지 못했습니다.");
+            ItemRarity rarity = (ItemRarity)i;
+            bool selected = spawnRarity == rarity;
+            if (GUILayout.Toggle(selected, RarityLabels[i], GUI.skin.button) && !selected)
+            {
+                spawnRarity = rarity;
+            }
+        }
+        GUILayout.EndHorizontal();
+
+        // 아이템 레벨
+        GUILayout.BeginHorizontal();
+        GUILayout.Label("아이템 레벨", GUILayout.Width(80f));
+        if (GUILayout.Button("-", GUILayout.Width(28f))) spawnItemLevel = Mathf.Max(1, spawnItemLevel - 1);
+        GUILayout.Label(spawnItemLevel.ToString(), GUILayout.Width(36f));
+        if (GUILayout.Button("+", GUILayout.Width(28f))) spawnItemLevel = Mathf.Min(99, spawnItemLevel + 1);
+        if (GUILayout.Button("+5", GUILayout.Width(36f))) spawnItemLevel = Mathf.Min(99, spawnItemLevel + 5);
+        GUILayout.EndHorizontal();
+
+        if (GUILayout.Button("아이템 만들기 (발밑에)")) SpawnDevItem();
+        if (GUILayout.Button("등급 색 보기 (등급별 아이템 떨어뜨리기)")) DropRarityColorPreview();
+    }
+
+    // ItemDatabase 목록이 바뀌었을 수 있으니, 창을 그릴 때 표시 글자를 맞춤
+    private void EnsureSpawnItemLabel()
+    {
+        ItemBase item = GetSpawnItemBase();
+        if (item == null)
+        {
+            spawnItemLabel = "종류: (목록 없음)";
             return;
         }
 
+        string name = string.IsNullOrEmpty(item.displayName) ? item.itemId : item.displayName;
+        spawnItemLabel = $"종류: {name}";
+    }
+
+    // ItemDatabase에서 지금 고른 기본 아이템 (없으면 null)
+    private ItemBase GetSpawnItemBase()
+    {
+        ItemDatabase db = ItemDatabase.Instance;
+        if (db == null || db.Items == null || db.Items.Count == 0) return null;
+
+        if (spawnItemIndex < 0) spawnItemIndex = 0;
+        if (spawnItemIndex >= db.Items.Count) spawnItemIndex = db.Items.Count - 1;
+        return db.Items[spawnItemIndex];
+    }
+
+    // 기본 아이템 목록을 앞뒤로 한 칸 이동
+    private void CycleSpawnItem(int direction)
+    {
+        ItemDatabase db = ItemDatabase.Instance;
+        if (db == null || db.Items == null || db.Items.Count == 0) return;
+
+        int count = db.Items.Count;
+        spawnItemIndex = (spawnItemIndex + direction + count) % count;
+        EnsureSpawnItemLabel();
+    }
+
+    // 고른 종류·등급·아이템 레벨로 플레이어 발밑에 아이템 하나 떨어뜨림
+    private void SpawnDevItem()
+    {
+        if (!TryGetPlayerAndDropper(out _, out LootDropper dropper)) return;
+
+        ItemBase baseItem = GetSpawnItemBase();
+        if (baseItem == null)
+        {
+            Debug.LogWarning("ItemDatabase에 기본 아이템이 없어 만들 수 없습니다.");
+            return;
+        }
+
+        dropper.DropDevItem(playerStats.transform.position, baseItem, spawnRarity, spawnItemLevel);
+    }
+
+    // 플레이어 발밑에 노멀·매직·레어·유니크 장비와 물약을 하나씩 떨어뜨림 (등급 색 표 ItemRarityColors를 고를 때)
+    private void DropRarityColorPreview()
+    {
+        if (!TryGetPlayerAndDropper(out _, out LootDropper dropper)) return;
         dropper.DropColorPreview(playerStats.transform.position);
+    }
+
+    // 플레이어와 LootDropper를 찾아 둠 (드랍은 귀신 프리팹의 아이템 모양·글꼴을 빌려 씀)
+    private bool TryGetPlayerAndDropper(out PlayerStats stats, out LootDropper dropper)
+    {
+        stats = playerStats;
+        if (stats == null)
+        {
+            stats = FindFirstObjectByType<PlayerStats>();
+            playerStats = stats;
+        }
+
+        if (stats == null)
+        {
+            Debug.LogWarning("플레이어가 없어 아이템을 떨어뜨리지 못했습니다.");
+            dropper = null;
+            return false;
+        }
+
+        // 지역을 옮기면 이전 지역 귀신이 사라지므로, 없거나 파괴된 참조면 다시 찾음
+        if (cachedDropper == null)
+        {
+            cachedDropper = FindFirstObjectByType<LootDropper>(FindObjectsInactive.Include);
+        }
+
+        dropper = cachedDropper;
+        if (dropper == null)
+        {
+            Debug.LogWarning("씬에 LootDropper가 붙은 귀신이 없어 아이템을 떨어뜨리지 못했습니다.");
+            return false;
+        }
+
+        return true;
+    }
+
+    // 귀신 소환 구역: 종류·등급·레벨을 고른 뒤 플레이어 앞에 한 마리 세움 (바로 깨어남)
+    private void DrawEnemySpawnSection()
+    {
+        GUILayout.Label("귀신 소환");
+
+        EnsureSpawnEnemyLabel();
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("◀", GUILayout.Width(28f))) CycleSpawnEnemy(-1);
+        GUILayout.Label(spawnEnemyLabel, GUILayout.ExpandWidth(true));
+        if (GUILayout.Button("▶", GUILayout.Width(28f))) CycleSpawnEnemy(1);
+        GUILayout.EndHorizontal();
+
+        GUILayout.BeginHorizontal();
+        for (int i = 0; i < RankLabels.Length; i++)
+        {
+            MonsterRank rank = (MonsterRank)i;
+            bool selected = spawnRank == rank;
+            if (GUILayout.Toggle(selected, RankLabels[i], GUI.skin.button) && !selected)
+            {
+                spawnRank = rank;
+            }
+        }
+        GUILayout.EndHorizontal();
+
+        GUILayout.BeginHorizontal();
+        GUILayout.Label("몬스터 레벨", GUILayout.Width(80f));
+        if (GUILayout.Button("-", GUILayout.Width(28f))) spawnEnemyLevel = Mathf.Max(1, spawnEnemyLevel - 1);
+        GUILayout.Label(spawnEnemyLevel.ToString(), GUILayout.Width(36f));
+        if (GUILayout.Button("+", GUILayout.Width(28f))) spawnEnemyLevel = Mathf.Min(99, spawnEnemyLevel + 1);
+        if (GUILayout.Button("+5", GUILayout.Width(36f))) spawnEnemyLevel = Mathf.Min(99, spawnEnemyLevel + 5);
+        GUILayout.EndHorizontal();
+
+        if (GUILayout.Button("귀신 소환 (앞에, 바로 싸움)")) SpawnDevEnemy();
+    }
+
+    private void EnsureSpawnEnemyLabel()
+    {
+        EnemyData data = GetSpawnEnemyData();
+        if (data == null)
+        {
+            spawnEnemyLabel = "귀신: (목록 없음)";
+            return;
+        }
+
+        string name = string.IsNullOrEmpty(data.displayName) ? data.enemyId : data.displayName;
+        spawnEnemyLabel = $"귀신: {name}";
+    }
+
+    private EnemyData GetSpawnEnemyData()
+    {
+        EnemyDatabase db = EnemyDatabase.Instance;
+        if (db == null || db.Enemies == null || db.Enemies.Count == 0) return null;
+
+        if (spawnEnemyIndex < 0) spawnEnemyIndex = 0;
+        if (spawnEnemyIndex >= db.Enemies.Count) spawnEnemyIndex = db.Enemies.Count - 1;
+        return db.Enemies[spawnEnemyIndex];
+    }
+
+    private void CycleSpawnEnemy(int direction)
+    {
+        EnemyDatabase db = EnemyDatabase.Instance;
+        if (db == null || db.Enemies == null || db.Enemies.Count == 0) return;
+
+        int count = db.Enemies.Count;
+        spawnEnemyIndex = (spawnEnemyIndex + direction + count) % count;
+        EnsureSpawnEnemyLabel();
+    }
+
+    // 플레이어 앞 NavMesh 위에 고른 귀신을 한 마리 세우고 바로 깨움
+    private void SpawnDevEnemy()
+    {
+        if (RegionManager.IsBusy)
+        {
+            Debug.LogWarning("지역을 불러오는 중이라 귀신을 소환하지 않습니다.");
+            return;
+        }
+
+        if (playerStats == null)
+        {
+            playerStats = FindFirstObjectByType<PlayerStats>();
+            if (playerStats == null)
+            {
+                Debug.LogWarning("플레이어가 없어 귀신을 소환하지 못했습니다.");
+                return;
+            }
+        }
+
+        RegionSettings region = FindFirstObjectByType<RegionSettings>();
+        if (region == null)
+        {
+            Debug.LogWarning("RegionSettings가 없어 귀신을 소환하지 못했습니다. 지역 씬이 열려 있는지 확인해 주세요.");
+            return;
+        }
+
+        EnemyData data = GetSpawnEnemyData();
+        if (data == null)
+        {
+            Debug.LogWarning("EnemyDatabase에 귀신 종류가 없어 소환할 수 없습니다.");
+            return;
+        }
+
+        Vector3 spawnPos = FindSpawnPositionInFront(playerStats.transform);
+        string label = MakeSpawnLabel(data, spawnRank);
+        Enemy enemy = region.SpawnMonster(data, spawnEnemyLevel, spawnRank, label, spawnPos);
+        if (enemy == null)
+        {
+            Debug.LogWarning("귀신 소환에 실패했습니다 (프리팹·풀 확인).");
+            return;
+        }
+
+        enemy.WakeUp(); // 테스트용: 잠들지 않고 바로 싸움
+        devSpawnedEnemies.Add(enemy);
+        GameLog.Region($"개발자 소환: {data.displayName} Lv.{spawnEnemyLevel} ({spawnRank})");
+    }
+
+    // 플레이어가 바라보는 쪽 SpawnDistance m 앞의 NavMesh 위 (못 찾으면 발밑)
+    private static Vector3 FindSpawnPositionInFront(Transform player)
+    {
+        Vector3 candidate = player.position + player.forward * SpawnDistance;
+        if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, 5f, NavMesh.AllAreas))
+        {
+            return hit.position;
+        }
+        if (NavMesh.SamplePosition(player.position, out hit, 3f, NavMesh.AllAreas))
+        {
+            return hit.position;
+        }
+        return player.position;
+    }
+
+    private static string MakeSpawnLabel(EnemyData data, MonsterRank rank)
+    {
+        switch (rank)
+        {
+            case MonsterRank.Champion: return MonsterFactory.MakeChampionName(data);
+            case MonsterRank.Unique: return MonsterFactory.MakeUniqueName(data);
+            case MonsterRank.Minion: return MonsterFactory.MakeMinionName(data);
+            default: return null; // 일반은 이름표 없음 (기존 고정 배치와 같음)
+        }
+    }
+
+    // 지역이 바뀔 때: 개발자 메뉴로 소환한 귀신을 모두 창고로 (보상 없이)
+    private void ClearDevSpawnedEnemies()
+    {
+        for (int i = devSpawnedEnemies.Count - 1; i >= 0; i--)
+        {
+            Enemy enemy = devSpawnedEnemies[i];
+            if (enemy != null) enemy.Despawn();
+        }
+        devSpawnedEnemies.Clear();
+        cachedDropper = null; // 이전 지역 귀신 참조를 버림
+    }
+
+    // 지역 이동 구역: 지금 지역을 보여주고, 다른 지역 버튼을 누르면 start 입구로 이동
+    private void DrawRegionTravelSection()
+    {
+        GUILayout.Label("지역 이동");
+        GUILayout.Label(currentRegionLabel);
+
+        GUILayout.BeginHorizontal();
+        for (int i = 0; i < TravelRegionScenes.Length; i++)
+        {
+            string sceneName = TravelRegionScenes[i];
+            bool isCurrent = RegionManager.Instance != null
+                             && RegionManager.Instance.CurrentRegionScene == sceneName;
+
+            // 지금 있는 지역·불러오는 중이면 버튼 비활성
+            GUI.enabled = !isCurrent && !RegionManager.IsBusy;
+            if (GUILayout.Button(TravelRegionLabels[i]))
+            {
+                TravelToRegion(sceneName);
+            }
+            GUI.enabled = true;
+        }
+        GUILayout.EndHorizontal();
+    }
+
+    private void UpdateCurrentRegionLabel()
+    {
+        if (RegionManager.Instance == null)
+        {
+            currentRegionLabel = "지역: (관리자 없음)";
+            return;
+        }
+
+        if (RegionManager.IsBusy)
+        {
+            currentRegionLabel = "지역: 불러오는 중…";
+            return;
+        }
+
+        string scene = RegionManager.Instance.CurrentRegionScene;
+        string display = scene;
+        for (int i = 0; i < TravelRegionScenes.Length; i++)
+        {
+            if (TravelRegionScenes[i] == scene)
+            {
+                display = TravelRegionLabels[i];
+                break;
+            }
+        }
+
+        currentRegionLabel = string.IsNullOrEmpty(scene) ? "지역: -" : $"지역: {display} ({scene})";
+    }
+
+    private void TravelToRegion(string sceneName)
+    {
+        if (RegionManager.Instance == null)
+        {
+            Debug.LogWarning("RegionManager가 없어 지역을 옮기지 못했습니다.");
+            return;
+        }
+
+        if (RegionManager.IsBusy) return;
+
+        // 같은 지역이면 무시 (버튼이 비활성이어도 안전장치)
+        if (RegionManager.Instance.CurrentRegionScene == sceneName) return;
+
+        GameLog.Region($"개발자 지역 이동 → {sceneName} (입구: {TravelEntryId})");
+        RegionManager.Instance.TravelTo(sceneName, TravelEntryId);
+    }
+
+    // 적 체력·피해·드랍 배율 (새로 나오는 귀신부터 — 소환 또는 지역 재입장)
+    private void DrawMultiplierSection()
+    {
+        GUILayout.Label("배율 (새 귀신부터 적용)");
+        GUILayout.Label("이미 나온 무리는 지역을 다시 들어가면 반영됩니다.");
+
+        DrawMultSlider("적 체력", ref DevCheats.EnemyHealthMult);
+        DrawMultSlider("적 피해", ref DevCheats.EnemyDamageMult);
+        DrawMultSlider("드랍", ref DevCheats.EnemyLootMult);
+
+        if (GUILayout.Button("배율 모두 1배로"))
+        {
+            DevCheats.EnemyHealthMult = 1f;
+            DevCheats.EnemyDamageMult = 1f;
+            DevCheats.EnemyLootMult = 1f;
+        }
+
+        // 스킬 포인트는 S5(스킬 창)에서 생김 — 자리만 안내
+        GUILayout.Label("스킬 포인트 설정: S5에서 추가 예정");
+    }
+
+    private static void DrawMultSlider(string label, ref float value)
+    {
+        GUILayout.BeginHorizontal();
+        GUILayout.Label(label, GUILayout.Width(56f));
+        value = GUILayout.HorizontalSlider(value, MultMin, MultMax, GUILayout.ExpandWidth(true));
+        // 0.05 단위로 맞춰 읽기 쉽게
+        value = Mathf.Round(value * 20f) / 20f;
+        GUILayout.Label($"{value:0.00}×", GUILayout.Width(48f));
+        GUILayout.EndHorizontal();
     }
 
     // 레벨이 바뀌었을 때만 표시 글자를 새로 만듦 (매 프레임 문자열을 만들지 않기 위함)

@@ -335,6 +335,10 @@ MonoBehaviour:
     m_Key: region.exit_label
     m_Metadata:
       m_Items: []
+  - m_Id: 1674671046344704
+    m_Key: notice.save_restored
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

@@ -62,13 +62,14 @@ public class SaveManager : MonoBehaviour
     }
 
     // 캐릭터 세이브 불러오기 (없거나 읽기에 실패하면 null)
+    // 파일이 깨져 있으면 .bak(바로 전 저장)으로 복구
     // 0번 칸에 캐릭터 파일이 없고 옛 세이브(SaveData.json)가 있으면 그것을 버전 3으로 변환해서 돌려줌
     public CharacterSaveData LoadCharacter(int slot)
     {
         string path = GetCharacterPath(slot);
-        if (File.Exists(path))
+        if (File.Exists(path) || File.Exists(path + BackupSuffix))
         {
-            CharacterSaveData data = ReadJson<CharacterSaveData>(path);
+            CharacterSaveData data = ReadWithBackup<CharacterSaveData>(path, d => d.version > 0);
             if (data != null && data.version > CharacterSaveData.CurrentVersion)
             {
                 Debug.LogError($"세이브 파일이 더 새로운 형식(버전 {data.version})이라 불러오지 않습니다. 게임을 최신 버전으로 실행해 주세요.");
@@ -86,16 +87,47 @@ public class SaveManager : MonoBehaviour
         return null;
     }
 
-    // 계정 공용 세이브 불러오기 (없거나 읽기에 실패하면 null)
+    // 계정 공용 세이브 불러오기 (없거나 읽기에 실패하면 null, 깨져 있으면 .bak으로 복구)
     public AccountSaveData LoadAccount()
     {
-        return File.Exists(AccountPath) ? ReadJson<AccountSaveData>(AccountPath) : null;
+        if (!File.Exists(AccountPath) && !File.Exists(AccountPath + BackupSuffix)) return null;
+        return ReadWithBackup<AccountSaveData>(AccountPath, d => d.version > 0);
     }
 
-    // 불러올 세이브가 있는지 (캐릭터 파일 또는 0번 칸이면 옛 세이브)
+    // 불러올 세이브가 있는지 (캐릭터 파일·그 백업 또는 0번 칸이면 옛 세이브)
     public bool HasSaveFile(int slot = 0)
     {
-        return File.Exists(GetCharacterPath(slot)) || (slot == 0 && File.Exists(LegacySavePath));
+        string path = GetCharacterPath(slot);
+        return File.Exists(path) || File.Exists(path + BackupSuffix) || (slot == 0 && File.Exists(LegacySavePath));
+    }
+
+    // 세이브 파일을 읽고, 읽기에 실패하거나 내용이 비어 있으면 .bak으로 다시 시도
+    // isValid: 읽은 내용이 쓸 만한지 확인 (예: 버전 번호가 들어 있는지)
+    // .bak으로 복구하면 진짜 파일도 .bak 내용으로 되돌리고 화면에 알림
+    private T ReadWithBackup<T>(string path, Func<T, bool> isValid) where T : class
+    {
+        T data = File.Exists(path) ? ReadJson<T>(path) : null;
+        if (data != null && isValid(data)) return data;
+
+        string backupPath = path + BackupSuffix;
+        T backup = File.Exists(backupPath) ? ReadJson<T>(backupPath) : null;
+        if (backup == null || !isValid(backup))
+        {
+            Debug.LogError($"세이브 파일이 손상되었고 쓸 수 있는 백업(.bak)도 없어 불러오지 않습니다: {path} — 새로 시작할 수 있습니다.");
+            return null;
+        }
+
+        Debug.LogWarning($"세이브 파일이 손상되어 바로 전 저장(.bak)으로 복구했습니다: {path}");
+        try
+        {
+            File.Copy(backupPath, path, true);
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"복구한 내용을 세이브 파일에 되돌려 쓰지 못했습니다 (다음 저장 때 다시 씀): {e.Message}");
+        }
+        NotificationUI.Show(Loc.Get("notice.save_restored"), NotificationUI.NoticeType.Warning);
+        return backup;
     }
 
     // 데이터를 JSON 파일로 안전하게 저장 (성공 시 true, 실패해도 진짜 파일은 그대로)
@@ -147,17 +179,18 @@ public class SaveManager : MonoBehaviour
         }
     }
 
-    // JSON 파일을 읽어 T로 반환 (읽기에 실패하면 null)
+    // JSON 파일을 읽어 T로 반환 (읽기에 실패하면 null — 백업으로 다시 시도할 수 있으므로 경고만 남김)
     private static T ReadJson<T>(string path) where T : class
     {
         try
         {
             string json = File.ReadAllText(path);
+            if (string.IsNullOrWhiteSpace(json)) return null;
             return JsonUtility.FromJson<T>(json);
         }
         catch (Exception e)
         {
-            Debug.LogError($"게임 불러오기 실패 ({path}): {e.Message}");
+            Debug.LogWarning($"세이브 파일 읽기 실패 ({path}): {e.Message}");
             return null;
         }
     }

@@ -20,6 +20,7 @@ public static class LocalizationTableFiller
         { "notice.save_done",         "게임 저장 완료!" },
         { "notice.load_done",         "게임 불러오기 완료!" },
         { "notice.load_no_save",      "불러올 세이브 파일이 없습니다. 먼저 S 키로 저장해 주세요." },
+        { "notice.save_restored",     "세이브 파일이 손상되어 이전 저장으로 복구했습니다" },
         { "notice.mana_not_enough",   "기력이 부족합니다!" },
         { "notice.mana_full",         "기력이 이미 가득 차 있습니다." },
         { "notice.level_up",          "레벨 업! (레벨 {0})" },

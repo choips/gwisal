@@ -1288,14 +1288,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraFollow
   target: {fileID: 0}
-  useCurrentOffset: 1
-  offset: {x: 0, y: 15, z: -10}
+  distance: 30
+  pitch: 45
+  fieldOfView: 30
   smoothTime: 0.15
-  enableZoom: 1
-  zoomStep: 0.1
-  minZoom: 0.5
-  maxZoom: 1.5
-  zoomSmoothSpeed: 10
 --- !u!1 &336964984
 GameObject:
   m_ObjectHideFlags: 0
@@ -2664,6 +2660,7 @@ MonoBehaviour:
   titleShowTime: 2
   titleFadeTime: 0.6
   currentRegionScene: 
+  currentEntryId: 
 --- !u!4 &785131904
 Transform:
   m_ObjectHideFlags: 0
@@ -3158,6 +3155,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameController
   playerStats: {fileID: 1487634042}
+  startNewGame: 0
+  autoSaveInterval: 300
 --- !u!4 &958661956
 Transform:
   m_ObjectHideFlags: 0
